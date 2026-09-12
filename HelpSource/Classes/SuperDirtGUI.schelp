@@ -1,0 +1,180 @@
+TITLE:: SuperDirtGUI
+summary:: extra synths, effects and sample helpers for SuperDirt, loaded into a running instance
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SuperDirt, Classes/DirtOrbit, Classes/GlobalDirtEffect, Classes/DirtModule
+
+DESCRIPTION::
+A loader that reads three folders of plain code::.scd:: files - code::synths/::,
+code::modules/:: and code::effects/:: next to its own code::classes/:: folder -
+into a link::Classes/SuperDirt:: you already run. SuperDirt itself is never
+changed, so this lives next to a normal install and updates on its own.
+
+code::
+s.boot;
+~dirt = SuperDirt(2, s);
+~dirt.loadSoundFiles;
+~dirt.start(57120, 0 ! 12);
+~sdg = SuperDirtGUI(~dirt);
+~sdg.gui;
+::
+
+Every file is loaded the way SuperDirt loads its own code::synths/:: folder,
+with code::~dirt:: bound to the instance and code::~sdg:: to this loader, in
+alphabetical order. Each folder ships one example file that is a template: copy
+it, rename it, edit it.
+
+table::
+## strong::folder:: || strong::one file holds:: || strong::switched on from Tidal by::
+## code::synths/:: || a SynthDef in SuperDirt's argument convention || code::s "sdgsine"::
+## code::modules/:: || code::~dirt.addModule(name, func, test):: and its SynthDef, code::"name" ++ ~dirt.numChannels:: || the parameter its test looks for
+## code::effects/:: || code::SynthDef("global_name" ++ ~dirt.numChannels):: and code::~sdg.addGlobalEffect(\global_name, [\params]):: || one of its parameters
+::
+
+subsection:: Who owns what
+
+Synths are added to link::Classes/SynthDescLib::.global and sent to the
+server; they stay there after link::#-free::, since Tidal may still be playing
+them. Modules are added to code::~dirt.modules:: and removed by
+link::#-free:: and link::#-reload::. Global effects are one
+link::Classes/GlobalDirtEffect:: per orbit, put first in the orbit's chain,
+ahead of SuperDirt's delay and reverb; link::#-free:: releases them and hands
+the orbits back the way they were.
+
+Orbits exist only after code::~dirt.start::, so make the loader after
+code::start::. Made before, it loads synths and modules at once and adds the
+global effects on its own once the orbits appear. After a later
+code::~dirt.stop; ~dirt.start(...):: call link::#-applyGlobalEffects::
+yourself: new orbits do not know about us.
+
+subsection:: Files that fail
+
+A file with an error in it is reported with a warning and skipped; the other
+files still load. Fix it and link::#-reload::.
+
+
+CLASSMETHODS::
+
+METHOD:: new
+Make the loader and load everything.
+ARGUMENT:: dirt
+the link::Classes/SuperDirt:: to load into, usually code::~dirt::.
+RETURNS:: a SuperDirtGUI.
+
+METHOD:: current
+The loader made last, or nil after it was freed.
+
+
+INSTANCEMETHODS::
+
+METHOD:: load
+Read all three folders. Called by code::new::.
+
+METHOD:: reload
+Take our modules and global effects out, then read every file again. Edited a
+file? This is what to call - no reboot, no recompile.
+
+METHOD:: loadSynths
+METHOD:: loadModules
+METHOD:: loadGlobalEffects
+One folder each.
+
+METHOD:: synthNames
+METHOD:: moduleNames
+METHOD:: globalEffectNames
+What the three folders added, as Symbols, in load order.
+
+METHOD:: addGlobalEffect
+Called from a file in code::effects/::. Registers a SynthDef name and the event
+keys it listens to; link::#-applyGlobalEffects:: then gives every orbit an
+instance.
+ARGUMENT:: name
+the SynthDef name without the channel count, e.g. code::\global_sdgspace::.
+ARGUMENT:: paramNames
+an Array of Symbols: the Tidal parameters that wake the effect and are passed on.
+ARGUMENT:: alwaysRun
+true to keep it awake even when no parameter arrives. false by default.
+
+METHOD:: applyGlobalEffects
+Give every orbit its own link::Classes/GlobalDirtEffect:: for each registered
+name, first in the chain, and rebuild the node tree. An orbit that already has
+one is left alone, so calling it twice changes nothing. Waits for the server
+once, since code::SynthDef.add:: is asynchronous.
+
+METHOD:: globalEffectSpecs
+The registered specs, one Event per effect: code::name::, code::paramNames::,
+code::alwaysRun::.
+
+METHOD:: loadSamples
+Append a folder of sample banks to the sound library: one bank per subfolder,
+files numbered by name, the way Dirt-Samples is laid out. Banks already loaded
+stay.
+ARGUMENT:: folderPath
+a String; code::~:: is expanded.
+
+METHOD:: gui
+Open the window, or bring it to the front: three lists of what is loaded, a
+reload button and a free button.
+RETURNS:: the link::Classes/Window::.
+
+METHOD:: window
+The window while it is open, nil otherwise.
+
+METHOD:: free
+Take our modules and global effects out of code::~dirt::, forget the names and
+close the window. Synths stay on the server.
+
+METHOD:: dirt
+The link::Classes/SuperDirt:: this loads into.
+
+METHOD:: path
+The repository folder, found from the class file. Works through the
+extensions symlink and for a quark install alike.
+
+METHOD:: synthDir
+METHOD:: moduleDir
+METHOD:: effectDir
+The three folders.
+
+METHOD:: verbose
+METHOD:: verbose_
+Whether to post one line per file loaded. true by default.
+
+
+EXAMPLES::
+
+code::
+s.boot;
+
+(
+s.waitForBoot {
+	~dirt = SuperDirt(2, s);
+	~dirt.loadSoundFiles;
+	s.sync;
+	~dirt.start(57120, 0 ! 12);
+	s.sync;
+	~sdg = SuperDirtGUI(~dirt);
+};
+)
+
+~sdg.synthNames;           // -> [ sdgsine ]
+~sdg.moduleNames;          // -> [ sdgcomb ]
+~sdg.globalEffectNames;    // -> [ global_sdgspace ]
+~sdg.gui;
+
+// from tidal:
+//   d1 $ s "sdgsine" # n "0 7 12"
+//   d1 $ s "bd*4" # pF "sdgcomb" 0.4
+//   d1 $ s "bd*4" # pF "sdgspace" 0.5
+
+// the same event from sclang, without tidal
+~dirt.orbits[0].valuePairs([\s, \sdgsine, \n, 7, \sdgcomb, 0.4, \sdgspace, 0.5]);
+
+// edited a file in synths/, modules/ or effects/
+~sdg.reload;
+
+// done
+~sdg.free;
+::
+
+There is a startup you can evaluate a block at a time in
+code::examples/superdirt-gui-demo.scd:: in the repository.

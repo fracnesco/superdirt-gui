@@ -1,0 +1,11 @@
+(
+	name: "SuperDirtGUI",
+	summary: "extra synths, effects and sample helpers for SuperDirt, loaded into a running instance",
+	version: "0.1.0",
+	author: "Francesco Corvi",
+	url: "https://github.com/fracnesco/superdirt-gui.git",
+	license: "MIT",
+	copyright: "Copyright (c) 2026 Francesco Corvi",
+	schelp: "HelpSource",
+	dependencies: ["SuperDirt"]
+)
