@@ -1,0 +1,59 @@
+-- SuperDirtGUI from Tidal - 4: the warp player
+--
+-- sdgwarp reads the sample in small overlapping grains (Warp1), so time and
+-- pitch come apart:
+--
+--   speed, note and accelerate are time: how fast it moves through the sample
+--   sdgpitch is the pitch, as a ratio: 2 an octave up, 0.5 an octave down
+--
+-- n, begin, end, chop, striate and loopAt mean what they always mean.
+
+let sdgwarp = pF "sdgwarp"
+    sdgpitch = pF "sdgpitch"
+    semi p = fmap (\x -> 2 ** (x / 12)) p
+
+-- slower, the same pitch
+d1 $ s "numbers:3" # sdgwarp 1 # speed "<1 0.5 0.25>"
+
+-- the same speed, other pitches
+d1 $ s "numbers:3" # sdgwarp 1 # sdgpitch "<1 1.5 0.5>"
+
+-- one against the other: half speed, an octave up
+d1 $ s "numbers:3" # sdgwarp 1 # speed 0.5 # sdgpitch 2
+
+-- semitones: semi turns 7 into 1.498, the ratio of a fifth
+d1 $ s "numbers:3*4" # sdgwarp 1 # sdgpitch (semi "0 4 7 12")
+
+-- a tune out of one word
+d1 $ s "numbers:5*8" # sdgwarp 1 # legato 1
+   # sdgpitch (semi $ scale "major" "0 2 4 7 4 2 0 -3")
+
+-- note and accelerate move the time, not the pitch, here
+d1 $ s "numbers:3*2" # sdgwarp 1 # note "0 12"
+
+d1 $ s "numbers:3" # sdgwarp 1 # accelerate "-0.5"
+
+-- backwards: the reading runs back, each grain still plays forwards
+d1 $ s "numbers:3" # sdgwarp 1 # speed "-1"
+
+-- a break kept in time with loopAt. Change the tempo: the loop follows,
+-- and the pitch stays where it is
+setcps (125/60/4)
+
+d1 $ loopAt 1 $ chop 8 $ s "breaks125" # sdgwarp 1
+
+setcps 0.4
+
+setcps 0.65
+
+-- the same with SuperDirt's own player: the pitch follows the tempo
+d1 $ loopAt 1 $ chop 8 $ s "breaks125"
+
+setcps (125/60/4)
+
+-- slices in another order, retuned per cycle
+d1 $ loopAt 1 $ chop 8 $ rev $ s "breaks125" # sdgwarp 1 # sdgpitch "<1 0.75 1.5 1>"
+
+d1 $ loopAt 2 $ striate 16 $ s "breaks152" # sdgwarp 1 # sdgpitch (semi "<0 -5>")
+
+hush

@@ -1,4 +1,4 @@
-// modules/example-module.scd - a template. copy it, rename it, edit it.
+// modules/example-module.scd - a module: a comb filter on each event that asks for it.
 //
 // a module is a function SuperDirt calls for every event whose test passes,
 // after the sound itself has been started. this one adds a comb filter to the
@@ -6,7 +6,14 @@
 // and writes back in place, at the orbit's channel count; SuperDirt puts it in
 // the event's group behind the sound, so it hears what the sound made.
 //
+// parameters:
+//   sdgcomb  0 to 1     the comb's delay, 0.5 ms at 0 to 50 ms at 1
+//   sdgres   0 to 10 s  how long the comb rings
+//
 //   d1 $ s "bd*4" # pF "sdgcomb" 0.4 # pF "sdgres" 2
+//
+// new... in the window's modules tab copies a file like this one under another
+// name. while the window is open, a file is read again when you save it.
 (
 ~dirt.addModule('sdgcomb', { |dirtEvent|
 	dirtEvent.sendSynth("sdgcomb" ++ ~dirt.numChannels, [

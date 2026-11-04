@@ -1,0 +1,32 @@
+-- SuperDirtGUI from Tidal - 1: a synth
+--
+-- synths/example-synth.scd adds sdgsine: a sine with a short envelope, and
+-- sdgshape, from 0 to 1, which drives harmonics into it. It plays like any
+-- SuperDirt synth: n or note is the pitch, sustain (seconds) or legato
+-- (against the step) the length, and SuperDirt's own effects all apply.
+
+let sdgshape = pF "sdgshape"
+
+-- notes
+d1 $ s "sdgsine*4" # n "0 7 12 7"
+
+d1 $ s "sdgsine*8" # n (scale "minor" "0 .. 7")
+
+-- length: sustain in seconds, or legato against the step
+d1 $ s "sdgsine*4" # n "0 3" # sustain "0.1 0.4"
+
+d1 $ s "sdgsine(5,8)" # n "<0 -5>" # legato "<0.25 1>"
+
+-- accelerate bends the pitch over the note: 1 rises an octave,
+-- -0.5 falls an octave, -1 falls all the way
+d1 $ s "sdgsine*2" # n 12 # accelerate "<1 -0.5 -1>" # sustain 0.5
+
+-- sdgshape: 0 is a plain sine, 1 is nearly a square
+d1 $ s "sdgsine*8" # n "0 12" # sdgshape (range 0 1 $ slow 4 sine)
+
+d1 $ s "sdgsine*16" # n (irand 12) # sdgshape "0 0.5 1" # legato 0.3
+
+-- with SuperDirt's effects, like any synth
+d1 $ s "sdgsine*8" # n "0 7" # sdgshape 0.8 # lpf 1200 # room 0.3 # size 0.6
+
+hush

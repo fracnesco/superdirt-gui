@@ -1,0 +1,146 @@
+TITLE:: SDGSamplePlayer
+summary:: one way of reading a sample buffer, registered with a SuperDirtGUI
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SuperDirtGUI, Classes/SuperDirt, Classes/DirtModule
+
+DESCRIPTION::
+A sample event needs a SynthDef, and the right one depends on two things: how
+the sample should be read - warped, granular, backwards - and how many channels
+the buffer has. This class holds one way of reading: a name, a test that says
+when it wants the event, and the prefix its SynthDef names are built from.
+link::Classes/SuperDirtGUI:: keeps them in an ordered list, and its player
+module - in front of SuperDirt's own code::sound:: module - asks that list on
+every sample event. When no player wants the event, SuperDirt plays it the way
+it always has.
+
+A player is made with link::Classes/SuperDirtGUI#-addSamplePlayer::, usually
+from a file in code::players/::, and is named after the Tidal parameter that
+switches it on, like a module:
+
+code::
+(
+~sdg.addSamplePlayer(\sdggrain, { |sampleNumChannels, numChannels|
+	{ |out, bufnum, sustain = 1, begin = 0, end = 1, speed = 1, endSpeed = 1, freq = 440, pan = 0,
+		sdgdensity = 40, sdggrain = 0.1|
+		var rate = SDGBufRate.kr(speed, endSpeed, sustain, freq);
+		var phase = SDGBufPhase.ar(bufnum, rate, begin, end, speed);
+		var sound = GrainBuf.ar(1, Impulse.ar(sdgdensity), sdggrain, bufnum, rate, phase / max(BufFrames.ir(bufnum), 1), 4);
+		Out.ar(out, DirtPan.ar(sound, numChannels, pan))
+	}
+}, { ~sdggrain.notNil });
+)
+
+~dirt.orbits[0].valuePairs([\s, \bd, \sdggrain, 0.1]);          // chosen by its test
+~dirt.orbits[0].valuePairs([\s, \bd, \player, \sdggrain]);      // chosen by name
+::
+
+From Tidal that is code::# pF "sdggrain" 0.1:: and code::# pS "player" "sdggrain"::.
+
+subsection:: The SynthDef function
+
+code::synthFunc:: is called once per possible sample channel count, from 1 to
+code::SuperDirt.maxSampleNumChannels::, with code::(sampleNumChannels,
+numChannels)::, and answers the SynthDef function; one SynthDef named
+code::<defPrefix>_<sampleChannels>_<numChannels>:: is built for each. Keep it
+pure. Two rules for the function it answers:
+
+list::
+## the nine standard controls come first, in this order: code::out, bufnum,
+sustain, begin, end, speed, endSpeed, freq, pan::. link::#*defaultRates:: maps
+onto them positionally - all code::\ir::, code::pan:: code::\kr::.
+## anything declared after them is control rate, is sent only when the event
+carries a value for it, and can be set or bus-mapped while the synth runs.
+::
+
+No argument list is written by hand. The player module reads the control
+names from the SynthDesc and sends every one the event has a non-nil value
+for, plus the buffer under code::bufnum:: and code::freq:: tuned by the
+sample's metadata - exactly what SuperDirt's own code::sound:: module sends
+to code::dirt_sample::. code::SDGBufRate:: and code::SDGBufPhase:: give the
+playback rate and the begin-to-end read pointer code::dirt_sample:: uses, so
+the trim, code::speed::, code::accelerate:: and code::n:: mean what they
+always mean.
+
+subsection:: Prepare
+
+An optional function, run inside the event just before its arguments are read,
+for what a SynthDef cannot do alone: change code::~begin:: or code::~sustain::,
+or look up a second buffer. It is called with the code::DirtEvent::. SuperDirt
+has worked out code::~sustain:: by then but has not sent it, so what prepare
+leaves there is what the event lasts. This is the one way past SuperDirt's cap:
+code::sustain:: and code::legato:: stop at the length of the sample.
+
+code::
+(
+~sdg.addSamplePlayer(\sdglong, { |sampleNumChannels, numChannels|
+	{ |out, bufnum, sustain = 1, begin = 0, end = 1, speed = 1, endSpeed = 1, freq = 440, pan = 0|
+		var rate = SDGBufRate.kr(speed, endSpeed, sustain, freq);
+		var phase = SDGBufPhase.ar(bufnum, rate, begin, end, speed);
+		Out.ar(out, DirtPan.ar(BufRd.ar(sampleNumChannels, bufnum, phase, 0, 4), numChannels, pan))
+	}
+}, { ~sdglong.notNil }, prepare: { ~sustain = ~sdglong / ~cps }); // sdglong cycles long
+)
+::
+
+code::players/sdgfreeze.scd:: lengthens an event like this,
+code::players/sdgonset.scd:: moves code::~begin:: and code::~end::, and
+code::players/sdgcross.scd:: looks up a second buffer.
+
+subsection:: Selection
+
+An explicit code::~player:: in the event wins. Otherwise the first player in
+the list whose test passes is used; code::addSamplePlayer:: puts a new player
+at the front, so the most recently added one takes precedence. A player is
+its name: adding one with the same name replaces it in place.
+
+
+CLASSMETHODS::
+
+METHOD:: new
+Make a player; link::Classes/SuperDirtGUI#-addSamplePlayer:: does this and
+builds the SynthDefs.
+ARGUMENT:: name
+the Tidal parameter that switches it on.
+ARGUMENT:: synthFunc
+the function described above; nil for a player whose SynthDefs are defined
+elsewhere.
+ARGUMENT:: test
+a function evaluated inside the event; true when nil.
+ARGUMENT:: defPrefix
+the SynthDef name prefix; the name when nil.
+ARGUMENT:: rates
+the rates of the nine standard controls; link::#*defaultRates:: when nil.
+ARGUMENT:: prepare
+an optional function run inside the event before its arguments are read; see link::#Prepare::.
+
+METHOD:: defaultRates
+code::[\ir, \ir, \ir, \ir, \ir, \ir, \ir, \ir, \kr]::.
+
+
+INSTANCEMETHODS::
+
+METHOD:: name
+The name, a Symbol.
+
+METHOD:: test
+METHOD:: synthFunc
+METHOD:: defPrefix
+METHOD:: rates
+As given.
+
+METHOD:: prepare
+As given; see link::#Prepare::.
+
+METHOD:: defName
+The SynthDef for a buffer with that many channels, played into that many.
+
+METHOD:: instrumentFor
+The SynthDef for an event: the buffer event carries code::bufNumChannels::,
+the orbit's default event carries code::numChannels::.
+
+METHOD:: matches
+Whether the player wants the event: the test, run inside it.
+
+METHOD:: makeSynthDefs
+Build and add one SynthDef per sample channel count for this many output
+channels. Nothing happens for a player without code::synthFunc::.

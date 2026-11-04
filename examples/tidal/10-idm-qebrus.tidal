@@ -1,0 +1,61 @@
+-- SuperDirtGUI from Tidal - 10: IDM, in the manner of Qebrus
+--
+-- Not a copy of any track: the habits. Breakcore speed, edits so small they turn
+-- into pitch and texture, digital damage, and now and then the floor drops out
+-- into something calm. Loud: start with the faders down.
+
+setcps (178/60/4)
+
+let sdgcomb = pF "sdgcomb"
+    sdgres = pF "sdgres"
+    sdgwarp = pF "sdgwarp"
+    sdgpitch = pF "sdgpitch"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+    sdgcut = pF "sdgcut"
+    sdgq = pF "sdgq"
+    sdgenv = pF "sdgenv"
+    sdgdecay = pF "sdgdecay"
+    sdgaccent = pF "sdgaccent"
+
+-- orbit 0: a break in 32 pieces, shuffled, a piece of it repeated so fast that
+-- it stops being a drum and starts being a note
+d1 $ sometimesBy 0.3 (ply "<4 8 [16 8]>") $ every 3 (bite 8 "0 [1 1] 6 2 [7*4] 3 [5*8] 4")
+   $ loopAt 2 $ chop 32 $ s "breaks152" # gain 0.95 # shape 0.3
+
+-- the same, each bar cut in a different grid, and damaged where it repeats
+d1 $ sometimesBy 0.3 (ply "<4 8 [16 8]>" . (# crush "<8 5 4>")) $ every 3 (bite 8 "0 [1 1] 6 2 [7*4] 3 [5*8] 4")
+   $ loopAt 2 $ chop "<32 24 48 [64 12]>" $ s "breaks152" # gain 0.95 # shape 0.3
+
+-- orbit 1: the kick nails it down, then trips over itself
+d2 $ whenmod 6 4 (ply "2 1 4 1 8") $ s "808bd:9*4 ~ 808bd:9 ~" # shape 0.6 # lpf 1200
+
+-- orbit 2: digital litter: tiny glitches with their length, rate and place at random
+d3 $ degradeBy 0.35 $ s "glitch*16" # n (irand 8) # speed (choose [0.5, 1, 1, 2, 4, -2])
+   # legato 0.3 # coarse (choose [1, 1, 4, 12]) # pan rand # gain 0.85
+
+d4 $ degradeBy 0.6 $ s "glitch2*32" # n (irand 8) # speed (range 2 6 rand) # legato 0.25
+   # hpf 2000 # pan (fast 7 sine) # gain 0.7
+
+-- orbit 4: noise bursts as a second snare, ringing through the comb
+d5 $ s "~ noise2 ~ noise2:3" # legato 0.15 # sdgcomb "<0.3 0.45 0.6 0.25>" # sdgres 0.7
+   # hpf 900 # gain 0.85
+
+-- orbit 5: a line in the wreckage: squelch cut short, jumping octaves
+d6 $ sometimes (ply 2) $ note "e3 ~ e4 ~ bf3 e3 ~ b4 ~ e3 f4 ~ e3 ~ bf4 ~" # s "sdgacid"
+   # legato 0.3 # sdgcut 300 # sdgq 0.9 # sdgenv 0.6 # sdgdecay 0.06
+   # sdgaccent "1 0 0 1 0" # gain 0.75 # pan (fast 3 saw)
+
+-- the floor drops out: everything but a long sound, stretched to dust by the
+-- warp player. Evaluate this, and then the d1 above to bring the chaos back
+mapM_ (\f -> f silence) [d1, d2, d3, d4, d5, d6]
+
+d7 $ slow 2 $ s "padlong" # begin "<0 0.25 0.5 0.75>" # sdgwarp 1 # speed 0.2
+   # sdgpitch "<1 0.75 1.5 0.5>" # legato 1.5 # attack 0.4 # release 0.8
+   # gain 0.9 # sdgspace 0.6 # sdgtime 0.67
+
+-- a sound in the calm: one break slice, slowed until it glows
+d8 $ slow 2 $ degradeBy 0.5 $ striate 8 $ s "breaks125" # sdgwarp 1 # speed 0.1
+   # sdgpitch "<2 3>" # lpf 2500 # pan rand # gain 0.75 # sdgspace 0.6 # sdgtime 0.67
+
+hush

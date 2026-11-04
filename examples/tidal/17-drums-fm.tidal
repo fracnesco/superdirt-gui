@@ -1,0 +1,156 @@
+-- SuperDirtGUI from Tidal - 17: drums the Elektron way
+--
+-- Three voices built like the machines from Gothenburg: sdgfmdrum, an FM
+-- drum that is a whole kit (Machinedrum EFM, Digitone, Model:Cycles);
+-- sdgcymbal, cymbals and bells; sdgmodal, a struck object whose material is
+-- a knob (the PI machines). What makes those boxes is less the sound than the
+-- sequencer, and every part of it has a Tidal word:
+--
+--   parameter lock    a pattern on the knob: # sdgdecay "0.5 0.5 1.2 0.5"
+--   sound lock        n picks the preset on one step, or inhabit names them
+--   trig condition    every' 4 3 is 4:4, whenmod 8 6, sometimesBy 0.3 is 30%
+--   neighbour         degradeBy on one d, unDegradeBy on another: they take turns
+--   retrig            ply, or echoWith for repeats that fade
+--   micro timing      nudge (seconds), or (1/64) ~> (a part of the bar)
+--   swing             swingBy (1/6) 8 is the boxes' 67, a triplet shuffle
+--   LFO               # sdgindex (slow 4 sine): read once per trig, like a lock
+--
+-- On the box a track is one voice, and a new trig stops the old one: cut 1.
+
+setcps (122/60/4)
+
+let sdgfreq = pF "sdgfreq"
+    sdgdecay = pF "sdgdecay"
+    sdgpunch = pF "sdgpunch"
+    sdgbend = pF "sdgbend"
+    sdgratio = pF "sdgratio"
+    sdgindex = pF "sdgindex"
+    sdgcolor = pF "sdgcolor"
+    sdgfb = pF "sdgfb"
+    sdgmetal = pF "sdgmetal"
+    sdgsnap = pF "sdgsnap"
+    sdgnoise = pF "sdgnoise"
+    sdgtone = pF "sdgtone"
+    sdgcount = pF "sdgcount"
+    sdgclick = pF "sdgclick"
+    sdgdrive = pF "sdgdrive"
+    sdgbloom = pF "sdgbloom"
+    sdgspread = pF "sdgspread"
+
+-- one voice, a whole kit: n locks a sound to a step. 0 kick, 1 snare, 2 tom,
+-- 3 clap, 4 metal, 5 perc. With cut 1 it is one voice, as on the box: each hit
+-- stops the one before, so the kick is only as long as the gap after it
+d1 $ n "0 ~ 5 ~ 1 ~ 5 0 ~ 0 5 ~ 1 ~ [3 3] 5" # s "sdgfmdrum" # cut 1
+
+-- now a track per sound, the kick alone on d1. Parameter locks: the third beat
+-- of every other bar is locked long and struck from further up
+d1 $ s "sdgfmdrum*4" # sdgdecay "0.5 0.5 <0.5 1.2> 0.5" # sdgpunch "30 30 <30 44> 30"
+
+-- the perc track on d2: one sound, a ratio and an index locked on every step.
+-- sdgratio is the instrument - 1 round, 1.41 a knock, 2.76 a signpost, 3.5 a
+-- bell - and sdgindex how hard it is struck
+d2 $ s "~ sdgfmdrum:5 sdgfmdrum:5 ~ sdgfmdrum:5 ~ sdgfmdrum:5 sdgfmdrum:5" # note "0 0 7 0 12 0 5 3"
+   # sdgratio "1 1.41 2.76 1.41 1 3.5 1.41 2" # sdgindex "1.5 3 1.5 6 1.5 2 8 1.5" # cut 1
+
+-- tweak to taste, the FM drum. sdgcolor on this voice is how long the
+-- modulation lasts: 0 only the strike, past 0.5 the whole tail is coloured.
+-- sdgfb feeds the modulator back on itself, brighter and then noise; sdgmetal
+-- adds a second modulator off the harmonic grid, toward bells. A bar each
+d2 $ s "~ sdgfmdrum:5 sdgfmdrum:5 ~ sdgfmdrum:5 ~ sdgfmdrum:5 sdgfmdrum:5" # note "0 0 7 0 12 0 5 3"
+   # sdgratio "1 1.41 2.76 1.41 1 3.5 1.41 2" # sdgindex 3 # cut 1
+   # sdgcolor "<0.1 0.5 0.9 0.5>" # sdgfb "<0 0.3 0.6 0.9>" # sdgmetal "<0 0 0.5 1>"
+
+-- sound locks by name: inhabit gives each letter its own sound and its own
+-- locks, so the pattern reads like a row of trigs. s the FM snare, c the FM
+-- clap with three hands (sdgcount), a little under the snare it doubles, g a
+-- ghost: the snare, short and quiet
+d3 $ inhabit [("s", s "sdgfmdrum:1"),
+              ("c", s "sdgfmdrum:3" # sdgcount 3 # gain 0.9),
+              ("g", s "sdgfmdrum:1" # sdgdecay 0.08 # sdgsnap 0.8 # gain 0.8)]
+     "~ ~ ~ ~ s ~ ~ g ~ g ~ ~ [s,c] ~ g ~"
+
+-- conditional trigs. On d4 metal and on d5 the tom take turns: degradeBy 0.5
+-- drops half the metal hits and unDegradeBy 0.5 plays the tom on exactly those
+-- (the box's NEI). On the kick, every' 4 3 is the condition 4:4 - only the last
+-- bar of four - and sometimesBy 0.25 locks a long decay on a quarter of the hits.
+-- gain 0.9 sits the metal and the tom under the kick and the snare
+do
+  d4 $ degradeBy 0.5 $ s "sdgfmdrum:4*8" # note "12 7" # sdgdecay 0.15 # pan 0.7 # gain 0.9
+  d5 $ unDegradeBy 0.5 $ s "sdgfmdrum:2*8" # note "0 5 7 0" # pan 0.3 # gain 0.9
+  d1 $ every' 4 3 (# sdgpunch 44) $ sometimesBy 0.25 (# sdgdecay 1.2) $ s "sdgfmdrum*4"
+
+-- retrigs. ply repeats a step inside itself: the perc's last steps go to 2 and
+-- 4. echoWith repeats the snare 6 times, a 24th of a bar apart, each one 0.88 of
+-- the last (the box's fade): a roll that dies away on the last beat of every
+-- fourth bar
+do
+  d2 $ ply "1 1 1 1 1 1 <1 2> <1 4>" $ s "~ sdgfmdrum:5 sdgfmdrum:5 ~ sdgfmdrum:5 ~ sdgfmdrum:5 sdgfmdrum:5"
+     # note "0 0 7 0 12 0 5 3" # sdgratio "1 1.41 2.76 1.41 1 3.5 1.41 2" # sdgindex 3 # cut 1
+  d3 $ every' 4 3 (within (0.75, 1) (echoWith 6 (1/24) (|* gain 0.88))) $ s "~ sdgfmdrum:1 ~ sdgfmdrum:1" # gain 1
+
+-- micro timing and swing. swingBy (1/6) 8 pushes every second sixteenth late by
+-- a third of itself, a triplet shuffle; nudge puts the snare 12 ms behind the
+-- beat, lazy, and the tom 10 ms ahead, eager. Take swingBy out to hear it straight
+do
+  d2 $ swingBy (1/6) 8 $ s "~ sdgfmdrum:5 sdgfmdrum:5 ~ sdgfmdrum:5 ~ sdgfmdrum:5 sdgfmdrum:5"
+     # note "0 0 7 0 12 0 5 3" # sdgratio "1 1.41 2.76 1.41 1 3.5 1.41 2" # sdgindex 3 # cut 1
+  d3 $ s "~ sdgfmdrum:1 ~ sdgfmdrum:1" # nudge 0.012
+  d5 $ swingBy (1/6) 8 $ unDegradeBy 0.5 $ s "sdgfmdrum:2*8" # note "0 5 7 0" # pan 0.3 # gain 0.9
+     # nudge (-0.01)
+
+-- LFOs. A continuous pattern is read once per trig, at the trig: the index
+-- rises and falls over four bars, the ratio over eight, the colour saws once a
+-- bar, so no two bars of the perc are the same sound
+d2 $ swingBy (1/6) 8 $ s "~ sdgfmdrum:5 sdgfmdrum:5 ~ sdgfmdrum:5 ~ sdgfmdrum:5 sdgfmdrum:5"
+   # note "0 0 7 0 12 0 5 3" # cut 1
+   # sdgindex (range 0.5 8 $ slow 4 sine) # sdgratio (range 1 3.5 $ slow 8 tri) # sdgcolor saw
+
+-- sdgcymbal on d6: a ride on the eighths, the bell of it on the off beats, a
+-- crash on the first bar of four. sdgcolor on this voice is wash against bell:
+-- 0 a crash, 0.4 a ride, 1 a bell. cut 1 lets each ride stop the last, or
+-- they pile up for seconds
+d6 $ stack [
+     s "sdgcymbal*8" # sdgcolor "0.4 0.7" # sdgdecay 1.5 # gain "0.9 0.85" # cut 1,
+     s "<sdgcymbal:1 ~ ~ ~>" # sdgdecay 2.5
+   ]
+
+-- tweak to taste, the cymbal. sdgmetal turns the wash from noise into metal,
+-- sdgtone darkens it, sdgdrive makes it trashy - a china - and sdgbloom swells
+-- it in, like a gong rolled with soft mallets
+d6 $ s "sdgcymbal ~ ~ ~ ~ ~ ~ ~" # sdgcolor 0.15 # sdgmetal "<0.2 1 0.6 0.6>"
+   # sdgtone "<0.7 0.7 0.3 0.6>" # sdgdrive "<0 0 0 0.8>" # sdgbloom "<0 0 0.6 0>" # sdgdecay 2
+
+-- sdgmodal, the marimba preset (:1, C5 at note 0), as a tune. The material is
+-- sdgmetal: 0.25 a skin, 0.5 the marimba bar, 0.75 glass, 1 a plate. Walk it
+-- with a slow saw and the same notes go from drum to bar to glass to metal
+d6 $ note "0 ~ 3 7 ~ <10 12> 7 ~ 0 ~ 3 ~ 5 3 ~ -2" # s "sdgmodal:1" # cut 1
+   # sdgmetal (slow 16 $ range 0.2 1 saw) # pan (slow 4 sine)
+
+-- tweak to taste, the modal voice. sdgcolor is where it is hit: 0 the centre,
+-- round and dull, 1 near the edge, ringing. sdgtone is the mallet, soft felt to
+-- a hard stick; sdgsnap adds snare wires that rattle as long as it rings
+d6 $ note "0 ~ 3 7 ~ <10 12> 7 ~ 0 ~ 3 ~ 5 3 ~ -2" # s "sdgmodal:1" # cut 1
+   # sdgcolor "<0 1 0.4 0.4>" # sdgtone "<0.5 0.5 0.1 1>" # sdgsnap "<0 0 0 0.5>"
+
+-- let it run: a pattern chain that changes itself. The kick's punch drifts over
+-- 16 bars and its last bar of 8 locks a long decay; the perc steps through four
+-- ratios, a new one every 4 bars, its index on slow noise; the snare fills on
+-- every eighth bar; the cymbal brightens and darkens over 32; the marimba's
+-- material walks back and forth over 24
+do
+  d1 $ whenmod 8 7 (# sdgdecay 1.2) $ s "sdgfmdrum*4" # sdgpunch (range 24 40 $ slow 16 sine)
+  d2 $ swingBy (1/6) 8 $ s "~ sdgfmdrum:5 sdgfmdrum:5 ~ sdgfmdrum:5 ~ sdgfmdrum:5 sdgfmdrum:5"
+     # note "0 0 7 0 12 0 5 3" # cut 1 # sdgratio (slow 4 "<1.41 2.76 1 3.5>")
+     # sdgindex (range 1 7 $ slow 6 perlin)
+  d3 $ every' 8 7 (within (0.5, 1) (ply 4)) $ s "~ sdgfmdrum:1 ~ sdgfmdrum:1"
+  d4 $ degradeBy 0.5 $ s "sdgfmdrum:4*8" # note "12 7" # sdgdecay 0.15 # pan 0.7 # gain 0.9
+     # sdgfb (range 0.2 0.7 $ slow 12 sine)
+  d5 $ unDegradeBy 0.5 $ s "sdgfmdrum:2*8" # note "0 5 7 0" # pan 0.3 # gain 0.9
+  d6 $ stack [
+       s "sdgcymbal*8" # sdgcolor "0.4 0.7" # sdgdecay 1.5 # cut 1 # gain "0.9 0.85"
+         # sdgtone (range 0.3 0.9 $ slow 32 sine),
+       note "0 ~ 3 7 ~ <10 12> 7 ~ 0 ~ 3 ~ 5 3 ~ -2" # s "sdgmodal:1" # cut 2 # pan (slow 4 sine)
+         # sdgmetal (slow 24 $ range 0.2 1 tri)
+     ]
+
+hush

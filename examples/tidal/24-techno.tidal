@@ -1,0 +1,102 @@
+-- SuperDirtGUI from Tidal - 24: techno, the Berlin kind
+--
+-- Nine parts that are meant to play at once. Evaluate d1 to d9 in order, a
+-- block at a time, and listen to what each one adds; then the variations at
+-- the end go over the top of all of it. F minor, 134 bpm. Every sound is a
+-- voice of synths/: six of the drum machine (sdgkick, sdghat, sdgclap,
+-- sdgfmdrum, sdgmodal, sdgratchet) and three synths (sdgsub, sdgsync, sdgpad).
+-- sdgspace is the echo of the orbit a part plays on; sdgtime 0.336 is a dotted
+-- eighth at this tempo, 0.448 a quarter.
+--
+-- One rule holds it together: nothing stands where another part stands. The
+-- kick owns the beats, the bass the off-beats, the stab the holes in both, the
+-- pad is under everything, and the percussion keeps to the gaps.
+
+setcps (134/60/4)
+
+let sdgdecay = pF "sdgdecay"
+    sdgdrive = pF "sdgdrive"
+    sdgpunch = pF "sdgpunch"
+    sdgbits = pF "sdgbits"
+    sdgtail = pF "sdgtail"
+    sdgsweep = pF "sdgsweep"
+    sdgcut = pF "sdgcut"
+    sdgq = pF "sdgq"
+    sdgmove = pF "sdgmove"
+    sdgrate = pF "sdgrate"
+    sdgatk = pF "sdgatk"
+    sdgrel = pF "sdgrel"
+    sdgcount = pF "sdgcount"
+    sdglen = pF "sdglen"
+    sdgwalk = pF "sdgwalk"
+    sdgcurve = pF "sdgcurve"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- d1, the kick: the hard techno preset (:3) on every beat. Its drive rises and
+-- falls over 32 bars, so the track gets harder on its own and backs off again
+d1 $ s "sdgkick:3*4" # sdgdrive (range 0.3 0.8 $ slow 32 sine)
+
+-- d2, the hats: the 909 closed hat (:3) on the sixteenths, the open one (:4) on
+-- the off-beat and choked by the next closed one (cut 1), crushed a little
+d2 $ s "sdghat*16" # n "3 3 4 3" # cut 1 # sdgbits 0.6 # gain "0.9 0.8 0.95 0.8"
+
+-- d3, the clap: the big room one (:3) on two and four; sdgtail is its room
+d3 $ s "~ sdgclap:3 ~ sdgclap:3" # sdgtail 0.5 # gain 0.9
+
+-- d4, the bass: a sub on the off-beats, where the kick is not, with a short
+-- front (sdgpunch); the last step of every other bar goes up a minor third
+d4 $ note "~ f2 ~ f2 ~ f2 ~ <f2 af2>" # s "sdgsub" # legato 0.5 # sdgpunch 4 # sdgdrive 0.35 # gain 0.95
+
+-- d5, the stab: a sync chord in the holes between kick and bass, short, the
+-- sweep on each note nearly off, echoed in dotted eighths. The chord moves
+-- down a tone and up a minor third over four bars
+d5 $ struct "~ ~ t ~ ~ ~ ~ t ~ ~ t ~ ~ ~ ~ ~" $ note ("f5'min" + "<0 0 -2 3>") # s "sdgsync"
+   # legato 1 # sdgsweep 1.5 # sdgdecay 0.08 # sdgcut 2500 # sdgq 0.2
+   # sdgspace 0.45 # sdgtime 0.336 # gain 0.85
+
+-- d6, percussion: the FM signpost (:5), five hits in sixteen that start on
+-- another step every other bar, tuned to the key, panned left and right
+d6 $ euclidOff 5 16 "<0 2>" $ s "sdgfmdrum:5" # note "<0 0 5 -3>" # sdgdecay 0.12 # pan "0.3 0.7" # gain 0.85
+
+-- d7, the pad: a chord under everything, four bars a change, its filter
+-- opening and closing over sixteen bars; the attack and release take two
+-- seconds each, so one chord melts into the next
+d7 $ slow 4 $ note "<f4'min9 df4'maj7>" # s "sdgpad" # legato 1 # sdgcut (range 300 1800 $ slow 16 sine)
+   # sdgmove 1 # sdgrate 0.08 # sdgatk 2 # sdgrel 2 # gain 0.7
+
+-- d8, the metal plate: one hit on the last sixteenth of the bar, every other
+-- bar a second one before it, tuned down a fourth; its echo lands on the beat
+d8 $ s "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ <~ sdgmodal:3> sdgmodal:3" # note "<0 -5>" # sdgdecay 1.5
+   # sdgspace 0.35 # sdgtime 0.448 # gain 0.8
+
+-- d9, a roll on the last beat of every fourth bar: 24 clicks that speed up
+-- like a dropped ball and climb two octaves - a build in one event
+d9 $ whenmod 4 3 (const $ s "~ ~ ~ sdgratchet:3" # sdgcount 24 # sdglen 0.4 # sdgwalk 24 # sdgcurve 0.8 # gain 0.85) $ silence
+
+-- variations, over the top of all of it
+
+-- the breakdown: the kick and the bass drop out, the pad opens wide, the stab
+-- echoes longer. Then put d1 and d4 back, from above
+do
+  d1 silence
+  d4 silence
+  d7 $ slow 4 $ note "<f4'min9 df4'maj7>" # s "sdgpad" # legato 1 # sdgcut 4000 # sdgmove 1.5
+     # sdgrate 0.1 # sdgatk 2 # sdgrel 2 # gain 0.75
+  d5 $ struct "~ ~ t ~ ~ ~ ~ t ~ ~ t ~ ~ ~ ~ ~" $ note ("f5'min" + "<0 0 -2 3>") # s "sdgsync"
+     # legato 1 # sdgsweep 1.5 # sdgdecay 0.08 # sdgcut 2500 # sdgspace 0.7 # sdgtime 0.336 # gain 0.85
+
+-- the kick back through a low pass that opens over eight bars: the return
+d1 $ s "sdgkick:3*4" # lpf (slow 8 $ range 150 6000 saw) # sdgdrive 0.6
+
+-- the hats doubled on the last bar of four, the way a mixer's roll button would
+d2 $ whenmod 4 3 (ply 2) $ s "sdghat*16" # n "3 3 4 3" # cut 1 # sdgbits 0.6 # gain "0.9 0.8 0.95 0.8"
+
+-- the bass walking: the same steps, through the notes of the chord
+d4 $ note "~ f2 ~ f2 ~ <f2 af2> ~ <c3 af2 ef3 f2>" # s "sdgsub" # legato 0.5 # sdgpunch 4 # sdgdrive 0.35 # gain 0.95
+
+-- the stab twice as often, an octave up every fourth bar, the echo shorter
+d5 $ every 4 (|+ note 12) $ struct "~ t ~ t ~ ~ t ~ ~ t ~ t ~ ~ t ~" $ note ("f5'min" + "<0 0 -2 3>")
+   # s "sdgsync" # legato 0.8 # sdgsweep 1.5 # sdgdecay 0.06 # sdgcut 3000 # sdgspace 0.4 # sdgtime 0.224 # gain 0.8
+
+hush

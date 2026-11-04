@@ -1,0 +1,34 @@
+-- SuperDirtGUI from Tidal - 2: a module, an effect on each event
+--
+-- modules/example-module.scd adds sdgcomb: a comb filter on every event
+-- that carries it, like SuperDirt's own lpf or crush, after SuperDirt's own
+-- effects. sdgcomb, from 0 to 1, is the comb's pitch, high to low; sdgres
+-- how long it rings, in seconds (1 unless you say).
+--
+-- It is switched on by being there, so sdgcomb 0 is still on - at its
+-- highest pitch. Leave it out to switch it off. Events without it pass
+-- untouched.
+
+let sdgcomb = pF "sdgcomb"
+    sdgres = pF "sdgres"
+
+d1 $ s "bd*4" # sdgcomb 0.4
+
+d1 $ s "bd*4" # sdgcomb 0.4 # sdgres 2
+
+-- each event gets a comb of its own
+d1 $ s "drum*8" # sdgcomb "0.1 0.3 0.5 0.7" # sdgres 1.5
+
+d1 $ s "hh*16" # sdgcomb (range 0.05 0.6 $ slow 4 sine) # sdgres 0.8
+
+-- only some events: the others pass untouched
+d1 $ sometimes (# sdgcomb 0.3) $ s "sn*8"
+
+d1 $ while "1 0 0 1" (# sdgcomb "0.2 0.6") $ s "cp*8"
+
+-- on a synth too, and after SuperDirt's own effects
+d1 $ s "sdgsine*4" # n "0 5" # sdgcomb 0.2 # sdgres 3
+
+d1 $ s "drum*8" # crush 4 # sdgcomb 0.25
+
+hush

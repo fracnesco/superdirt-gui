@@ -1,0 +1,145 @@
+TITLE:: SDGSlicer
+summary:: a sample cut on the beat grid or on its attacks, written as a bank of its own
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SDGSampleEditor, Classes/SDGSampleEdit, Classes/SDGSampleFeatures
+
+DESCRIPTION::
+The sample editor's slicer, usable on its own. The slices cover an
+link::Classes/SDGSampleEdit::'s trim: the first starts where the trim does, the
+last ends where it ends. The cuts are on the edit's grid at a division, or on
+the attacks its analysis heard at a sensitivity, and cuts made by hand stay on
+top of either.
+
+code::
+e = SDGSampleEdit(~sdg, \breaks152, 0);
+e.analyseFeatures;                       // the onsets, and a bpm for the grid
+x = SDGSlicer(e);
+x.mode = \grid; x.division = 1/16;       // every sixteenth
+x.numSlices;
+x.mode = \transients; x.sensitivity = 0.7;
+x.starts;                                // frames
+x.addSliceAt(22050);
+x.export;                                // a new folder beside the file, loaded as a bank
+x.export(SDGSlicer.samplesFolder +/+ "brk");   // brk/brk_00.wav ... in Dirt-Samples
+::
+
+link::#-export:: writes every slice to a file of its own in a new folder
+(code::_2::, code::_3:: when the name is taken), each file named after the
+folder with the slice's index from 0, the code::n:: Tidal plays it as,
+in the file's format, with the edit's gain and DC as set and short fades
+(link::#*fadeInMs::, link::#*fadeOutMs::) so no cut clicks. The folder is loaded
+into the library as a bank named after it, every slice tagged code::slice::,
+and on the grid given the grid's bpm. The sample itself is never written to.
+
+It sends code::changed:: with code::\slices:: when the cuts change and
+code::\exported:: with the folder.
+
+CLASSMETHODS::
+
+METHOD:: new
+ARGUMENT:: edit
+an link::Classes/SDGSampleEdit::; for transients mode, after its
+link::Classes/SDGSampleEdit#-analyseFeatures::.
+
+METHOD:: divisions
+What a grid offers: code::[[fraction of a whole note, name] ...]::, a bar down to
+1/32, and triplets.
+
+METHOD:: modes
+code::[\grid, \transients]::.
+
+METHOD:: fadeInMs
+METHOD:: fadeOutMs
+Each slice's fades, 1 and 4 ms.
+
+METHOD:: samplesFolder
+Dirt-Samples, beside the SuperDirt quark: the folder SuperDirt's own
+code::loadSoundFiles:: reads, so a bank exported there loads at every start.
+RETURNS:: its path, or nil when it is not there.
+
+METHOD:: exportParent
+Where the editor's export went last; nil at first.
+
+METHOD:: exportStart
+Where the editor's export dialog opens: link::#*exportParent::, else
+link::#*samplesFolder::, else the folder of the edit's file.
+ARGUMENT:: edit
+an link::Classes/SDGSampleEdit::.
+
+METHOD:: freeFolder
+ARGUMENT:: parent
+ARGUMENT:: name
+RETURNS:: a path in parent that does not exist yet: the name, or the name with code::_2::, code::_3:: ...
+
+INSTANCEMETHODS::
+
+METHOD:: mode
+code::\grid:: or code::\transients::.
+
+METHOD:: division
+Of a whole note: 1/4 a beat, 1/16 a sixteenth.
+
+METHOD:: sensitivity
+0 .. 1, see link::Classes/SDGSampleFeatures#*pickOnsets::.
+
+METHOD:: minLength
+Seconds: a cut closer than this to the one before, or to the end, is not made.
+
+METHOD:: compute
+The cuts again; every setter calls it, and the editor after the trim moves.
+RETURNS:: link::#-starts::.
+
+METHOD:: starts
+The frames the slices start on, the trim's start first.
+
+METHOD:: slices
+code::[[start, end] ...]::, frames.
+
+METHOD:: numSlices
+
+METHOD:: gridStarts
+METHOD:: transientStarts
+Where each mode cuts, between two frames.
+ARGUMENT:: f0
+ARGUMENT:: f1
+
+METHOD:: addSliceAt
+A cut by hand.
+ARGUMENT:: frame
+
+METHOD:: removeSliceNear
+Take away the cut nearest a frame, if there is one near enough; never the first.
+ARGUMENT:: frame
+ARGUMENT:: tolerance
+frames; nil for 10 ms.
+RETURNS:: true when one was taken away.
+
+METHOD:: clearEdits
+Forget the cuts made and taken away by hand.
+
+METHOD:: added
+METHOD:: removed
+The cuts by hand, frames.
+
+METHOD:: defaultName
+code::<file>_slices::, made a name SuperDirt takes as a bank's.
+
+METHOD:: defaultFolder
+link::#-defaultName:: beside the file, or the first free name after it.
+
+METHOD:: fileNames
+The names an export to a folder would give the slices: code::<folder>_00.wav::,
+code::<folder>_01.wav:: ..., two digits or more, in the file's own extension.
+ARGUMENT:: folder
+a path; only its last part counts.
+
+METHOD:: export
+ARGUMENT:: folder
+nil for link::#-defaultFolder::; a folder that exists gets a free name beside it.
+ARGUMENT:: load
+false writes the files and leaves the library alone.
+RETURNS:: code::(folder:, paths:, bank:)::, or nil.
+
+METHOD:: edit
+METHOD:: sampleRate
+The edit it cuts.

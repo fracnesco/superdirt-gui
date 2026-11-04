@@ -1,0 +1,43 @@
+-- SuperDirtGUI from Tidal - 5: a global effect
+--
+-- effects/example-global.scd adds sdgspace: an echo that lives in the
+-- orbit, not on the event - like SuperDirt's own delay and room. Every orbit
+-- has one of its own. sdgspace, from 0 to 1, is how loud the echo is;
+-- sdgtime its time in seconds, from 0.01 to 1.
+--
+-- The echo follows the last event that reached its orbit. A pattern that
+-- stops sending sdgspace silences it at once; a pattern that stops playing
+-- (d1 silence, hush) leaves it ringing out.
+
+let sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- at setcps 0.5 a cycle lasts 2 seconds: 0.375 is a dotted eighth of a bar
+setcps 0.5
+
+d1 $ s "cp*2" # sdgspace 0.6 # sdgtime 0.375
+
+-- each orbit has its own: d2, on orbit 1, stays dry
+d2 $ s "hh*8" # gain 0.9
+
+-- d2 gets one of its own, at another time
+d2 $ s "hh*8" # gain 0.9 # sdgspace 0.4 # sdgtime 0.125
+
+-- the time per cycle, or sweeping - a moving time bends the echo
+d1 $ s "cp*2" # sdgspace 0.6 # sdgtime "<0.375 0.25 0.125>"
+
+d1 $ s "arpy*8" # n "0 3 5 7" # sdgspace 0.5 # sdgtime (range 0.05 0.3 $ slow 8 sine)
+
+-- off at once: the same pattern without it
+d1 $ s "cp*2"
+
+-- or stop the pattern and the echo rings out
+d1 $ s "cp*2" # sdgspace 0.8 # sdgtime 0.25
+
+d1 silence
+
+-- the window's effects tab has sdgspace and sdgtime for the orbit you
+-- select. A value set there holds for the orbit's events that send none;
+-- a value in the pattern wins for its own events.
+
+hush

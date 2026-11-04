@@ -1,0 +1,38 @@
+-- SuperDirtGUI from Tidal - 7: all of it at once
+--
+-- Four orbits, four strips in the window: watch their meters, and try the
+-- faders, mute and solo while it plays. Bring the parts in one at a time.
+
+let sdgshape = pF "sdgshape"
+    sdgcomb = pF "sdgcomb"
+    sdgres = pF "sdgres"
+    sdgwarp = pF "sdgwarp"
+    sdgpitch = pF "sdgpitch"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+    semi p = fmap (\x -> 2 ** (x / 12)) p
+
+setcps (125/60/4)
+
+-- orbit 0: the break, warped, so the tempo never moves its pitch
+d1 $ loopAt 1 $ chop 16 $ s "breaks125"
+   # sdgwarp 1 # sdgpitch (semi "<0 0 -2 3>") # gain 0.9
+
+-- orbit 1: the kick, combed on the offbeat
+d2 $ s "bd*4" # sdgcomb "<0.2 0.35>" # sdgres "0 0.6"
+
+-- orbit 2: a line on the synth, through the orbit's echo
+d3 $ s "sdgsine*8" # n (scale "minor" "0 .. 7" + "<0 3>")
+   # sdgshape (range 0.1 0.7 $ slow 8 sine) # legato 0.4
+   # sdgspace 0.4 # sdgtime 0.36
+
+-- orbit 3: words, slowed and pitched, now and then
+d4 $ sometimes (# sdgwarp 1) $ s "numbers*2" # n "<0 3 5>"
+   # speed 0.5 # sdgpitch "<1 1.5>" # sdgspace 0.6 # sdgtime 0.24
+
+-- take parts out again
+d2 silence
+
+d1 $ loopAt 1 $ chop 16 $ s "breaks125" # sdgwarp 1 # speed "<1 0.5>"
+
+hush

@@ -1,0 +1,114 @@
+-- SuperDirtGUI from Tidal - 27: ambient
+--
+-- Nine parts meant to play at once, none of them in a hurry: evaluate d1 to
+-- d9 in order, then the variations. A minor, and a cycle of four seconds
+-- (60 bpm), so a bar is a slow breath. The pad, the choir and the strings hold
+-- the chords (sdgpad, sdgchoir, sdgstrings); a pluck, FM bells and a glass
+-- (sdgpluck, sdgfm, sdgmodal) play notes of the A minor pentatonic now and
+-- then; two sample players make the weather - sdgfreeze holds a pad from
+-- Dirt-Samples as a drone, sdgcloud turns an arpeggio sample into grains - and
+-- drips and droplets (sdgplastic, sdgping) fall where they like.
+--
+-- Everything is quiet and most things are missing most of the time: degradeBy
+-- and sometimesBy leave out more notes than they play, and the echo of each
+-- orbit (sdgspace) fills the gaps.
+
+setcps (60/60/4)
+
+let sdgatk = pF "sdgatk"
+    sdgrel = pF "sdgrel"
+    sdgcut = pF "sdgcut"
+    sdgmove = pF "sdgmove"
+    sdgrate = pF "sdgrate"
+    sdgvowel = pF "sdgvowel"
+    sdgbreath = pF "sdgbreath"
+    sdgchorus = pF "sdgchorus"
+    sdgdecay = pF "sdgdecay"
+    sdgdamp = pF "sdgdamp"
+    sdgratio = pF "sdgratio"
+    sdgindex = pF "sdgindex"
+    sdgfreeze = pF "sdgfreeze"
+    sdghold = pF "sdghold"
+    sdgcloud = pF "sdgcloud"
+    sdggrain = pF "sdggrain"
+    sdgscatter = pF "sdgscatter"
+    sdgrev = pF "sdgrev"
+    sdgpitch = pF "sdgpitch"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- d1, the pad: four chords, sixteen seconds each, the attack and the release
+-- four seconds long, so they melt into each other; the filter barely open
+d1 $ slow 4 $ note "<a4'min9 f4'maj9 c5'maj9 g4'sus4>" # s "sdgpad" # legato 1 # sdgatk 4 # sdgrel 4
+   # sdgcut 900 # sdgmove 0.8 # sdgrate 0.05 # gain 0.7
+
+-- d2, the choir: two chords, 32 seconds each, the vowel morphing all the way
+-- from a to u and back over that time, more breath than voice
+d2 $ slow 8 $ note "<e5'min7 c5'maj7>" # s "sdgchoir" # legato 0.9 # sdgvowel (segment 16 $ slow 8 $ range 0 4 sine)
+   # sdgatk 3 # sdgrel 3 # sdgbreath 0.3 # gain 0.6
+
+-- d3, the strings: the same four chords as the pad, high up and very quiet,
+-- a three-second swell into each
+d3 $ slow 4 $ note "<a5'min f5'maj c5'maj g5'maj>" # s "sdgstrings" # legato 1 # sdgatk 3 # sdgrel 3
+   # sdgchorus 0.8 # sdgcut 4000 # gain 0.5
+
+-- d4, the pluck: notes of the A minor pentatonic, four places a bar, half of
+-- them left out, each ringing three seconds and echoed every three quarters
+d4 $ degradeBy 0.5 $ note (scale "minPent" (segment 4 $ irand 8) + 9) # s "sdgpluck" # legato 4
+   # sdgdecay 3 # sdgdamp 0.2 # sdgspace 0.4 # sdgtime 0.75 # pan rand # gain 0.7
+
+-- d5, the bells: an FM bell up and down an A minor seventh, an octave above
+-- the pluck, half of the notes silent, two seconds each
+d5 $ sometimesBy 0.5 (# gain 0) $ note (arp "<up down>" "a6'min7'4") # s "sdgfm" # sdgratio 3.5 # sdgindex 2
+   # sdgdecay 2 # legato 2 # pan rand # gain 0.6
+
+-- d6, the glass: three strikes in eight, starting elsewhere each bar, ringing
+-- three seconds, on one note of the scale a bar
+d6 $ s "sdgmodal:2(3,8,<0 2 5>)" # note (scale "minPent" "<0 2 4 1>" + 9) # sdgdecay 3 # gain 0.65
+   # pan (slow 7 sine)
+
+-- d7, the drone: a pad sample from Dirt-Samples, its spectrum frozen a third
+-- of the way in and held for eight bars (sdghold), one such every 32 seconds
+d7 $ slow 8 $ s "pad:1" # sdgfreeze 0.3 # sdghold 8 # gain 0.6 # lpf 2000
+
+-- d8, the grains: an arpy sample read at a quarter speed in sixteen grains a
+-- second, scattered half a second either way, half of them backwards; its
+-- pitch a bar each as it is, an octave down, an octave up, as it is
+d8 $ slow 2 $ s "arpy:3" # sdgcloud 16 # sdggrain 0.2 # sdgscatter 0.5 # sdgrev 0.5 # speed 0.25
+   # sdgpitch "<1 0.5 2 1>" # gain 0.6 # hpf 300
+
+-- d9, drips and droplets: a plastic drip (:4) or a pinged droplet (:1) on each
+-- of eight steps, most of them left out, at a random pitch, somewhere in the
+-- stereo, echoed
+d9 $ degradeBy 0.7 $ s "[sdgplastic:4 | sdgping:1]*8" # note (irand 12) # pan rand # gain 0.7
+   # sdgspace 0.5 # sdgtime 0.6
+
+-- variations, over the top of all of it
+
+-- the chords move to C major: the pad and the strings on a brighter set, the
+-- glass and the pluck on the C major pentatonic
+do
+  d1 $ slow 4 $ note "<c5'maj9 a4'min9 f4'maj9 g4'sus4>" # s "sdgpad" # legato 1 # sdgatk 4 # sdgrel 4
+     # sdgcut 1200 # sdgmove 0.8 # sdgrate 0.05 # gain 0.7
+  d3 $ slow 4 $ note "<c6'maj a5'min f5'maj g5'maj>" # s "sdgstrings" # legato 1 # sdgatk 3 # sdgrel 3
+     # sdgchorus 0.8 # sdgcut 4000 # gain 0.5
+  d4 $ degradeBy 0.5 $ note (scale "majPent" (segment 4 $ irand 8) + 12) # s "sdgpluck" # legato 4
+     # sdgdecay 3 # sdgdamp 0.2 # sdgspace 0.4 # sdgtime 0.75 # pan rand # gain 0.7
+  d6 $ s "sdgmodal:2(3,8,<0 2 5>)" # note (scale "majPent" "<0 2 4 1>" + 12) # sdgdecay 3 # gain 0.65
+     # pan (slow 7 sine)
+
+-- the pad opening and the choir vowel going faster: a little movement
+do
+  d1 $ slow 4 $ note "<a4'min9 f4'maj9 c5'maj9 g4'sus4>" # s "sdgpad" # legato 1 # sdgatk 4 # sdgrel 4
+     # sdgcut (range 600 3000 $ slow 32 sine) # sdgmove 1.5 # sdgrate 0.1 # gain 0.7
+  d2 $ slow 8 $ note "<e5'min7 c5'maj7>" # s "sdgchoir" # legato 0.9 # sdgvowel (segment 16 $ slow 2 $ range 0 4 sine)
+     # sdgatk 3 # sdgrel 3 # sdgbreath 0.3 # gain 0.6
+
+-- the grains twice as dense and all forwards, the drops more often: rain
+do
+  d8 $ slow 2 $ s "arpy:3" # sdgcloud 40 # sdggrain 0.1 # sdgscatter 0.8 # sdgrev 0 # speed 0.25
+     # sdgpitch "<1 0.5 2 1>" # gain 0.6 # hpf 300
+  d9 $ degradeBy 0.3 $ s "[sdgplastic:4 | sdgping:1]*16" # note (irand 12) # pan rand # gain 0.65
+     # sdgspace 0.5 # sdgtime 0.6
+
+hush

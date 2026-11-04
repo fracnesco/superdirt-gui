@@ -1,12 +1,14 @@
 TITLE:: SuperDirtGUI
-summary:: extra synths, effects and sample helpers for SuperDirt, loaded into a running instance
+summary:: extra synths, effects, sample players, a mixer window and a sample editor for SuperDirt, loaded into a running instance
 categories:: Libraries>SuperDirtGUI
-related:: Classes/SuperDirt, Classes/DirtOrbit, Classes/GlobalDirtEffect, Classes/DirtModule
+related:: Classes/SDGWindow, Classes/SDGInsert, Classes/SDGSession, Classes/SDGSampleEditor, Classes/SDGSamplePlayer, Classes/SuperDirt, Classes/DirtOrbit, Classes/GlobalDirtEffect, Classes/DirtModule
 
 DESCRIPTION::
-A loader that reads three folders of plain code::.scd:: files - code::synths/::,
-code::modules/:: and code::effects/:: next to its own code::classes/:: folder -
-into a link::Classes/SuperDirt:: you already run. SuperDirt itself is never
+A loader that reads four folders of plain code::.scd:: files - code::synths/::,
+code::modules/::, code::players/:: and code::effects/:: next to its own
+code::classes/:: folder - into a link::Classes/SuperDirt:: you already run, and
+owns what the window and the sample editor need on top: a fader per orbit, the
+sample-player module, and the library helpers. SuperDirt itself is never
 changed, so this lives next to a normal install and updates on its own.
 
 code::
@@ -20,13 +22,15 @@ s.boot;
 
 Every file is loaded the way SuperDirt loads its own code::synths/:: folder,
 with code::~dirt:: bound to the instance and code::~sdg:: to this loader, in
-alphabetical order. Each folder ships one example file that is a template: copy
-it, rename it, edit it.
+alphabetical order. Each folder ships one example file that is a template:
+link::#-newFile:: - new... in the window's modules tab - copies it under a new
+name, or copy it by hand.
 
 table::
 ## strong::folder:: || strong::one file holds:: || strong::switched on from Tidal by::
 ## code::synths/:: || a SynthDef in SuperDirt's argument convention || code::s "sdgsine"::
 ## code::modules/:: || code::~dirt.addModule(name, func, test):: and its SynthDef, code::"name" ++ ~dirt.numChannels:: || the parameter its test looks for
+## code::players/:: || code::~sdg.addSamplePlayer(name, synthFunc, test)::, another way of reading a sample - see link::Classes/SDGSamplePlayer:: || the parameter its test looks for
 ## code::effects/:: || code::SynthDef("global_name" ++ ~dirt.numChannels):: and code::~sdg.addGlobalEffect(\global_name, [\params]):: || one of its parameters
 ::
 
@@ -35,21 +39,105 @@ subsection:: Who owns what
 Synths are added to link::Classes/SynthDescLib::.global and sent to the
 server; they stay there after link::#-free::, since Tidal may still be playing
 them. Modules are added to code::~dirt.modules:: and removed by
-link::#-free:: and link::#-reload::. Global effects are one
+link::#-free:: and link::#-reload::. A file that redefines one of SuperDirt's
+own modules - code::lpf::, say - replaces it, but the module is not counted as
+ours, so link::#-free:: never takes SuperDirt's away. Global effects are one
 link::Classes/GlobalDirtEffect:: per orbit, put first in the orbit's chain,
 ahead of SuperDirt's delay and reverb; link::#-free:: releases them and hands
 the orbits back the way they were.
 
+Two things are added by the class itself, not by a file. A module named
+code::sdgplayer:: sits in front of SuperDirt's own code::sound:: module: when a
+sample event asks for one of the players it sends that player's synth with the
+arguments SuperDirt would have sent, and sets code::~diversion:: - the key
+SuperDirt's own module checks before playing - so the sample is heard once. And
+a global effect named code::global_sdgfader:: is put in every orbit last before
+SuperDirt's code::dirt_rms:: and code::dirt_monitor::. It scales the orbit's
+dry and effect busses in place by its one parameter, code::orbitAmp::, which is
+what link::#-setFader::, link::#-setMute:: and link::#-setSolo:: set. The
+monitor after it is SuperDirt's, untouched. Both come out again with
+link::#-free::.
+
 Orbits exist only after code::~dirt.start::, so make the loader after
-code::start::. Made before, it loads synths and modules at once and adds the
-global effects on its own once the orbits appear. After a later
+code::start::. Made before, it loads synths, modules and players at once and
+adds the global effects on its own once the orbits appear. After a later
 code::~dirt.stop; ~dirt.start(...):: call link::#-applyGlobalEffects::
 yourself: new orbits do not know about us.
 
+subsection:: Files, one at a time
+
+The loader remembers every file it read and what the file defined, so one file
+can be read again on its own: link::#-loadFile::, which the window calls within
+a second of a file being saved (link::#-reloadChangedFiles::). What the file no
+longer defines is taken out - its modules and players come out, its global
+effects leave every orbit - unless another file defines it too. A global effect
+it still defines starts again on its new SynthDef and parameters, in its place
+in each orbit's chain, and the other effects of the chain keep running, tails
+and all; one it defines for the first time goes first into every orbit. An
+orbit the effect was taken out of in the window does not get it back.
+
+link::#-newFile:: makes a new file from one that is there and loads it - the
+window's new... button - after link::#-nameProblem:: has made sure the name
+means nothing yet. link::#-sourceFile:: and link::#-entries:: say where each
+name came from.
+
+subsection:: Inserts
+
+Every orbit can have inserts, the way a channel of a desk does: an eq, a
+compressor, an insight or a VST plugin - the ParaEQ, Compressor, Insight and
+VSTPlugin extensions, each looked up by name and offered only when installed -
+after SuperDirt's delay,
+reverb and leslie and before the fader, in an order you choose, as many as you
+like. Each is a global effect of SuperDirt's own kind, so SuperDirt keeps it in
+place through every rebuild of the orbit; link::Classes/SDGInsert:: says how.
+
+code::
+i = ~sdg.addInsert(0, \eq);
+c = ~sdg.addInsert(0, \compressor);
+~sdg.moveInsert(c, 0);
+~sdg.insertsOf(0);
+~sdg.removeInsert(i);
+::
+
+link::#-reload:: keeps them, with their settings; link::#-free:: takes them out.
+
+subsection:: Tags, and picking samples by them
+
+link::#-tags:: is the library's analysis: every sample's tags, bpm and key, set
+by hand where you set them (link::Classes/SDGSampleTags::). The loader also puts
+a picker in every orbit's default event, as its code::diversion:: - what
+SuperDirt calls before it looks the sound up. An event with code::sdgtag::,
+code::sdgnot::, code::sdgbpm:: or code::sdgkey:: gets its code::s:: and code::n::
+replaced by a sample that matches: at random, or the n-th match when the event
+has an code::n::. code::s:: names a bank to pick inside, or
+link::#*anySoundName:: (code::sdgany::) for the whole library. A diversion that
+was there before is called after it, and link::#-free:: puts it back.
+
+code::
+~sdg.tags.analyseLibrary;
+(type: \dirt, dirt: ~dirt, s: \sdgany, sdgtag: "percussive.short", sdgnot: \melodic).play;
+::
+
+From Tidal: code::d1 $ s "sdgany*8" # pS "sdgtag" "percussive.short" # pS "sdgnot" "melodic"::.
+
+subsection:: Notifications
+
+The loader is a model for the window: it sends code::changed:: with
+code::\loaded:: (after load, reload and free, with no more arguments; after one
+file was read, with its kind and path), code::\samples:: (a bank or a file was
+added, the bank name when there is one), code::\reloaded:: (name and index of a
+sample re-read after a save), code::\mixer:: (a fader, mute or solo moved) and
+code::\inserts:: (an orbit's inserts changed, with its index). Anything can
+depend on it the usual way.
+
 subsection:: Files that fail
 
-A file with an error in it is reported with a warning and skipped; the other
-files still load. Fix it and link::#-reload::.
+A file that does not compile is reported with the parse error and a warning; a
+file that throws, with the error. The other files still load. A file read again
+on its own that fails leaves in place what it loaded before - so a save with a
+typo in it never silences what was playing - and is marked failed until a save
+that loads: link::#-fileFailed::, and in the window's list. link::#-reload::
+takes everything out first, so there a failing file loses what it had.
 
 
 CLASSMETHODS::
@@ -61,27 +149,285 @@ the link::Classes/SuperDirt:: to load into, usually code::~dirt::.
 RETURNS:: a SuperDirtGUI.
 
 METHOD:: current
-The loader made last, or nil after it was freed.
+The loader made last, or nil after it was freed. link::Classes/SDGWindow:: and
+link::Classes/SDGSampleEditor:: fall back to it.
+
+METHOD:: registerBusses
+Name every orbit's code::dryBus:: and code::globalEffectBus:: in the
+BusManager registry as code::orbit0_dry::, code::orbit0_fx:: and so on, so they can be
+metered and listened to from its window. A no-op when that quark is not
+installed; safe to call twice. The window calls it when it opens.
+ARGUMENT:: dirt
+a started link::Classes/SuperDirt::; code::SuperDirt.default:: or the current
+loader's when nil.
+
+METHOD:: plumbingEffectNames
+SuperDirt's own orbit effects, code::[\dirt_rms, \dirt_monitor]::, which the
+fader is kept in front of and the window never lists.
+
+METHOD:: faderEffectName
+The name of the fader effect, code::\global_sdgfader::.
+
+METHOD:: anySoundName
+The sound that means the whole library to the tag picker; code::\sdgany::.
+
+METHOD:: splitTags
+ARGUMENT:: value
+code::"percussive.short"::, a Symbol, or an Array.
+RETURNS:: an Array of Symbols: tags joined with a dot, as Tidal's words allow.
+
+METHOD:: playerModuleName
+The name of the sample-player module, code::\sdgplayer::.
+
+METHOD:: kinds
+The four kinds of content, code::[\synths, \modules, \players, \effects]::,
+each read from the folder of the same name.
+
+METHOD:: fileNotes
+What a content file says about itself, from the comments above its code. The
+description is the first paragraph, without its code::folder/file.scd - ::. The
+parameters are the lines under code::// parameters:::, one each, with two spaces
+or more between the columns: name, range, what it does.
+code::
+//   sdgcut     30 to 18000 Hz       the filter with its envelope closed
+::
+Comments, so a file that does not compile still has them, and new... copies them
+along. Nothing checks a range: it says what is useful, the SynthDef clips what it
+clips.
+ARGUMENT:: filePath
+the file's path; nil or a missing file answers empty notes.
+RETURNS:: an Event, code::(description:, params: [(name:, range:, text:)], listed:)::,
+with code::listed:: true when the file has the section.
+
+METHOD:: kindLabel
+What one of a kind is called in messages and in the window: code::"player"::
+for code::\players::, code::"global effect":: for code::\effects::.
+
+METHOD:: baseName
+A name without code::global_:: for a global effect - its parameter - and as it
+is for the other kinds. Answers a String.
+ARGUMENT:: kind
+one of link::#*kinds::.
+ARGUMENT:: name
+a String or Symbol.
+
+METHOD:: fullName
+The name a kind registers under, from the name or, for a global effect, its
+parameter: code::SuperDirtGUI.fullName(\effects, \sdgspace):: is
+code::\global_sdgspace::. Answers a Symbol.
+ARGUMENT:: kind
+one of link::#*kinds::.
+ARGUMENT:: name
+a String or Symbol.
+
+METHOD:: eventWords
+The event keys SuperDirt, Tidal or the player module read without any SynthDef
+or default event declaring them - the core and internal part of SuperDirt's own
+code::used-parameters.scd::, and code::player:: and code::diversion::. Part of
+what link::#-nameProblem:: refuses.
+
+METHOD:: samePath
+Whether two paths name the same place however they are spelled: code::~::
+expanded, a backslash read as a slash, no trailing separator, and on Windows no
+case. Every comparison of paths here goes through it - on Windows a path made
+with code::+/+:: has backslashes and one from elsewhere may have slashes.
+ARGUMENT:: a
+a path.
+ARGUMENT:: b
+another.
+
+
+METHOD:: bankName
+The bank a folder makes: its name, with what Tidal's mini notation would read as
+something else, spaces above all, as code::_::. code::"~/my kit/":: is code::\my_kit::.
+ARGUMENT:: folderPath
+a String.
+RETURNS:: a Symbol.
 
 
 INSTANCEMETHODS::
 
+METHOD:: recorder
+Open the BusRecorder window. When the recorder holds no sources, or only orbit
+sources left from an earlier SuperDirt, it gets the preset first
+(link::#-recordOrbits::); any other list is left alone, as is everything during
+a take. A warning and nil when BusRecorder is not installed or there are no
+orbits yet.
+RETURNS:: the BusRecorderGUI, or nil.
+
+METHOD:: recordOrbits
+The recorder's preset: replaces its sources with one per orbit, named
+code::orbit0::, code::orbit1:: and so on, reading link::#-tapBusOf::, with one
+file per source, labelled by name, in 32-bit float. The take name and the folder
+stay as they are. Refused with a warning during a take.
+RETURNS:: the BusRecorder class, or nil.
+
+METHOD:: tapBusOf
+The bus holding an orbit's sound after its effects, inserts, fader, mute and
+solo, what its meters read: dry and effect busses summed by the fader effect,
+with as many channels as SuperDirt has. The monitor's limiter is not in it. It is silent
+while the orbit sleeps. The bus belongs to the orbit: code::reload:: and a
+second loader on the same SuperDirt keep it, code::free:: frees it and takes the
+sources reading it out of the recorder.
+ARGUMENT:: orbitIndex
+the orbit, from 0.
+RETURNS:: a link::Classes/Bus::, or nil while the orbit has no fader.
+
 METHOD:: load
-Read all three folders. Called by code::new::.
+Read all four folders. Called by code::new::.
 
 METHOD:: reload
-Take our modules and global effects out, then read every file again. Edited a
-file? This is what to call - no reboot, no recompile.
+Take our modules, players and global effects out, then read every file again.
+Edited a file? This is what to call - no reboot, no recompile.
 
 METHOD:: loadSynths
 METHOD:: loadModules
+METHOD:: loadSamplePlayers
 METHOD:: loadGlobalEffects
 One folder each.
 
+METHOD:: loadFile
+Read one file of the four folders again, or for the first time, as the
+subsection on files one at a time above says. Edited a file with the window
+closed? This reads just that file.
+ARGUMENT:: filePath
+absolute, or relative to the repository: code::"players/mywarp.scd"::.
+RETURNS:: true when the file ran; false when it did not compile, threw, or is
+gone (and what it defined was taken out).
+
+METHOD:: reloadChangedFiles
+Every file of the four folders whose text is not what was read last - edited,
+new, or gone - through link::#-loadFile::. The window calls it once a second
+while it is open.
+RETURNS:: the paths it read, an Array.
+
 METHOD:: synthNames
 METHOD:: moduleNames
+METHOD:: samplePlayerNames
 METHOD:: globalEffectNames
-What the three folders added, as Symbols, in load order.
+What the four folders added, as Symbols, in load order.
+
+METHOD:: namesOf
+One of the four, by kind.
+ARGUMENT:: kind
+one of link::#*kinds::.
+
+METHOD:: sourceFile
+The file a name came from.
+ARGUMENT:: kind
+one of link::#*kinds::.
+ARGUMENT:: name
+the name; a global effect by its name or by its parameter, code::\global_sdgspace::
+or code::\sdgspace::.
+RETURNS:: the path, or nil for a name registered from code rather than a file.
+
+METHOD:: entries
+What the window's modules tab lists for a kind: an Event per name,
+code::(name:, path:, failed:)::, with code::path:: nil for a name registered
+from code; then one per file that failed before it defined anything, with
+code::name:: nil.
+ARGUMENT:: kind
+one of link::#*kinds::.
+
+METHOD:: notes
+What a name does and takes: link::#*fileNotes:: of its file. A file without a
+parameters section, or a name registered from code, gets the controls of its
+SynthDef instead, each code::(name:, range: nil, default:, text: ""):: - without
+the ones every synth of its kind has, such as code::out:: or code::sustain::.
+ARGUMENT:: kind
+one of link::#*kinds::.
+ARGUMENT:: name
+a name of that kind.
+RETURNS:: an Event, as for link::#*fileNotes::.
+
+METHOD:: fileFailed
+Whether a file's last read failed - it did not compile, or threw - so that what
+plays is what it loaded before, if anything.
+ARGUMENT:: filePath
+absolute, or relative to the repository.
+
+METHOD:: templateName
+The name a folder's example file defines: what link::#-newFile:: copies when
+it is not told what to copy. The first name that came from a file of the folder
+when there is no example file.
+ARGUMENT:: kind
+one of link::#*kinds::.
+
+METHOD:: nameProblem
+Why a name will not do for a new file of a kind, or nil when it will. The name
+becomes an argument name and an event key, so it must be an identifier: a
+lowercase letter, then letters, digits or code::_::. And it must mean nothing
+yet: no file of that name in the folder, none of our names, no module of
+SuperDirt's, no sample bank or sound of the library, no key of the orbits'
+default events, no parameter of their effects, no SynthDef and no parameter of
+one, none of link::#*eventWords::, and none of the SynthDefs the new file would
+build. A module named code::speed:: would switch on with every event that has a
+speed; one named code::lpf:: would replace SuperDirt's own.
+ARGUMENT:: kind
+one of link::#*kinds::.
+ARGUMENT:: name
+a String or Symbol; a global effect by its parameter, with or without
+code::global_::.
+RETURNS:: a String saying what the word already is, or nil.
+
+METHOD:: newFile
+Make a file from one that is there and load it. The source's text has the
+source's name - and its file name - replaced by the new one wherever it stands
+as a word: a letter or digit next to it makes it part of another word, a
+code::_:: does not, so code::global_sdgspace:: and code::sdgwarp_1_2:: change
+with it and code::sdgspacer:: does not. Its other parameters keep their names.
+code::
+~sdg.newFile(\players, \mywarp);            // players/mywarp.scd from the example
+~sdg.newFile(\effects, \myecho, \sdgspace);   // effects/myecho.scd from sdgspace's file
+::
+ARGUMENT:: kind
+one of link::#*kinds::.
+ARGUMENT:: name
+the new name, which link::#-nameProblem:: must find nothing wrong with. A
+global effect by its parameter; code::global_:: is added.
+ARGUMENT:: from
+a name of the same kind whose file is copied; link::#-templateName:: when nil.
+RETURNS:: the path of the new file, or nil, with a warning, when the name will
+not do or there is no file to copy.
+
+METHOD:: addSamplePlayer
+Called from a file in code::players/::. Registers a link::Classes/SDGSamplePlayer::,
+builds its SynthDefs, puts it at the front of the list (the most recently added
+player wins when several tests pass), and installs the player module the first
+time. Re-adding a name replaces it in place.
+ARGUMENT:: name
+the Tidal parameter that switches it on, e.g. code::\sdgwarp::.
+ARGUMENT:: synthFunc
+a function of code::(sampleNumChannels, numChannels):: answering the SynthDef
+function - see link::Classes/SDGSamplePlayer:: for the argument convention.
+ARGUMENT:: test
+evaluated inside the event, e.g. code::{ ~sdgwarp.notNil }::.
+ARGUMENT:: defPrefix
+the SynthDef names are code::<defPrefix>_<sampleChannels>_<numChannels>::;
+the name itself by default.
+ARGUMENT:: rates
+the control rates of the nine standard controls; all code::\ir:: but
+code::pan:: by default.
+ARGUMENT:: prepare
+optional, run inside the event just before its arguments are read - see
+link::Classes/SDGSamplePlayer#Prepare::.
+RETURNS:: the link::Classes/SDGSamplePlayer::.
+
+METHOD:: removeSamplePlayer
+Take a player out; the module goes with the last one.
+
+METHOD:: getSamplePlayer
+The player of that name, or nil.
+
+METHOD:: samplePlayerFor
+The player for a sample event: an explicit code::~player:: wins, otherwise the
+first whose test passes; nil when none wants it, and SuperDirt plays the sample
+as always.
+ARGUMENT:: event
+the event, with the sound event merged in.
+
+METHOD:: samplePlayers
+The registered players, in the order they are asked.
 
 METHOD:: addGlobalEffect
 Called from a file in code::effects/::. Registers a SynthDef name and the event
@@ -94,34 +440,422 @@ an Array of Symbols: the Tidal parameters that wake the effect and are passed on
 ARGUMENT:: alwaysRun
 true to keep it awake even when no parameter arrives. false by default.
 
+METHOD:: offerGlobalEffect
+Called from a file in code::effects/::, in place of link::#-addGlobalEffect::, for an
+effect no orbit gets by itself. It waits in the add menu of the window's effects tab
+and costs nothing until link::#-addTrack:: or link::#-setReturnEffect:: puts it
+somewhere. A reload keeps it where it was added and puts it nowhere else. It always
+runs, since an event need not carry any of its parameters, so its SynthDef's defaults
+should make a sound.
+ARGUMENT:: name
+the SynthDef name without the channel count, e.g. code::\global_sdghole::.
+ARGUMENT:: paramNames
+an Array of Symbols: the event keys that are passed on.
+ARGUMENT:: specs
+optional, an Event of parameter -> what code::asSpec:: takes, the ranges of the
+window's knobs: code::(sdgholetime: [0.05, 2, \exp])::.
+
+METHOD:: offeredEffectNames
+RETURNS:: the names registered with link::#-offerGlobalEffect::.
+
+METHOD:: effectParamSpec
+The knob range an effect's file gave a parameter.
+ARGUMENT:: name
+the effect's name, code::\global_sdghole::.
+ARGUMENT:: param
+the parameter.
+RETURNS:: a link::Classes/ControlSpec::, or nil.
+
 METHOD:: applyGlobalEffects
 Give every orbit its own link::Classes/GlobalDirtEffect:: for each registered
-name, first in the chain, and rebuild the node tree. An orbit that already has
-one is left alone, so calling it twice changes nothing. Waits for the server
-once, since code::SynthDef.add:: is asynchronous.
+name, first in the chain, and the fader last before SuperDirt's rms and
+monitor, then rebuild the node tree and push the mixer's state onto the new
+fader synths. An orbit that already has one is left alone, so calling it twice
+changes nothing. Waits for the server once, since code::SynthDef.add:: is
+asynchronous.
 
 METHOD:: globalEffectSpecs
 The registered specs, one Event per effect: code::name::, code::paramNames::,
 code::alwaysRun::.
 
+METHOD:: saveSession
+The whole mixer under a name, over any of that name; link::Classes/SDGSession:: says
+what that holds. It takes a moment: every plugin is asked for its state.
+ARGUMENT:: name
+The session's name.
+ARGUMENT:: action
+Called with true, or false with a warning.
+
+METHOD:: loadSession
+A saved mixer back, in place of what the orbits hold now.
+ARGUMENT:: name
+The session's name.
+ARGUMENT:: action
+Called with true once everything is playing, or false with a warning, and then
+nothing was touched.
+
+METHOD:: sessionNames
+RETURNS:: the saved sessions, an Array of link::Classes/String::.
+
+METHOD:: sessionName
+RETURNS:: the session saved or loaded last, nil before the first.
+
+METHOD:: session
+RETURNS:: this loader's link::Classes/SDGSession::.
+
+METHOD:: controlWindow
+RETURNS:: the link::Classes/SDGWindow:: while it is open, nil otherwise.
+
+METHOD:: insertsOf
+The inserts of an orbit, in the order the signal goes through them.
+ARGUMENT:: orbitIndex
+0 for the first orbit.
+RETURNS:: an Array of link::Classes/SDGInsert::.
+
+METHOD:: addInsert
+An insert on an orbit: into its chain before the fader, its synth started in
+its place and nothing else restarted.
+ARGUMENT:: orbitIndex
+0 for the first orbit.
+ARGUMENT:: kind
+code::\eq::, code::\compressor::, code::\insight:: or code::\vst::.
+ARGUMENT:: index
+its position among the orbit's inserts; the end when nil.
+ARGUMENT:: plugin
+for code::\vst::, the plugin: a name VSTPlugin's search found (see
+link::#-vstPlugins::) or a file path.
+RETURNS:: the link::Classes/SDGInsert::, or nil when there is no such orbit,
+the kind's extension is not installed, or a VST insert has no plugin.
+
+METHOD:: vstPlugins
+The VST effects the server can open, by VSTPlugin's own search - quick for
+plugins in its cache, slow the first time it meets many (a minute is not
+unusual).
+ARGUMENT:: action
+called with their VSTPluginDescs, instruments left out, sorted by name.
+ARGUMENT:: rescan
+true to search again, for plugins installed since.
+
+METHOD:: orderInserts
+Walk an orbit's inserts into the order of its list on the server: moved, never
+started again. Every rebuild here calls it; it is what puts a VST insert, which
+SuperDirt does not know about, back in its place.
+ARGUMENT:: orbit
+a link::Classes/DirtOrbit::.
+
+METHOD:: setOutBus
+Set an orbit's output bus - code::DirtOrbit:outBus_::, which rebuilds the orbit -
+with its effects released so that sleeping ones are freed and its inserts put
+back in place. The window's out box uses it.
+ARGUMENT:: i
+the orbit's index.
+ARGUMENT:: bus
+a bus index or a Bus.
+
+METHOD:: moveInsert
+An insert to another position among its orbit's inserts. The synths are moved,
+not started again.
+ARGUMENT:: insert
+an link::Classes/SDGInsert::.
+ARGUMENT:: toIndex
+its new position.
+
+METHOD:: removeInsert
+Take an insert out: its synth released, which fades the orbit's busses back,
+its object, window and insight freed.
+ARGUMENT:: insert
+an link::Classes/SDGInsert::.
+
+METHOD:: removeInserts
+Every insert of an orbit out.
+ARGUMENT:: orbitIndex
+0 for the first orbit.
+
+METHOD:: startMeters
+Switch on SuperDirt's rms replies, the ones the window's meters read, at a
+rate that lands. code::DirtOrbit:startSendRMS:: hands the rate to the effect
+while it is still switched off, so it never arrives and the replies come 8 a
+second with peaks held 3 seconds; this puts the rate into the orbit's default
+event and the effect's state first and rebuilds the orbit. The window calls it.
+ARGUMENT:: rate
+replies a second, per orbit.
+ARGUMENT:: peakLag
+how long a peak is held, in seconds.
+
+METHOD:: stopMeters
+Switch the replies off again.
+
+METHOD:: setFader
+METHOD:: setMute
+METHOD:: setSolo
+The mixer. Each sets its state for orbit code::i:: and applies the result to
+every orbit whose level changed: the level is written into the orbit's
+code::defaultParentEvent:: as code::orbitAmp:: and pushed to the fader effect
+through its change tracking, so the synth and every event that follows agree.
+Ends with code::changed(\mixer)::, which the window follows.
+ARGUMENT:: i
+the orbit index, 0 for d1.
+ARGUMENT:: amp
+the level, 0 to 4, for code::setFader::.
+ARGUMENT:: bool
+on or off, for code::setMute:: and code::setSolo::.
+
+METHOD:: effectiveAmp
+What the fader effect of orbit code::i:: is told: 0 when muted or when another
+orbit is soloed, the fader's value otherwise.
+
+METHOD:: faderValues
+METHOD:: muteStates
+METHOD:: soloStates
+The mixer's state, one entry per orbit. nil until the orbits exist.
+
+METHOD:: applyAmps
+Push the state onto the orbits; the three setters call it.
+
+METHOD:: setOrbitParam
+Set a key of the orbit's plumbing - code::\limitertype:: - the same way: into
+the default event, then to the running synth.
+
+METHOD:: wakeOrbit
+Push the orbit's default event to every always-on effect of it: the fader takes
+its level and the monitor is resumed if it was asleep. SuperDirt's effects pause
+themselves after four seconds of silence and only a set resumes them, which is
+what every event does on its way in; a preview from the sample editor does the
+same through this.
+ARGUMENT:: orbit
+a link::Classes/DirtOrbit::.
+
+METHOD:: releaseEffect
+link::Classes/GlobalDirtEffect#-release::, made to free a sleeping synth too.
+code::DirtPause:: puts a quiet effect to sleep with a code::DetectSilence::, and
+a synth it has put to sleep pauses itself again in the first block after an
+code::/n_run:: that does not come with its code::dirt_resumed:: trigger.
+code::release:: sends none, so a sleeping synth never finishes its release and
+stays in the node tree, paused, holding its memory, until the next cmd-period -
+measured: every effect that had run and gone quiet was left behind by each
+reload. This sends the trigger with the gate. Everything here that takes an
+effect out or starts it again goes through this or link::#-rebuildOrbit::.
+ARGUMENT:: fx
+a link::Classes/GlobalDirtEffect::.
+ARGUMENT:: releaseTime
+seconds, 0.2 as in code::release::.
+
+METHOD:: tracksOf
+ARGUMENT:: orbitIndex
+the orbit's number.
+RETURNS:: its link::Classes/SDGTrack::s, one per global effect, in chain order.
+
+METHOD:: trackOf
+ARGUMENT:: fx
+a link::Classes/GlobalDirtEffect::.
+RETURNS:: the link::Classes/SDGTrack:: it is the effect of, or nil.
+
+METHOD:: effectParams
+The keys a global effect listens to: what its file registered, or else its
+SynthDef's controls without the plumbing.
+ARGUMENT:: name
+the effect's name.
+RETURNS:: an Array of Symbols, or nil when there is no such SynthDef.
+
+METHOD:: addTrack
+A new track with the named global effect. Nothing else in the chain restarts.
+ARGUMENT:: orbitIndex
+the orbit's number.
+ARGUMENT:: name
+the effect's name, without the channel count.
+ARGUMENT:: index
+its position among the tracks, the end by default.
+RETURNS:: the link::Classes/SDGTrack::, or nil with a warning when there is no such SynthDef or the orbit has it already.
+
+METHOD:: setTrackEffect
+Another global effect on a track. The old one is released with its tail; the
+new one starts between the same inserts, at the same fader.
+ARGUMENT:: track
+an link::Classes/SDGTrack::.
+ARGUMENT:: name
+the effect's name, without the channel count.
+RETURNS:: the new link::Classes/GlobalDirtEffect::, or nil with a warning when there is no such SynthDef or the orbit has it already.
+
+METHOD:: moveTrack
+A track to another position among its orbit's tracks. Its synths are moved, not
+started again.
+ARGUMENT:: track
+an link::Classes/SDGTrack::.
+ARGUMENT:: toIndex
+its new position.
+
+METHOD:: removeTrack
+A track and its effect out of the orbit, its inserts with them.
+ARGUMENT:: track
+an link::Classes/SDGTrack::.
+
+METHOD:: addTrackInsert
+An insert on a track, as link::#-addInsert:: does on an orbit.
+ARGUMENT:: track
+an link::Classes/SDGTrack::.
+ARGUMENT:: place
+code::\pre::, before its effect, or code::\post::, after it.
+ARGUMENT:: kind
+code::\eq::, code::\compressor::, code::\insight:: or code::\vst::.
+ARGUMENT:: index
+its position among the inserts of that place, the end by default.
+ARGUMENT:: plugin
+a code::\vst:: insert's plugin.
+RETURNS:: the link::Classes/SDGInsert::, or nil.
+
+METHOD:: insertListOf
+ARGUMENT:: insert
+an link::Classes/SDGInsert::.
+RETURNS:: the list it is in, its track's or its orbit's.
+
+METHOD:: adoptEffects
+A track for each effect that reached the orbit's list from code without one.
+ARGUMENT:: orbit
+a link::Classes/DirtOrbit::.
+
+METHOD:: silentBus
+RETURNS:: the link::Classes/Bus:: a track's inserts read as their effect bus; nothing writes to it.
+
+METHOD:: rebuildOrbit
+link::Classes/DirtOrbit#-initNodeTree:: - every effect of the orbit started
+again, in the order of its code::globalEffects:: - after link::#-releaseEffect::
+on each, since the stock rebuild leaves the sleeping ones behind.
+ARGUMENT:: orbit
+a link::Classes/DirtOrbit::.
+
+METHOD:: returns
+RETURNS:: the return tracks (link::Classes/SDGReturn::), by letter.
+
+METHOD:: returnAt
+ARGUMENT:: letter
+its letter, as a Symbol or String.
+RETURNS:: the link::Classes/SDGReturn::, or nil.
+
+METHOD:: addReturn
+A return track with a send from every orbit and to and from every return, all at
+nothing. Nothing that plays restarts.
+ARGUMENT:: letter
+its letter; the next one free by default.
+RETURNS:: the link::Classes/SDGReturn::, or nil with a warning when there are no orbits or the letter is taken.
+
+METHOD:: removeReturn
+A return out, with its effect, inserts and every send to it and from it.
+ARGUMENT:: ret
+the link::Classes/SDGReturn::.
+
+METHOD:: setReturnEffect
+A global effect on a return, in the place of the one it has.
+ARGUMENT:: ret
+the link::Classes/SDGReturn::.
+ARGUMENT:: name
+the effect's name; nil takes it out.
+RETURNS:: the new link::Classes/GlobalDirtEffect::, or nil when there is none now.
+
+METHOD:: setSend
+An orbit's send to a return.
+ARGUMENT:: i
+the orbit's number.
+ARGUMENT:: ret
+the link::Classes/SDGReturn::, or its letter.
+ARGUMENT:: amp
+the level, 0 to 1.
+
+METHOD:: sendOf
+ARGUMENT:: i
+the orbit's number.
+ARGUMENT:: ret
+the link::Classes/SDGReturn::, or its letter.
+RETURNS:: the level of that send, 0 to 1.
+
+METHOD:: setReturnSend
+One return's send to another, or to itself. It is only heard while link::#-returnFeedback:: is on.
+ARGUMENT:: from
+the link::Classes/SDGReturn:: it comes from, or its letter.
+ARGUMENT:: to
+the one it goes to, or its letter.
+ARGUMENT:: amp
+the level, 0 to 1.
+
+METHOD:: returnFeedback
+Whether returns may send to returns. Off by default. See link::Classes/SDGReturn#Feedback::.
+ARGUMENT:: bool
+true or false.
+
+METHOD:: returnGroup
+RETURNS:: the link::Classes/Group:: the returns run in, right after SuperDirt's; nil before the first.
+
+METHOD:: returnHeads
+RETURNS:: the link::Classes/Group:: inside it where every return's feedback is read, before anything writes.
+
+METHOD:: orderReturns
+Walk the returns' nodes into the order of their chains. Nothing restarts.
+
 METHOD:: loadSamples
-Append a folder of sample banks to the sound library: one bank per subfolder,
-files numbered by name, the way Dirt-Samples is laid out. Banks already loaded
-stay.
+Append a folder to the sound library: one bank per subfolder, files numbered by
+name, the way Dirt-Samples is laid out, and the sound files lying in the folder
+itself as a bank named after it (link::#*bankName::). Banks already loaded stay,
+and a file a bank already holds is not read again, so a folder can be loaded
+again for what is new in it. One level down only.
 ARGUMENT:: folderPath
 a String; code::~:: is expanded.
+RETURNS:: the names of the banks that got files, an Array of Symbols; empty when
+there was nothing new, which is also warned.
+
+METHOD:: addSample
+Append one file to a bank as its last index, or make the bank if the name is
+new.
+ARGUMENT:: filePath
+a String; code::~:: is expanded.
+ARGUMENT:: bankName
+the bank, a Symbol.
+
+METHOD:: reloadSample
+Read a sample that was rewritten on disk back into the same link::Classes/Buffer::,
+so every event keeps its bufnum and Tidal plays the new file under the same
+name and number. The header is read first, so the event's frame count is right
+before the server has read the file. The sample editor calls this after a save.
+ARGUMENT:: name
+the bank.
+ARGUMENT:: index
+the sample in it.
+RETURNS:: the Buffer, or nil when there is none at that name and index or the
+file is gone.
+
+METHOD:: bufferAt
+The library's Buffer for a bank and index, wrapping the index the way Tidal
+does, or nil.
 
 METHOD:: gui
-Open the window, or bring it to the front: three lists of what is loaded, a
-reload button and a free button.
-RETURNS:: the link::Classes/Window::.
+Open the control window, or bring it to the front. Needs the orbits, so after
+code::~dirt.start::.
+RETURNS:: the link::Classes/SDGWindow::, or nil when there are no orbits yet.
 
 METHOD:: window
-The window while it is open, nil otherwise.
+The link::Classes/Window:: while the control window is open, nil otherwise.
+
+METHOD:: sync
+The link::Classes/SDGSync:: of the library, made when first asked for: longer samples on one
+tempo and in one key, written as Tidal code. code::free:: stops its preview and closes its window.
+
+METHOD:: tags
+The link::Classes/SDGSampleTags:: of the library, made when first asked for.
+Its files are shared by every loader: they live in
+link::Classes/SDGSampleTags#*folder::.
+
+METHOD:: edit
+Open the sample editor on one sample of the library.
+ARGUMENT:: name
+the bank.
+ARGUMENT:: index
+the sample in it.
+ARGUMENT:: orbit
+the orbit index the preview plays through.
+RETURNS:: the link::Classes/SDGSampleEditor::.
 
 METHOD:: free
-Take our modules and global effects out of code::~dirt::, forget the names and
-close the window. Synths stay on the server.
+Take our modules, players and global effects out of code::~dirt::, forget the
+names, put the orbits' code::orbitAmp:: back to nothing and close the window.
+Synths stay on the server.
 
 METHOD:: dirt
 The link::Classes/SuperDirt:: this loads into.
@@ -132,11 +866,14 @@ extensions symlink and for a quark install alike.
 
 METHOD:: synthDir
 METHOD:: moduleDir
+METHOD:: playerDir
 METHOD:: effectDir
-The three folders.
+The four folders.
+
+METHOD:: dirFor
+The folder of a kind, one of link::#*kinds::.
 
 METHOD:: verbose
-METHOD:: verbose_
 Whether to post one line per file loaded. true by default.
 
 
@@ -154,22 +891,40 @@ s.waitForBoot {
 	s.sync;
 	~sdg = SuperDirtGUI(~dirt);
 };
-)
+);
 
-~sdg.synthNames;           // -> [ sdgsine ]
+~sdg.synthNames;           // -> [ sdgsine, sdgacid, sdgchoir, ... ]
 ~sdg.moduleNames;          // -> [ sdgcomb ]
+~sdg.samplePlayerNames;    // -> [ sdgwarp ]
 ~sdg.globalEffectNames;    // -> [ global_sdgspace ]
 ~sdg.gui;
 
 // from tidal:
 //   d1 $ s "sdgsine" # n "0 7 12"
 //   d1 $ s "bd*4" # pF "sdgcomb" 0.4
+//   d1 $ s "breaks152" # pF "sdgwarp" 1 # speed 0.5 # pF "sdgpitch" 1.5
 //   d1 $ s "bd*4" # pF "sdgspace" 0.5
 
-// the same event from sclang, without tidal
+// the same events from sclang, without tidal
 ~dirt.orbits[0].valuePairs([\s, \sdgsine, \n, 7, \sdgcomb, 0.4, \sdgspace, 0.5]);
+~dirt.orbits[0].valuePairs([\s, \breaks152, \n, 0, \sdgwarp, 1, \speed, 0.5]);
 
-// edited a file in synths/, modules/ or effects/
+// the mixer from code; the window follows
+~sdg.setFader(0, 0.5);
+~sdg.setMute(0, true);
+~sdg.setMute(0, false);
+
+// the sample editor on one sample
+~sdg.edit(\bd, 3);
+
+// a player of your own: players/mywarp.scd, from the example, loaded
+~sdg.newFile(\players, \mywarp);
+~sdg.sourceFile(\players, \mywarp);
+
+// edited it? read that file again - the window does this when you save
+~sdg.loadFile("players/mywarp.scd");
+
+// or every file in synths/, modules/, players/ and effects/
 ~sdg.reload;
 
 // done

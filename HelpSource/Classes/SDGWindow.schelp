@@ -1,0 +1,516 @@
+TITLE:: SDGWindow
+summary:: the control window of a SuperDirtGUI: orbit strips, global effects, the sound explorer, what was loaded
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SuperDirtGUI, Classes/SDGSampleEditor, Classes/DirtOrbit, Classes/GlobalDirtEffect
+
+DESCRIPTION::
+code::~sdg.gui:: makes one, after code::~dirt.start::. One strip per orbit on
+the left; three tabs on the right; a hint bar along the bottom that says what
+the pointer is over.
+
+code::
+~sdg.gui;                  // or SDGWindow(~sdg)
+~sdg.gui.selectTab(1);     // 0 effects, 1 sound explorer, 2 loaded
+~sdg.gui.search = "808";   // narrow the explorer
+~sdg.gui.close;
+::
+
+subsection:: Sessions
+
+Along the top: a menu of the saved sessions, strong::load session:: for the one it
+shows, strong::save session:: to keep the whole mixer under a name, asked for in a
+small window that warns before it replaces one. Choosing in the menu changes nothing
+until load session is pressed. See link::Classes/SDGSession::.
+
+subsection:: The strips
+
+One per orbit, named after it: code::orbit 0:: is where Tidal's code::d1::
+plays, code::orbit 1:: code::d2::, and so on. The name selects the orbit for
+the effects tab and the explorer's play button.
+
+Under the name, the orbit's inserts, top first - the order the signal takes
+(link::Classes/SDGInsert::). A click opens an insert's window - a VST plugin's
+own editor - a right click bypasses, moves or removes it (and, for a VST
+plugin, shows its parameters as sliders or remembers its state now), and +
+insert adds an eq, a compressor, an insight or a VST plugin after the others,
+opening its window. A VST plugin is picked in link::#-vstDialog:: first. A
+bypassed insert is greyed and in brackets.
+
+Then peak and rms meters, one per channel, reading after the inserts and the
+fader - SuperDirt's own code::dirt_rms::, 20 replies a second while the window
+is open (link::Classes/SuperDirtGUI#-startMeters::), a tick every 5 dB from
+-60 to 0 - and beside them the fader, its level in dB under it
+(link::#*faderString::), then the highest peak since you last clicked it, in dB,
+red once it reached 0. Mute and solo do not change the level shown. The fader,
+mute and solo are
+link::Classes/SuperDirtGUI#-setFader::, link::Classes/SuperDirtGUI#-setMute::
+and link::Classes/SuperDirtGUI#-setSolo::, so the state lives in the loader
+and the strips follow its code::\mixer:: notification; the monitor's limiter
+mode; and the orbit's output bus, as a number, and as a dropdown of BusManager
+names when that quark is installed.
+
+Above the strips, a button opens the BusManager window and another the
+BusRecorder window, through link::Classes/SuperDirtGUI#-recorder::. Each is
+disabled when its quark is not installed.
+
+subsection:: The effects tab
+
+The global effects of the selected orbit as tracks (link::Classes/SDGTrack::),
+a strip each, left to right in the order of the chain. From the top: the name,
+which shows the effect's parameters under the strips; load effect..., another
+global effect on the same track, in place of this one, its inserts and fader
+staying; off pauses the synth and on resumes it; the arrows move the track, the
+cross takes it and its inserts out; + pre, the inserts before the effect, a
+click for an insert's window and a right click for bypass, move and remove; the
+effect's name; + post, the inserts after it; meters and a fader on what the track
+adds to the orbit, the dry signal untouched. Under the strips, add puts any other
+SynthDef that follows the global-effect convention (code::dryBus::,
+code::effectBus::, code::gate::) on a new track, and knobs, dragged up and down,
+set the selected effect's parameters. A value set here is written into the orbit's
+code::defaultParentEvent:: and pushed to the running synth, so the next event
+from Tidal carries the same value and nothing flips back; the code::x:: puts a
+parameter back to what it was before the window touched it. Knobs use
+link::#*paramSpecs:: when there is one for the name and the SynthDef default
+otherwise.
+
+Under them, the same orbit's inserts: a row each with on (bypass), the name
+(its window), the arrows (its place among the inserts) and the cross, and a
+menu to add one. The kinds whose extension is not installed are listed as
+such and cannot be added.
+
+subsection:: The sound explorer
+
+The sound library, not the disk: a folder per bank that opens onto its
+samples, the synth events in a folder of their own, a search over both. It is
+a list with columns, as in the Finder's list view (code::SDGExplorerView::
+draws it): name, duration, bpm, key and tags, and code::n::, date added and
+date created a right click on the header away. A click on a header sorts by
+it, a second click the other way (link::#-sortBy::); banks among banks, each
+bank's samples within it. The bpm, the key and the tags come from
+link::Classes/SDGSampleTags::, which the window asks to analyse the library
+when it opens. The search takes words for names and code::tag:kick::,
+code::-tag:melodic::, code::bpm:120:: (its halves and doubles too) and
+code::key:am:: (link::#*parseSearch::); the buttons under it are the commonest
+tags, alt-click to leave one out. code::t:: edits the selected sample's tags,
+or adds tags to every sample of a selected bank (link::#-editTagsDialog::). Enter
+or a double click plays the selected sound into the orbit chosen below through
+the code::\dirt:: event type, with the speed, amp and pan knobs; code::e:: or
+edit... opens a sample in link::Classes/SDGSampleEditor::; a right click shows
+the file where it lives, opens it, or copies its path. The code::n:: box is
+what plays: picking a sample sets it, editing it picks a sibling. load folder...
+is link::#-loadFolder:: behind a dialog. The window
+follows the loader's code::\samples:: and code::\reloaded:: notifications and,
+for banks loaded straight through code::~dirt.loadSoundFiles::, compares the
+library's size once a second.
+
+subsection:: The modules tab
+
+What the four folders gave - synths, effects (the folder code::modules/::),
+players, global effects - a list each, and under each list new... and edit...; then the reload and free buttons,
+and load folder..., the same button as in the sound explorer.
+
+new... asks for a name and which file to copy - the one selected in the list,
+else the folder's example - and says as you type whether the name will do
+(link::Classes/SuperDirtGUI#-nameProblem::). make is link::#-makeFile:: - the
+copy is written, loaded, selected in its list, and opened. edit..., a double
+click or enter opens the file the selected name came from, through
+link::#*openCode::, which in the IDE makes it a document whose code::~dirt::
+and code::~sdg:: are the loader's. A right click on a name offers the same, shows
+the file in the Finder, or copies its path. The line under the lists says which
+file the selected name came from.
+
+At the bottom stands what the selected name does: the description and the
+parameters with their ranges, as link::Classes/SuperDirtGUI#-notes:: reads them
+from the comments at the top of its file. They are read again when the file is
+saved. A file without a code::// parameters:: section shows the controls of its
+SynthDef, with their defaults.
+
+While the window is open it reads a content file again within a second of its
+being saved - link::Classes/SuperDirtGUI#-reloadChangedFiles:: on the same
+once-a-second poll as the library - so editing is: edit, save, hear it. A file
+whose last read failed is marked in its list, and the version that loaded last
+plays on; one that failed before it defined anything is listed by its file
+name. link::#*reloadOnSave:: turns the reading off.
+
+
+CLASSMETHODS::
+
+METHOD:: faderString
+A fader's level as a strip writes it under the fader, to 0.1 dB.
+ARGUMENT:: amp
+the level, linear.
+RETURNS:: a String: code::"-1.0 dB"::, code::"+2.5 dB"::, code::"0.0 dB"::, code::"-inf dB"::.
+
+METHOD:: new
+ARGUMENT:: sdg
+the link::Classes/SuperDirtGUI::; code::SuperDirtGUI.current:: when nil. Its
+SuperDirt must have orbits.
+RETURNS:: an SDGWindow, already open.
+
+METHOD:: hiddenEffects
+The orbit effects the window never lists or moves: SuperDirt's
+code::dirt_rms:: and code::dirt_monitor::, and the loader's fader.
+
+METHOD:: isHiddenEffect
+Whether the global effects list leaves an effect out: one of
+link::#*hiddenEffects::, or an insert, which has a list of its own.
+ARGUMENT:: name
+the effect's name.
+
+METHOD:: insertColour
+The colour of an insert's button, by kind.
+ARGUMENT:: kind
+code::\eq::, code::\compressor:: or code::\insight::.
+
+METHOD:: insertKindName
+What a menu calls a kind of insert, and whether its extension is installed.
+ARGUMENT:: kind
+code::\eq::, code::\compressor:: or code::\insight::.
+
+METHOD:: hiddenParams
+SynthDef controls that are plumbing, never offered as parameters.
+
+METHOD:: paramSpecs
+An IdentityDictionary from parameter name to link::Classes/ControlSpec::, for
+the knobs. Holds SuperDirt's delay, reverb, leslie and limiter parameters
+and the templates' own; add yours.
+
+METHOD:: effectCandidates
+Every SynthDef for the loader's channel count that follows the global-effect
+convention, is not hidden, and is not in the orbit yet.
+
+METHOD:: explorerTab
+The tab a new window opens on; 1, the explorer, by default.
+
+METHOD:: reloadOnSave
+Whether an open window reads content files again when they change on disk. true
+by default; set it false to read them only with reload or
+link::Classes/SuperDirtGUI#-loadFile::.
+
+METHOD:: codeEditor
+A Function of a path and the loader that opens a content file, for an editor
+other than the IDE; nil by default, and then link::#*openCode:: decides.
+code::
+// Visual Studio Code, if its command line tool is installed
+SDGWindow.codeEditor = { |path| ("code" + path.shellQuote).unixCmd };
+SDGWindow.codeEditor = nil;   // the IDE again
+::
+
+METHOD:: openCode
+Open a content file. Inside the SuperCollider IDE, as a link::Classes/Document::
+whose environment holds the loader's code::~dirt:: and code::~sdg::, with the
+IDE's own environment behind them, so a block evaluated in it sees what a load
+sees; a document that is already open is brought to the front as it is.
+Outside the IDE, with the system's app for the file. link::#*codeEditor::, when
+set, is asked instead. Saving is what puts the change into SuperDirt (see the
+modules tab above): evaluating a global effect's block in the document adds its
+SynthDef, but the running effect starts again only when the file is read.
+ARGUMENT:: path
+the file.
+ARGUMENT:: sdg
+the link::Classes/SuperDirtGUI::.
+RETURNS:: true when something was asked to open it.
+
+METHOD:: colBg
+METHOD:: colPanel
+METHOD:: colText
+METHOD:: colDim
+METHOD:: colAccent
+METHOD:: colOn
+METHOD:: colWarn
+METHOD:: colWave
+METHOD:: colWaveDim
+METHOD:: colWaveBg
+METHOD:: colHandle
+METHOD:: colPlay
+METHOD:: colSel
+The colours, which the sample editor shares.
+
+
+METHOD:: bpmDialog
+ARGUMENT:: sdg
+the link::Classes/SuperDirtGUI::.
+ARGUMENT:: pairs
+code::[[path, seconds] ...]::: the files, and how long each is.
+ARGUMENT:: bankName
+for the title, when the files are a bank's.
+ARGUMENT:: where
+a link::Classes/Point::, the dialog's top left.
+A small window to set a bpm by hand. A bpm typed goes to every file; beats typed instead give each
+file the bpm its own length makes of them. ÷2 and ×2 act on the box; strong::back to the analysis::
+forgets what was set by hand. Return keeps, escape leaves. One at a time.
+RETURNS:: the Window.
+
+METHOD:: bpmDialogWindow
+RETURNS:: the bpm dialog, open or last closed.
+
+METHOD:: panelWidth
+The right panel's width in a new window, pixels: the last width it was dragged to. 450 to start.
+
+METHOD:: minPanelWidth
+The narrowest the right panel goes, 360.
+
+METHOD:: explorerColumnKeys
+The columns of a new window.
+
+METHOD:: explorerColumnSpecs
+Every column there is, an Event each: code::key::, code::label::, and
+code::width:: and code::align:: for the fixed ones.
+
+METHOD:: parseSearch
+ARGUMENT:: str
+what is in the search field.
+RETURNS:: an Event: code::words::, code::include:: and code::exclude:: (tags),
+code::bpm::, code::key:: (from link::Classes/SDGSampleFeatures#*parseKey::).
+
+METHOD:: durationRange
+ARGUMENT:: durs
+a bank's durations, seconds.
+RETURNS:: the shortest to the longest, code::"0.12-3.4"::, as the explorer shows a bank; one number when they are all the same.
+
+METHOD:: dateString
+ARGUMENT:: seconds
+seconds since 1970, UTC.
+RETURNS:: code::"2025-08-25"::, or an empty String for nil.
+
+METHOD:: naturalKey
+METHOD:: foldBpm
+METHOD:: keyOrder
+What the name, bpm and key columns sort by.
+
+METHOD:: notesColumns
+How many characters fit across the modules tab's notes, where a parameter's description
+wraps. 68 at the window's width.
+
+
+INSTANCEMETHODS::
+
+METHOD:: setPanelWidth
+ARGUMENT:: w
+The right panel this wide, pixels, kept between link::#*minPanelWidth:: and what leaves one strip
+beside it; new windows open with it. What dragging the handle between the strips and the panel does.
+
+METHOD:: panelHandle
+RETURNS:: the handle between the strips and the right panel, a UserView.
+
+METHOD:: sdg
+METHOD:: dirt
+The loader, and its SuperDirt.
+
+METHOD:: window
+The link::Classes/Window::.
+
+METHOD:: isOpen
+METHOD:: front
+METHOD:: close
+The window's state. Closing stops the meters and the library poll and takes
+the window off the loader's dependants.
+
+METHOD:: selectOrbit
+METHOD:: selectedOrbitIndex
+METHOD:: selectedOrbit
+The orbit the effects tab shows and the explorer plays into.
+
+METHOD:: selectTab
+METHOD:: tab
+METHOD:: walkTabs
+The tab on the right: 0 effects, 1 sound explorer, 2 modules.
+
+METHOD:: refreshMixer
+Put the faders, mutes and solos to the loader's state. Called on its
+code::\mixer:: notification.
+
+METHOD:: addInsert
+What + insert and the effects tab's add do: link::Classes/SuperDirtGUI#-addInsert::,
+and the new insert's window opened - for code::\vst::, link::#-vstDialog:: first.
+ARGUMENT:: i
+the orbit's index.
+ARGUMENT:: kind
+code::\eq::, code::\compressor::, code::\insight:: or code::\vst::.
+RETURNS:: the link::Classes/SDGInsert::, or nil - always nil for code::\vst::,
+whose insert is made once a plugin is picked.
+
+METHOD:: vstDialog
+The window + insert's VST plugin... opens: the VST effects the server can open
+(link::Classes/SuperDirtGUI#-vstPlugins::), a search over their names and
+vendors, and rescan. Insert, enter or a double click puts the chosen one on the
+orbit and shows its editor once it has loaded.
+ARGUMENT:: i
+the orbit's index.
+RETURNS:: the dialog's link::Classes/Window::.
+
+METHOD:: rebuildStripInserts
+METHOD:: rebuildInsertRows
+Read an orbit's inserts again: a strip's buttons, and the effects tab's rows
+for the selected orbit. Called on the loader's code::\inserts:: notification.
+
+METHOD:: peakHolds
+Per orbit, the highest peak since its readout was last clicked, as an
+amplitude.
+
+METHOD:: trackViews
+RETURNS:: an Event of views per strip on show: code::track::, code::label::, code::loadMenu::, code::candidates::, code::meters::, code::fader::, code::faderText::.
+
+METHOD:: rebuildTrackStrips
+Make the selected orbit's strips again, and send meter numbers only for them.
+
+METHOD:: refreshTrackLevels
+The strips' faders to their tracks' levels.
+
+METHOD:: loadTrackEffect
+What a strip's menu does: link::Classes/SuperDirtGUI#-setTrackEffect::, and the new effect's parameters shown.
+ARGUMENT:: track
+an link::Classes/SDGTrack::.
+ARGUMENT:: name
+the effect's name.
+RETURNS:: the new link::Classes/GlobalDirtEffect::, or nil.
+
+METHOD:: rebuildEffectSection
+Read the selected orbit's effects again.
+
+METHOD:: addEffect
+METHOD:: removeEffect
+METHOD:: moveEffect
+What the effect rows do, from code.
+
+METHOD:: search
+The explorer's search string.
+
+METHOD:: loadFolder
+What the load folder... buttons do once a folder is picked:
+link::Classes/SuperDirtGUI#-loadSamples::, then the search cleared and the first
+new bank selected. A folder with nothing new says so on the line under the tree.
+ARGUMENT:: path
+the folder, a String.
+RETURNS:: the names of the banks that got files.
+
+METHOD:: loadFolderDialog
+The folder dialog in front of link::#-loadFolder::.
+
+METHOD:: refreshExplorer
+Build the list from the sound library again, searched and sorted; what was
+selected is selected again if it is still there, and the banks that were open
+stay open.
+
+METHOD:: explorerModel
+What the list shows, one Event per bank in the order shown:
+code::(kind: \bank, name:, files:, fileData:, numBuffers:):: - code::files:: the
+indices of its samples in the order shown, code::fileData:: an Event per sample
+with its Buffer and its link::Classes/SDGSampleTags#-infoOf:: - and
+code::(kind: \synths, names:):: last.
+
+METHOD:: sortBy
+Sort the explorer by a column, as a click on its header does.
+ARGUMENT:: key
+code::\name::, code::\duration::, code::\number::, code::\bpm::, code::\key::,
+code::\tags::, code::\added:: or code::\created::. The bpm sorts folded into
+80 .. 160, so a loop at 70 sits by one at 140; with code::bpm:: in the search, by
+how close it is, halves and doubles counted.
+ARGUMENT:: ascending
+nil: ascending on the first click (newest first for the dates), the other way
+on the next.
+
+METHOD:: sortKey
+METHOD:: sortAscending
+What the explorer is sorted by. A session keeps both.
+
+METHOD:: explorerColumns
+The columns on show, code::\name:: first; a session keeps them.
+code::
+~sdg.gui.explorerColumns = [\name, \duration, \number, \bpm, \added];
+::
+
+METHOD:: toggleSearchTag
+Put code::tag:x:: in the search, or take it out - what a tag button does.
+ARGUMENT:: tag
+the tag.
+ARGUMENT:: exclude
+true for code::-tag:x::.
+
+METHOD:: openAll
+METHOD:: closeAll
+METHOD:: toggleBank
+METHOD:: expandBank
+METHOD:: isExpanded
+Which banks are open. A bank opened goes first in the analysis queue. While
+the search holds something, every bank is open until closed.
+
+METHOD:: selectSound
+Select a bank, or a sample of it (the bank opened), as a click would.
+ARGUMENT:: name
+the bank.
+ARGUMENT:: index
+the sample, or nil for the bank.
+
+METHOD:: selectedPaths
+The files the selection stands for: the sample's, or every one of a bank's.
+
+METHOD:: addSelectedToSync
+The selected sample, or every sample of a selected bank, into link::Classes/SuperDirtGUI#-sync::,
+and its window opened - what code::y:: and strong::add to sync:: do.
+RETURNS:: false when nothing that can be added is selected.
+
+METHOD:: editBpmDialog
+The bpm dialog (link::#*bpmDialog::) for the selected sample, or every sample of a selected bank -
+what code::b:: and strong::set bpm...:: do.
+
+METHOD:: editTagsDialog
+A sample's tags as one line to change; on a bank, tags to add to every sample
+of it, code::-x:: taking one away.
+
+METHOD:: reanalyseAll
+Analyse every sample with no fresh analysis.
+
+METHOD:: selected
+What is selected, as an Event with code::kind:: (code::\bank::, code::\sample::,
+code::\synth::), code::name:: and code::index::, or nil.
+
+METHOD:: selectedBuffer
+The Buffer the selection stands for, the code::n:: box picking the sample.
+
+METHOD:: playSelected
+METHOD:: editSelected
+METHOD:: revealSelected
+The explorer's buttons, from code.
+
+METHOD:: refreshLoaded
+Put the modules tab's lists to the loader's names, each list keeping its
+selection. Called on its code::\loaded:: notification.
+
+METHOD:: loadedEntries
+What the modules tab's lists show: an IdentityDictionary from kind to
+link::Classes/SuperDirtGUI#-entries::.
+
+METHOD:: notesString
+What the bottom of the modules tab says about the selected name, as a String;
+empty when nothing is selected.
+
+METHOD:: editFile
+Open the file a name came from, as edit... does.
+ARGUMENT:: kind
+code::\synths::, code::\modules::, code::\players:: or code::\effects::.
+ARGUMENT:: name
+the name; the one selected in that kind's list when nil.
+
+METHOD:: newFileDialog
+The window new... opens: a name, the file to copy, cancel and make.
+ARGUMENT:: kind
+code::\synths::, code::\modules::, code::\players:: or code::\effects::.
+ARGUMENT:: from
+the name whose file to copy; the one selected in the list, else the example,
+when nil.
+RETURNS:: the dialog's link::Classes/Window::.
+
+METHOD:: makeFile
+What make in that dialog does: link::Classes/SuperDirtGUI#-newFile::, then the
+new name selected in its list and its file opened through link::#*openCode::.
+code::
+~sdg.gui.makeFile(\players, \mywarp);
+::
+ARGUMENT:: kind
+code::\synths::, code::\modules::, code::\players:: or code::\effects::.
+ARGUMENT:: name
+the new name.
+ARGUMENT:: from
+the name whose file to copy; the example when nil.
+RETURNS:: the path of the new file, or nil.

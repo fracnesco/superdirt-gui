@@ -1,0 +1,194 @@
+TITLE:: SDGSync
+summary:: long samples played together at one tempo and in one key, written as Tidal code
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SDGSyncWindow, Classes/SuperDirtGUI, Classes/SDGSampleTags
+
+DESCRIPTION::
+Works out how to play several longer samples together - drum loops, arpeggios, pads - at one
+tempo, and in one key if they have one. It writes the Tidal code: code::setcps::, then a
+code::d:: for each sample with code::loopAt::, code::chop:: and, where the key needs it, a
+code::speed::. It reads each sample's bpm, first beat and key from link::Classes/SDGSampleTags::,
+the analysis or what was set by hand.
+
+code::
+y = ~sdg.sync;
+y.add(\breaks125, 0); y.add(\breaks152, 0);
+y.bpm = 125;
+y.plan.collect { |r| [r[\label], r[\cycles], r[\rate]] };
+y.code.postln;
+y.play;
+y.stop;
+::
+
+A loop of code::b:: bpm that holds code::beats:: beats plays as code::loopAt (beats / beatsPerCycle)::,
+which reads it at code::t / b:: of its speed: on the grid, and that much higher or lower in pitch.
+A loop nearer half or twice the tempo is counted in half or double time. A loop that is not a whole
+number of beats plays its whole beats only, with code::# end e # speed e::. With link::#-matchKey::, a
+sample tagged code::melodic::, or with a key set by hand, gets a code::speed:: that takes it the rest
+of the way into link::#-key::, less than a tritone either way; link::#-chopsPerBeat:: keeps it on the
+grid. The page code::docs/sync.md:: of the repository explains why each of these is done.
+
+It sends code::changed:: with code::\sync:: when a sample or a setting changes, and with
+code::\playing:: when the preview starts or stops. One belongs to each link::Classes/SuperDirtGUI::,
+made by link::Classes/SuperDirtGUI#-sync::, stopped and closed by its code::free::.
+
+CLASSMETHODS::
+
+METHOD:: new
+ARGUMENT:: sdg
+a link::Classes/SuperDirtGUI::. Use link::Classes/SuperDirtGUI#-sync:: rather than making another.
+
+METHOD:: chopChoices
+The pieces a beat the window offers, code::[0, 1, 2, 4, 8]::; 0 is no chop.
+
+METHOD:: latency
+The preview's events, all with this latency, so they line up. 0.2 s.
+
+METHOD:: minOffset
+A first beat later than this, in seconds, is shifted onto the grid with code::<~::. 0.015.
+
+METHOD:: wholeTolerance
+How far, in beats, a loop may be from a whole number before it is trimmed to its whole beats. 0.12.
+
+METHOD:: isTonal
+ARGUMENT:: info
+what link::Classes/SDGSampleTags#-infoOf:: answers for a sample.
+RETURNS:: whether its pitch is matched: it has a key or a note, and is tagged code::melodic:: or had its key set by hand.
+
+METHOD:: wantedTonic
+ARGUMENT:: mode
+the sample's: code::\major::, code::\minor:: or code::\note::.
+ARGUMENT:: target
+code::(tonic:, mode:)::.
+RETURNS:: the tonic the sample goes to: a note to the target's tonic, a minor sample into a major key to its relative minor, a major one into a minor key to its relative major.
+
+METHOD:: keyName
+ARGUMENT:: tonic
+0 .. 11.
+ARGUMENT:: mode
+ARGUMENT:: given
+a note's own name, kept for a note.
+RETURNS:: a link::Classes/String:: such as code::"C#m"::.
+
+METHOD:: num
+ARGUMENT:: x
+ARGUMENT:: decimals
+RETURNS:: x as Tidal code, rounded, with no trailing zeros.
+
+METHOD:: signed
+ARGUMENT:: x
+ARGUMENT:: decimals
+RETURNS:: x with its sign, for semitones.
+
+INSTANCEMETHODS::
+
+METHOD:: sdg
+RETURNS:: the link::Classes/SuperDirtGUI::.
+
+METHOD:: items
+RETURNS:: a link::Classes/List:: of code::(bank:, index:)::, in the order of the code.
+
+METHOD:: add
+ARGUMENT:: bank
+ARGUMENT:: index
+Adds a sample of the library and puts it first in the analysis queue.
+RETURNS:: its place, or nil when there is no such sample or it is in already.
+
+METHOD:: addBank
+ARGUMENT:: bank
+ARGUMENT:: max
+Every sample of a bank, up to max (16).
+
+METHOD:: removeAt
+ARGUMENT:: i
+
+METHOD:: move
+ARGUMENT:: i
+ARGUMENT:: to
+
+METHOD:: clear
+
+METHOD:: bpm
+The tempo they play at; nil takes the first sample's own. See link::#-targetBpm::.
+
+METHOD:: key
+The key they play in, a link::Classes/String:: as link::Classes/SDGSampleFeatures#*parseKey:: reads
+it: code::"Am"::, code::"F#"::, code::"Eb"::. nil takes the first melodic sample's key, as its
+tempo leaves it. A string that is not a key is refused with a warning.
+
+METHOD:: matchTempo
+true: every loop with a bpm on the tempo's beats. false: each is stretched to its nearest whole cycles.
+
+METHOD:: matchKey
+true: every melodic sample into link::#-key::.
+
+METHOD:: beatsPerCycle
+4: a cycle is a bar of 4/4.
+
+METHOD:: chopsPerBeat
+How many pieces code::chop:: cuts a beat into; 0 is no chop.
+
+METHOD:: useOffsets
+Whether a loop whose first beat is late is shifted with code::<~::.
+
+METHOD:: orbit
+The orbit the preview plays into.
+
+METHOD:: targetBpm
+RETURNS:: link::#-bpm::, or the first sample's bpm, or 120.
+
+METHOD:: cps
+RETURNS:: the cycles a second the code sets.
+
+METHOD:: targetKey
+RETURNS:: code::(tonic:, mode:)::, or nil when the key is not matched or no sample is melodic.
+
+METHOD:: plan
+RETURNS:: an link::Classes/Array:: of link::Classes/Event::s, one a sample: code::label::,
+code::duration::, code::bpm::, code::beats::, code::cycles:: (loopAt's number), code::rate:: (the
+tempo's read rate), code::tempoSt::, code::trim:: (the end of a loop cut to whole beats),
+code::correction:: (semitones by speed), code::speed::, code::pitch:: (semitones in all),
+code::chop::, code::shift:: (cycles earlier), code::keyFrom::, code::keyTo::, code::notes::.
+
+METHOD:: code
+RETURNS:: the Tidal code, a link::Classes/String::.
+
+METHOD:: line
+ARGUMENT:: r
+one Event of link::#-plan::.
+ARGUMENT:: d
+the number after code::d::.
+RETURNS:: one sample's line of code.
+
+METHOD:: describe
+ARGUMENT:: r
+RETURNS:: the comment above a sample's line.
+
+METHOD:: copy
+Puts the code on the clipboard.
+RETURNS:: whether this machine has a way to.
+
+METHOD:: play
+ARGUMENT:: orbitIndex
+nil: link::#-orbit::.
+Plays every sample here, in a loop, each piece as a code::\dirt:: event with the begin, end, speed,
+code::unit "c":: and cps the code would give it, so it sounds as it would from Tidal.
+
+METHOD:: stop
+
+METHOD:: isPlaying
+
+METHOD:: gui
+RETURNS:: the link::Classes/SDGSyncWindow::, opened or brought to the front.
+
+METHOD:: window
+RETURNS:: the link::Classes/SDGSyncWindow:: once opened.
+
+METHOD:: free
+Stops the preview and closes the window.
+
+METHOD:: tags
+RETURNS:: the link::Classes/SDGSampleTags:: of the link::Classes/SuperDirtGUI::.
+
+METHOD:: dirt
+RETURNS:: the SuperDirt.

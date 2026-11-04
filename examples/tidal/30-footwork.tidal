@@ -1,0 +1,91 @@
+-- SuperDirtGUI from Tidal - 30: footwork
+--
+-- Nine parts meant to play at once: evaluate d1 to d9 in order, then the
+-- variations. G minor, 160 bpm. The 808 sub kick (sdgkick:4) tuned to G plays
+-- the 3-3-2 figure the style is built on; the 606 hat rolls (sdghat), the
+-- claps and snares cut small (sdgclap, sdgsnare), claves in triplets (sdgrim),
+-- latex snaps (sdgplastic) and a digital hat (sdgchaos). The voice is a word
+-- from Dirt-Samples' numbers, chopped and re-cut (chop, bite) through the warp
+-- player, so its pitch can move without its time. An electric piano (sdgfm)
+-- and strings (sdgstrings) hold the chord. sdgtime 0.281 is a dotted eighth.
+--
+-- Footwork is the kick: a sub, tuned, in threes against the fours, and
+-- everything else cut short enough to leave it alone.
+
+setcps (160/60/4)
+
+let sdgfreq = pF "sdgfreq"
+    sdgdecay = pF "sdgdecay"
+    sdgdrive = pF "sdgdrive"
+    sdgwarp = pF "sdgwarp"
+    sdgpitch = pF "sdgpitch"
+    sdgindex = pF "sdgindex"
+    sdgatk = pF "sdgatk"
+    sdgcut = pF "sdgcut"
+    sdgtone = pF "sdgtone"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- d1, the kick: the deep sub tuned to G (49 Hz at note 0), on 1, the "and"
+-- of 2, 4 (three, three, two) and a double before the end, each note cut by
+-- the next
+d1 $ note "0 ~ ~ 0 ~ ~ 0 ~ ~ ~ 0 ~ [0 0] ~ ~ ~" # s "sdgkick:4" # sdgfreq 49 # sdgdecay 0.9 # sdgdrive 0.3 # cut 1
+
+-- d2, the hats: the 606 hat on the eighths, the fourth and the last rolled
+-- into four or two now and then (ply)
+d2 $ ply "1 1 1 <1 4> 1 1 1 <2 1>" $ s "sdghat:5*8" # gain "0.95 0.8"
+
+-- d3, the claps on two and four, tight (:2), with a tight snare on the "and"
+-- of two and doubled on the last sixteenth
+d3 $ stack [
+     s "~ sdgclap:2 ~ sdgclap:2" # gain 0.9,
+     s "~ ~ ~ ~ ~ ~ sdgsnare:2 ~ ~ ~ ~ ~ ~ ~ [sdgsnare:2 sdgsnare:2] ~" # gain 0.75
+   ]
+
+-- d4, the voice: a word cut into eight (chop) and those eighths played in
+-- another order (bite), through the warp player so its pitch can go up a
+-- fifth or down a fourth without changing its time
+d4 $ bite 8 "0 0 ~ 0 0 ~ 3 4" $ chop 8 $ s "numbers:3" # sdgwarp 1 # sdgpitch "<1 1 1.5 0.75>" # gain 0.8
+
+-- d5, the chord: the electric piano once a bar, on the seventh sixteenth, a
+-- chord a bar through a turnaround, held half a bar
+d5 $ struct "~ ~ ~ ~ ~ ~ t ~ ~ ~ ~ ~ ~ ~ ~ ~" $ note "<g4'min9 ef4'maj9 bf4'maj7 d5'min7>" # s "sdgfm"
+   # sdgindex 1.3 # sdgdecay 0.5 # legato 8 # gain 0.75 # sdgspace 0.3 # sdgtime 0.281
+
+-- d6, the strings: two chords, two bars each, a slow swell, quiet
+d6 $ slow 2 $ note "<g4'min9 ef4'maj9>" # s "sdgstrings" # legato 1 # sdgatk 1 # sdgcut 2500 # gain 0.55
+
+-- d7, the claves in sixteenth triplets, three in ten left out, with an
+-- accent on the first of each three
+d7 $ degradeBy 0.3 $ s "sdgrim:1*12" # gain "0.85 0.65 0.7" # pan 0.35
+
+-- d8, latex snaps on the second and fifth sixteenths, the tenth and the
+-- fourteenth, up a minor third every other bar
+d8 $ s "~ sdgplastic:1 ~ ~ sdgplastic:1 ~ ~ ~ ~ sdgplastic:1 ~ ~ ~ sdgplastic:1 ~ ~" # note "<0 3>" # gain 0.8 # pan 0.7
+
+-- d9, the digital hat: five in eight, starting elsewhere every other bar
+d9 $ s "sdgchaos:1(5,8,<0 2>)" # sdgtone 0.6 # gain 0.75
+
+-- variations, over the top of all of it
+
+-- the kick in a longer figure: two bars, the second with a note on the
+-- fourth (sdgfreq stays, note moves it)
+d1 $ note "<[0 ~ ~ 0 ~ ~ 0 ~ ~ ~ 0 ~ [0 0] ~ ~ ~] [0 ~ ~ 0 ~ ~ 0 ~ ~ ~ <3 -2> ~ ~ ~ 0 ~]>" # s "sdgkick:4"
+   # sdgfreq 49 # sdgdecay 0.9 # sdgdrive 0.3 # cut 1
+
+-- the voice re-cut every bar from a list of orders, and reversed every fourth
+d4 $ every 4 rev $ bite 8 "<[0 0 ~ 0 0 ~ 3 4] [0 ~ 0 ~ 0 0 [3 3] 4] [0 0 0 0 ~ ~ 3 [4 4]]>" $ chop 8 $ s "numbers:3"
+   # sdgwarp 1 # sdgpitch "<1 1 1.5 0.75>" # gain 0.8
+
+-- the hats doubled and the claves straight on the last bar of four
+do
+  d2 $ whenmod 4 3 (ply 2) $ ply "1 1 1 <1 4> 1 1 1 <2 1>" $ s "sdghat:5*8" # gain "0.95 0.8"
+  d7 $ whenmod 4 3 (const $ s "sdgrim:1*16" # gain "0.85 0.65 0.7 0.65" # pan 0.35) $ degradeBy 0.3 $ s "sdgrim:1*12" # gain "0.85 0.65 0.7" # pan 0.35
+
+-- the chord's piano brighter, echoed longer, and the strings gone
+do
+  d5 $ struct "~ ~ ~ ~ ~ ~ t ~ ~ ~ ~ ~ ~ ~ ~ ~" $ note "<g4'min9 ef4'maj9 bf4'maj7 d5'min7>" # s "sdgfm"
+     # sdgindex 2.5 # sdgdecay 0.5 # legato 8 # gain 0.75 # sdgspace 0.5 # sdgtime 0.281
+  d6 silence
+
+hush

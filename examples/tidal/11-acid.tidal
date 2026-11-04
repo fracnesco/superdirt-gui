@@ -1,0 +1,69 @@
+-- SuperDirtGUI from Tidal - 11: acid basslines
+--
+-- sdgacid (synths/sdgacid.scd) is one oscillator through a resonant filter, with
+-- an envelope that opens the filter on each note. Everything acid does is in
+-- five controls and in which steps get an accent or a slide:
+--
+--   sdgcut     the filter, closed; the knob you ride        sdgq      resonance
+--   sdgenv     how far each note opens it                   sdgdecay  how fast it shuts
+--   sdgaccent  louder, brighter, shorter                    sdgslide  glide from n semitones away
+
+setcps (135/60/4)
+
+let sdgcut = pF "sdgcut"
+    sdgq = pF "sdgq"
+    sdgenv = pF "sdgenv"
+    sdgdecay = pF "sdgdecay"
+    sdgaccent = pF "sdgaccent"
+    sdgslide = pF "sdgslide"
+    sdgwave = pF "sdgwave"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- one note, and the filter moved by hand: the whole sound is here
+d1 $ s "sdgacid*16" # note "a2" # legato 0.6
+   # sdgcut (range 150 1800 $ slow 8 sine) # sdgq 0.75 # sdgenv 0.5 # sdgdecay 0.18
+
+-- a line. Accents on the steps that push; a slide is the distance back to the
+-- note before, with that note's legato long enough to reach it
+d1 $ note "a2 a2 a3 a2 ~ a2 c4 a2 g2 a2 ~ a3 a2 e3 g3 a2" # s "sdgacid"
+   # legato "0.6 0.6 1.05 0.6 0.6 0.6 1.05 0.6 0.6 0.6 0.6 0.6 0.6 0.6 1.05 0.6"
+   # sdgslide "0 0 -12 0 0 0 -15 0 0 0 0 0 0 0 -3 0"
+   # sdgaccent "1 0 0 0 0 0 1 0 0 0 0 1 0 0 1 0"
+   # sdgcut (range 180 1400 $ slow 16 sine) # sdgq 0.8 # sdgenv 0.55 # sdgdecay 0.16 |* gain 0.8
+
+-- the square wave, lower and hollower, in phrygian
+d1 $ note "e2 ~ e2 f2 e2 ~ e3 ~ e2 g2 ~ e2 f2 ~ bf2 e2" # s "sdgacid" # sdgwave 1
+   # legato "0.5 0.5 0.5 1.05 0.5" # sdgslide "0 0 0 -1 0 0 -12 0"
+   # sdgaccent "0 0 1 0 0 0 1 0 0 1" # sdgcut (range 120 900 $ slow 12 sine)
+   # sdgq 0.88 # sdgenv 0.45 # sdgdecay 0.12
+
+-- a line nobody wrote: random notes in a scale, looped for two bars so it is a
+-- riff, not noise. Change the 2 to 4; change the 16 in rotL to get another
+d1 $ timeLoop 2 $ rotL 16 $ note (scale "phrygian" (segment 16 $ irand 12) + "a2")
+   # s "sdgacid" # legato (segment 16 $ choose [0.4, 0.6, 1.05])
+   # sdgaccent (segment 16 $ choose [0, 0, 0, 1])
+   # sdgcut (range 200 1600 $ slow 16 sine) # sdgq 0.82 # sdgenv 0.55 # sdgdecay 0.15
+
+-- a run that climbs, and a wild filter every fourth bar
+d1 $ every 4 (# sdgenv 0.95) $ every 2 (off "e" (|+ note 12)) $ note "c3*4 c3 ef3 c3 [g3 bf3]" # s "sdgacid"
+   # legato 0.7 # sdgcut (range 250 1100 $ slow 8 saw) # sdgq 0.85 # sdgenv 0.5 # sdgdecay 0.14 |* gain 0.8
+
+-- and the rest of the room. Orbit 0 keeps playing whichever line you left there
+d2 $ s "808bd:3*4" # shape 0.3
+
+d3 $ s "~ 808oh ~ 808oh ~ 808oh ~ 808oh" # gain 0.75
+
+d4 $ s "808hc*16" # gain (range 0.5 0.8 $ fast 4 saw) # pan rand
+
+d5 $ s "~ cp ~ cp" # gain 0.85
+
+-- the line through the orbit's echo, three sixteenths apart
+d1 $ note "a2 a2 a3 a2 ~ a2 c4 a2 g2 a2 ~ a3 a2 e3 g3 a2" # s "sdgacid"
+   # legato "0.6 0.6 1.05 0.6 0.6 0.6 1.05 0.6 0.6 0.6 0.6 0.6 0.6 0.6 1.05 0.6"
+   # sdgslide "0 0 -12 0 0 0 -15 0 0 0 0 0 0 0 -3 0"
+   # sdgaccent "1 0 0 0 0 0 1 0 0 0 0 1 0 0 1 0"
+   # sdgcut (range 180 1800 $ slow 32 sine) # sdgq 0.85 # sdgenv 0.6 # sdgdecay 0.16
+   # sdgspace 0.35 # sdgtime 0.333 |* gain 0.8
+
+hush

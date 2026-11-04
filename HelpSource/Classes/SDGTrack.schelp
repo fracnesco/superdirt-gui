@@ -1,0 +1,162 @@
+TITLE:: SDGTrack
+summary:: one global effect of one orbit as a track: inserts before and after it, and a fader on what it adds
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SuperDirtGUI, Classes/SDGInsert, Classes/SDGWindow, Classes/GlobalDirtEffect
+
+DESCRIPTION::
+Every global effect of an orbit runs on a track of its own, made by the
+link::Classes/SuperDirtGUI:: when it loads: SuperDirt's delay, reverb and
+leslie, and whatever code::effects/:: holds. The window's effects tab shows the
+selected orbit's tracks as strips. A track belongs to one orbit: the reverb of
+orbit 0 and the reverb of orbit 1 are two tracks, with two faders.
+
+code::
+t = ~sdg.tracksOf(0).first;                  // orbit 0's first global effect
+t.name;                                      // -> global_sdgspace
+t.level = 0.5;                               // -6 dB of what it adds; the dry signal stays
+~sdg.setTrackEffect(t, \dirt_reverb);        // another effect on the same track, if the orbit has none
+~sdg.addTrackInsert(t, \pre, \eq);           // an eq on what goes into it
+~sdg.addTrackInsert(t, \post, \compressor);  // a compressor on what comes out
+~sdg.moveTrack(t, 1);                        // later in the chain, nothing restarted
+~sdg.removeTrack(t);                         // the effect and its inserts out of the orbit
+::
+
+subsection:: The signal
+
+In the orbit's code::globalEffects:: a track is
+
+code::
+// send, pre inserts, the effect, post inserts, return
+::
+
+The effect's code::dryBus:: and code::effectBus:: are two busses of the track's,
+put in its state, which link::Classes/GlobalDirtEffect#-play:: sends after the
+orbit's. The send copies the orbit's dry bus to the first, and the return adds
+the second, at the fader's level, to the orbit's effect bus. An effect file
+needs to know nothing of this. With the fader at 0 dB and no insert the orbit
+sounds as it did without a track (measured: a known gain effect comes out at
+1.500 times the dry signal at fader 1, 1.25 at fader 0.5, 1.000 at fader 0).
+
+An effect that also writes to its dry bus, as stock code::dirt_leslie:: does, is
+inline: link::#*writesDry:: finds it in its SynthDesc, and its return copies the
+track's in bus back over the orbit's dry bus. Its fader still only scales what
+it adds, and its pre inserts then also process the dry signal.
+
+Each track uses 2 synths and 2 busses of code::numChannels:: on top of its
+effect. They sleep with the orbit, and every event wakes them.
+
+subsection:: Who owns what
+
+The link::Classes/SuperDirtGUI:: makes and frees tracks. They come back with
+the orbit after a cmd-period, with their level and inserts. Reading a file again
+keeps its tracks; so does link::Classes/SuperDirtGUI#-reload::, unless the effect
+is gone from the folder. link::Classes/SuperDirtGUI#-free:: removes them and puts
+the remaining effects back on the orbit's own busses.
+
+CLASSMETHODS::
+
+METHOD:: new
+Made by the link::Classes/SuperDirtGUI::, not by hand.
+ARGUMENT:: sdg
+the link::Classes/SuperDirtGUI::.
+ARGUMENT:: orbitIndex
+the orbit's number.
+ARGUMENT:: fx
+its link::Classes/GlobalDirtEffect::.
+
+METHOD:: sendName
+The send's effect name; its SynthDef adds the channel count.
+
+METHOD:: returnName
+The return's effect name; its SynthDef adds the channel count.
+
+METHOD:: isTrackName
+Whether a name is that of a send or a return.
+ARGUMENT:: name
+a Symbol or String.
+RETURNS:: a link::Classes/Boolean::.
+
+METHOD:: makeDefs
+Add the send's and the return's SynthDefs.
+ARGUMENT:: numChannels
+the channel count.
+
+METHOD:: writesDry
+Whether an effect writes to its dry bus as well, by its SynthDef's outputs.
+ARGUMENT:: name
+the effect's name, without the channel count.
+ARGUMENT:: numChannels
+the channel count.
+RETURNS:: a link::Classes/Boolean::.
+
+INSTANCEMETHODS::
+
+METHOD:: sdg
+RETURNS:: the link::Classes/SuperDirtGUI::.
+
+METHOD:: orbitIndex
+RETURNS:: the orbit's number.
+
+METHOD:: orbit
+RETURNS:: the link::Classes/DirtOrbit::.
+
+METHOD:: fx
+RETURNS:: its link::Classes/GlobalDirtEffect::; nil only during a reload.
+
+METHOD:: name
+RETURNS:: the effect's name, a link::Classes/Symbol::.
+
+METHOD:: shortName
+What the strip calls it: code::dirt_delay:: is delay, code::global_x:: is x.
+
+METHOD:: id
+The number its meter replies carry.
+
+METHOD:: level
+The fader, an amplitude from 0 to 4, on what the effect adds to the orbit. It
+sends a code::\trackLevel:: notification from the SuperDirtGUI.
+ARGUMENT:: amp
+the amplitude.
+
+METHOD:: metering
+Whether the return sends its levels as code::'/sdgtrack'::, 20 a second. The
+window turns this on for the tracks it shows.
+ARGUMENT:: bool
+true or false.
+
+METHOD:: pre
+RETURNS:: the link::Classes/SDGInsert::s before the effect, in signal order.
+
+METHOD:: post
+RETURNS:: the link::Classes/SDGInsert::s after the effect, in signal order.
+
+METHOD:: inserts
+RETURNS:: both lists as one.
+
+METHOD:: insertsAt
+ARGUMENT:: place
+code::\pre:: or code::\post::.
+RETURNS:: the inserts of that place.
+
+METHOD:: busAt
+ARGUMENT:: place
+code::\pre:: or code::\post::.
+RETURNS:: the link::Classes/Bus:: the inserts of that place process.
+
+METHOD:: inBus
+RETURNS:: the link::Classes/Bus:: the effect reads as its dry bus.
+
+METHOD:: outBus
+RETURNS:: the link::Classes/Bus:: the effect writes as its effect bus.
+
+METHOD:: sendFx
+RETURNS:: the send, a link::Classes/GlobalDirtEffect::.
+
+METHOD:: returnFx
+RETURNS:: the return, a link::Classes/GlobalDirtEffect::.
+
+METHOD:: chain
+RETURNS:: this track's part of the orbit's code::globalEffects::, in signal order. A VST insert is not in it.
+
+METHOD:: nodes
+RETURNS:: the chain's synths in signal order, VST inserts' included.

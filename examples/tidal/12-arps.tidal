@@ -1,0 +1,58 @@
+-- SuperDirtGUI from Tidal - 12: synth arpeggios
+--
+-- A chord is written c'min7, and '8 asks for eight of its notes, running up into
+-- the next octave. arp plays them one after another: up, down, updown, converge,
+-- diverge, pinkyup and others. sdgacid with a short filter envelope is a pluck;
+-- sdgsine with some sdgshape is a bell.
+
+setcps (128/60/4)
+
+let sdgshape = pF "sdgshape"
+    sdgcut = pF "sdgcut"
+    sdgq = pF "sdgq"
+    sdgenv = pF "sdgenv"
+    sdgdecay = pF "sdgdecay"
+    sdgaccent = pF "sdgaccent"
+    sdgwave = pF "sdgwave"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- a pluck, up through four chords
+d1 $ note (arp "up" "<a'min7'8 f'maj7'8 c'maj7'8 g'dom7'8>") # s "sdgacid"
+   # legato 0.5 # sdgcut 500 # sdgq 0.35 # sdgenv 0.5 # sdgdecay 0.12
+
+-- twice as fast, and another shape each bar
+d1 $ note (arp "<up updown converge pinkyup>" "<a'min7'8 f'maj7'8 c'maj7'8 g'dom7'8>*2")
+   # s "sdgacid" # legato 0.5 # sdgcut (range 300 1600 $ slow 8 sine) # sdgq 0.4
+   # sdgenv 0.5 # sdgdecay 0.1 # sdgaccent "1 0 0 1 0 0 1 0"
+   # sdgspace 0.3 # sdgtime 0.351
+
+-- the left ear plays it, the right ear plays it backwards and a bit behind
+d1 $ juxBy 0.8 (rev . (0.125 ~>)) $ note (arp "up" "<a'min9'8 f'maj9'8>*2")
+   # s "sdgacid" # sdgwave 1 # legato 0.4 # sdgcut 700 # sdgq 0.3 # sdgenv 0.45 # sdgdecay 0.09
+
+-- eleven hits on a grid of sixteen, each reading the arpeggio where it lands
+d1 $ struct "t(11,16)" $ note (arp "updown" "<a'min7'8 f'maj7'8>") # s "sdgacid"
+   # legato 0.5 # sdgcut 900 # sdgq 0.3 # sdgenv 0.4 # sdgdecay 0.1
+
+-- bells: each note answered an octave up, a dotted eighth later
+d2 $ off 0.1875 (|+ note 12) $ note (arp "<up down>" "<a'min7'4 e'min7'4>") + 12
+   # s "sdgsine" # sdgshape 0.15 # legato 2 # gain 0.8 # pan (slow 5 sine)
+
+-- echoes that climb: three copies, a fifth above the one before
+d2 $ stutWith 3 (3/16) (|+ note 7) $ note (arp "up" "<a'min'3 f'maj'3>") + 12
+   # s "sdgsine" # sdgshape 0.1 # legato 1.5 # gain 0.75
+
+-- a slow chord underneath, rolled like a hand across strings
+d3 $ slow 2 $ rolledBy 0.25 $ note ("<a'min9 f'maj9>" - 12) # s "sdgacid" # legato 1.1
+   # sdgcut 450 # sdgq 0.2 # sdgenv 0.2 # sdgdecay 1.2 # gain 0.65
+
+-- a bass that follows the arpeggio's chords
+d4 $ note "<a2 f2 c3 g2>(5,8)" # s "sdgacid" # legato 0.6 # sdgcut 180 # sdgq 0.4 # sdgenv 0.3 # sdgdecay 0.12
+
+-- and something to arpeggiate against
+d5 $ s "808bd:3*4" # shape 0.2
+
+d6 $ s "~ 808oh ~ 808oh" # gain 0.7
+
+hush

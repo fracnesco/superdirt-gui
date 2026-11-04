@@ -1,0 +1,44 @@
+-- SuperDirtGUI from Tidal - 3: sample players
+--
+-- A sample player is another way of reading a sample. players/
+-- example-player.scd adds sdgwarp. Each sample event is read by one player,
+-- picked like this:
+--
+--   1. # player "sdgwarp" names it, and wins
+--   2. otherwise, the player whose parameter the event carries: # sdgwarp 1
+--   3. otherwise SuperDirt reads the sample itself, as always
+--
+-- The parameter switches by being there: sdgwarp 0 is still the warp
+-- player. Leave it out to go back. Synths are never touched.
+
+let sdgwarp = pF "sdgwarp"
+    player = pS "player"
+
+-- at half speed SuperDirt plays it an octave down...
+d1 $ s "numbers:1" # speed 0.5
+
+-- ...and the warp player keeps the pitch
+d1 $ s "numbers:1" # speed 0.5 # sdgwarp 1
+
+-- the same, by name
+d1 $ s "numbers:1" # speed 0.5 # player "sdgwarp"
+
+-- some events warped, the others SuperDirt's own
+d1 $ sometimes (# sdgwarp 1) $ s "numbers*4" # n "<0 3 5 7>" # speed 0.6
+
+d1 $ every 2 (# player "sdgwarp") $ s "numbers:2*2" # speed 0.5
+
+-- per step, with a pattern of ones and zeros
+d1 $ while "1 0 1 1" (# sdgwarp 1) $ s "numbers*4" # n "0 1 2 3" # speed 0.5
+
+-- two layers, two players
+d1 $ stack [
+  s "breaks152" # sdgwarp 1 # speed 0.5 # gain 0.9,
+  s "bd*4"
+  ]
+
+-- a name wins over a parameter: with a copy called mywarp (made with
+-- new..., see 6-your-own) this plays mywarp, not sdgwarp
+-- d1 $ s "numbers:3" # sdgwarp 1 # player "mywarp"
+
+hush

@@ -1,0 +1,45 @@
+-- SuperDirtGUI from Tidal - 6: your own
+--
+-- new... in the window's modules tab copies a synth, module, player or
+-- global effect under a name you give, and opens the copy in the IDE. The
+-- name is the word Tidal calls it by. Say you made these four:
+--
+--   synths/mysine.scd    copied from sdgsine
+--   modules/mycomb.scd   copied from sdgcomb
+--   players/mywarp.scd   copied from sdgwarp
+--   effects/myecho.scd   copied from sdgspace
+--
+-- A copy keeps the template's other parameters - sdgshape, sdgres,
+-- sdgpitch, sdgtime - until you rename them in its file, so for now one
+-- sdgtime sets the time of both echoes.
+
+let mycomb = pF "mycomb"
+    mywarp = pF "mywarp"
+    myecho = pF "myecho"
+    sdgwarp = pF "sdgwarp"
+    sdgpitch = pF "sdgpitch"
+    sdgtime = pF "sdgtime"
+    player = pS "player"
+
+d1 $ s "mysine*4" # n "0 7"
+
+d1 $ s "bd*4" # mycomb 0.3
+
+d1 $ s "numbers:3" # mywarp 1 # speed 0.5
+
+d1 $ s "cp*2" # myecho 0.5 # sdgtime 0.25
+
+-- two players in one pattern, chosen by name
+d1 $ s "numbers*4" # n "0 1 2 3" # speed 0.5 # player "<sdgwarp mywarp>"
+
+d1 $ s "numbers:3*4" # sdgpitch "1 2" # player "sdgwarp mywarp"
+
+-- with the window open, edit players/mywarp.scd and save it: the next
+-- events already play the new version. Leave this running and try it.
+d1 $ s "numbers:3*2" # mywarp 1 # speed 0.75
+
+-- a file you saved with a mistake in it is marked in the window's list,
+-- the post window says where, and the last version that worked keeps
+-- playing until you save a fixed one.
+
+hush

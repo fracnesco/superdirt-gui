@@ -1,0 +1,131 @@
+-- SuperDirtGUI from Tidal - 14: the synths
+--
+-- Ten voices in synths/, one file each, made of nothing beyond SuperCollider
+-- itself. Every knob is a Tidal parameter, listed at the top of the voice's file.
+-- The same word means the same thing wherever it appears:
+--
+--   sdgcut     a low pass, in Hz            sdgq       its resonance
+--   sdgenv     how far a note opens it      sdgdecay   how fast it shuts
+--   sdgdetune  oscillators apart            sdgdrive   saturation
+--   sdgatk     attack, in seconds           sdgrel     release, in seconds
+--   sdgvib     vibrato depth, in semitones  sdgrate    how fast
+--
+-- SuperDirt ends a note at the end of its sustain, whatever is still sounding.
+-- So sdgatk and sdgrel happen inside the note, and a pad that should breathe
+-- wants a long note: legato 1 and a slow pattern.
+
+setcps (124/60/4)
+
+let sdgcut = pF "sdgcut"
+    sdgq = pF "sdgq"
+    sdgenv = pF "sdgenv"
+    sdgdecay = pF "sdgdecay"
+    sdgdetune = pF "sdgdetune"
+    sdgdrive = pF "sdgdrive"
+    sdgatk = pF "sdgatk"
+    sdgrel = pF "sdgrel"
+    sdgvib = pF "sdgvib"
+    sdgrate = pF "sdgrate"
+    sdgmix = pF "sdgmix"
+    sdgwidth = pF "sdgwidth"
+    sdgsquare = pF "sdgsquare"
+    sdgslide = pF "sdgslide"
+    sdgsync = pF "sdgsync"
+    sdgsweep = pF "sdgsweep"
+    sdgmove = pF "sdgmove"
+    sdgchorus = pF "sdgchorus"
+    sdgvowel = pF "sdgvowel"
+    sdgbreath = pF "sdgbreath"
+    sdgdamp = pF "sdgdamp"
+    sdgbright = pF "sdgbright"
+    sdgratio = pF "sdgratio"
+    sdgindex = pF "sdgindex"
+    sdgsub = pF "sdgsub"
+    sdgpunch = pF "sdgpunch"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- sdgsupersaw: seven saws. Stabs off the beat, the sound of a certain decade
+d1 $ struct "~ t ~ t ~ t ~ t" $ note "<a'min7 f'maj7 c'maj7 g'dom7>" # s "sdgsupersaw"
+   # legato 0.8 # sdgrel 0.1
+
+-- the same chords held, and the filter opened by hand: the build before a drop
+d1 $ note "<a'min7 f'maj7 c'maj7 g'dom7>" # s "sdgsupersaw" # legato 1
+   # sdgcut (slow 8 $ range 300 9000 saw) # sdgq 0.3 # sdgdetune 0.5
+
+-- as a riff: fewer saws at the side, a shut filter that each note opens
+d1 $ note (arp "up" "<a'min7'8 f'maj7'8>") # s "sdgsupersaw" # legato 0.7
+   # sdgmix 0.5 # sdgcut 500 # sdgenv 0.6 # sdgdecay 0.15 # sdgspace 0.3 # sdgtime 0.375
+
+-- sdglead: a tune, with slides written as the distance back to the note before.
+-- The vibrato only comes in on the long notes
+d1 $ note "a5 ~ c6 d6 e6@2 g6 e6" # s "sdglead" # legato 1
+   # sdgslide "0 0 -3 -2 -2 -3 3" # sdgvib 0.25 # sdgcut 1600 # sdgenv 0.35
+
+-- the same tune in the square an octave down, darker and fatter
+d1 $ note "a4 ~ c5 d5 e5@2 g5 e5" # s "sdglead" # legato 1 # sdgsquare 0.8
+   # sdgdetune 0.4 # sdgdrive 0.7 # sdgcut 900 # sdgq 0.5
+
+-- sdgsync: the sweep on each note is the sound. A faster one is a zap
+d1 $ note "a4 a4 c5 a4 e5 a4 g4 a4" # s "sdgsync" # legato 0.8 # sdgsweep 6 # sdgdecay 0.2
+
+-- no sweep on the notes, a slow one by hand instead
+d1 $ note "a4(3,8) c5(3,8,2)" # s "sdgsync" # legato 1 # sdgsweep 0 # sdgsync (slow 4 $ range 1 7 sine)
+
+-- sdgpad: chords that take their time. Both ears move on their own
+d1 $ slow 2 $ note "a'min9 f'maj7" # s "sdgpad" # legato 1
+
+-- darker, moving more, with a long swell
+d1 $ slow 4 $ note "<c'maj9 a'min9>" # s "sdgpad" # legato 1
+   # sdgcut 700 # sdgmove 1.2 # sdgrate 0.3 # sdgatk 3 # sdgrel 3
+
+-- sdgstrings: a string machine, sweeter the slower the attack
+d1 $ slow 2 $ note "c'maj7 a'min7" # s "sdgstrings" # legato 1 # sdgatk 0.6
+
+-- sdgchoir: a vowel per chord
+d1 $ slow 2 $ note "a'min7 f'maj7" # s "sdgchoir" # legato 1 # sdgvowel "<0 3 4 1>"
+
+-- a chord that changes its mouth as it goes
+d1 $ slow 4 $ note "d'min9" # s "sdgchoir" # legato 1 # sdgvowel (segment 16 $ slow 4 $ range 0 4 sine)
+
+-- sdgpluck: strings. Give each note room, it stops when its sustain does
+d1 $ note (arp "updown" "<a'min7'8 f'maj7'8>") # s "sdgpluck" # legato 2
+
+-- the same notes dull, and a harp if you take the damping off
+d1 $ note (arp "updown" "<a'min7'8 f'maj7'8>") # s "sdgpluck" # legato 2 # sdgdamp "<0.7 0>"
+
+-- sdgfm: the two numbers are the instrument. An electric piano
+d1 $ struct "t ~ t ~ ~ t ~ ~" $ note "<a'min9 d'min9>" # s "sdgfm" # legato 1.5
+
+-- a bell, and metal
+d1 $ note (arp "up" "c6'maj7'4") # s "sdgfm" # legato 2 # sdgratio 3.5 # sdgindex 3 # sdgdecay 1
+
+d1 $ note "c5*8" # s "sdgfm" # legato 0.5 # sdgratio 7.1 # sdgindex "1 6 2 8" # sdgdecay 0.1
+
+-- sdgreese: two saws beating. Slower and nastier with sdgdetune, watch the sub
+d1 $ note "a2 ~ ~ a2 ~ ~ c3 ~ a2 ~ ~ a2 ~ e2 ~ g2" # s "sdgreese" # legato 1
+   # sdgcut (slow 4 $ range 200 1600 sine) # sdgdetune "<0.1 0.2 0.4 0.2>"
+
+-- sdgsub: a sine with a front on it. You will want headphones for this one
+d1 $ note "a2 ~ ~ a2 ~ c3 ~ e2" # s "sdgsub" # legato 0.9 # sdgdrive 0.3
+
+-- a long drop in pitch, close to an 808
+d1 $ note "a2 ~ ~ ~ ~ ~ e2 ~" # s "sdgsub" # legato 2 # sdgpunch 24 # sdgdecay 0.08
+
+-- all of it. Pad, bass, a lead, a pluck, and some drums to hold them
+d1 $ slow 2 $ note "a'min9 f'maj7" # s "sdgpad" # legato 1 # gain 0.9
+
+d2 $ note "a2 ~ ~ a2 ~ ~ c3 ~ f2 ~ ~ f2 ~ ~ e2 ~" # s "sdgreese" # legato 0.9 # sdgcut 700
+
+d3 $ every 2 (rev) $ note (arp "up" "<a'min7'8 f'maj7'8>") # s "sdgpluck" # legato 2 # pan rand # gain 0.95
+
+d4 $ slow 2 $ note "a5 ~ c6 e6 d6@2 c6 b5" # s "sdglead" # legato 1 # sdgvib 0.2 # sdgcut 1400
+   # sdgspace 0.3 # sdgtime 0.375
+
+d5 $ s "808bd:3*4" # shape 0.3
+
+d6 $ s "~ cp ~ cp" # gain 0.85
+
+d7 $ s "808hc*8" # gain (range 0.6 0.8 $ fast 2 saw)
+
+hush

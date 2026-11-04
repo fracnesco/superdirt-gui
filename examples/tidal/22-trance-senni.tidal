@@ -1,0 +1,113 @@
+-- SuperDirtGUI from Tidal - 22: pointillistic trance, after Lorenzo Senni
+--
+-- Senni takes the trance of the late 90s apart and keeps only one piece of it:
+-- the supersaw arpeggio, and the build-up. No kick under it, no bassline, no
+-- drop - the build is the whole track. What is left he works like a pointillist
+-- painter: short stabs, gates that change every bar, little cells of notes that
+-- do not fit the bar and so wrap around it, two arpeggios against each other,
+-- silences where the drop should be.
+--
+-- All of it here is sdgsupersaw (synths/sdgsupersaw.scd), and a few other voices
+-- of synths/ in the last blocks. The knobs it uses:
+--
+--   sdgcut     the filter, closed         sdgenv     how far each note opens it
+--   sdgdecay   how fast it shuts again    sdgq       resonance
+--   sdgdetune  the saws apart             sdgwidth   0 mono, 1 wide
+--
+-- The notes are short on purpose (legato 0.3 to 0.5): the gaps between them are
+-- half the sound. room and size are SuperDirt's own reverb.
+--
+-- Transposing a chord goes inside the brackets: note ("a'min9" - 12). Outside
+-- them, - 12 is taken from every control of the event, gain and legato too.
+
+setcps (136/60/4)
+
+let sdgcut = pF "sdgcut"
+    sdgq = pF "sdgq"
+    sdgenv = pF "sdgenv"
+    sdgdecay = pF "sdgdecay"
+    sdgdetune = pF "sdgdetune"
+    sdgwidth = pF "sdgwidth"
+    sdgmove = pF "sdgmove"
+    sdgratio = pF "sdgratio"
+    sdgindex = pF "sdgindex"
+
+-- one chord, sixteen times a bar, short. Nothing under it. A filter that each
+-- stab opens and that shuts before the next one is what makes it a stab
+d1 $ struct "t*16" $ note "<a'min9 f'maj9 c'maj9 e'min9>" # s "sdgsupersaw"
+   # legato 0.35 # sdgcut 900 # sdgenv 0.5 # sdgdecay 0.07 # room 0.3 # size 0.8
+
+-- the gate is the instrument: which of the sixteen steps sound changes each bar
+d3 $ struct "<t(7,16) t(9,16,2) t(5,16,3) t(11,16,1)>" $ note "<a'min9 f'maj9 c'maj9 e'min9>"
+   # s "sdgsupersaw" # legato 0.35 # sdgcut 900 # sdgenv 0.5 # sdgdecay 0.07 # room 0.3 # size 0.8
+
+-- the same gate rotating by one step every bar, so the accent never sits still
+d2 $ (iter 4) $ struct "t(7,16)" $ note "<a'min9 f'maj9 c'maj9 e'min9>"
+   # s "sdgsupersaw" # legato 0.3 # sdgcut 900 # sdgenv 0.55 # sdgdecay 0.06
+   # gain "1 0.9 0.95 0.85" # room 0.3 # size 0.8
+
+
+
+
+
+-- the arpeggio: a cell of seven notes played on a grid of sixteen. Seven does
+-- not go into sixteen, so the cell starts on another step each bar and the
+-- line only comes round again after seven bars. The chord moves underneath it
+d1 $ note (fast (16/7) "0 3 7 12 15 19 24" + "<-3 -7 0 -5>") # s "sdgsupersaw"
+   # legato 0.45 # sdgcut 500 # sdgenv 0.7 # sdgdecay 0.1 # sdgq 0.3
+   # pan "0.35 0.65" # room 0.25 # size 0.7
+
+-- superimpositions: a cell of five in the left ear, a cell of seven coming down
+-- in the right. They agree once every 35 steps
+d3 $ pressBy (1/32) $ stack [note (fast (16/5) "0 7 12 15 19") # pan 0.1,
+            note (fast (16/7) "24 19 15 12 7 3 0") # pan 0.9]
+   |+ note "<-3 -7 0 -5>" # s "sdgsupersaw" # sdgwidth 0.3
+   # legato 0.4 # sdgcut 600 # sdgenv 0.6 # sdgdecay 0.08 # room 0.3 # size 0.8
+
+-- the build that never drops. Every bar more notes and a wider filter, eight
+-- bars long; the eighth is empty where the drop would be, and then it starts
+-- again from nothing
+d4 $ whenmod 8 7 (const silence)
+   $ struct "<t*8 t*8>" $ note (arp "up" "<a'min9'8 f'maj9'8>")
+   # s "sdgsupersaw" # legato 0.4 # sdgcut (slow 16 $ range 300 7000 tri)
+   # sdgenv 0.4 # sdgdecay 0.16 # sdgq (slow 8 $ range 0.1 0.5 saw) # room 0.3 # size 0.85
+
+-- a riser made of the arpeggio itself: four octaves up, the step getting shorter
+-- as it climbs
+d5 $ fast "<1 1 2 4>" $ note (arp "up" "a3'min'12") # s "sdgsupersaw"
+   # legato 0.4 # sdgcut 1200 # sdgenv 0.4 # sdgdecay 0.05 # sdgdetune 0.5 # room 0.3 # size 0.8
+
+-- stabs with holes punched in them, and the holes echoed by the reverb. Turn the
+-- 0.5 up and the picture empties into points
+d1 $ degradeBy 0.5 $ struct "t*16" $ note "<a'min9 f'maj9 c'maj9 e'min9>"
+   # s "sdgsupersaw" # legato 0.25 # sdgcut 1500 # sdgenv 0.3 # sdgdecay 0.05
+   # pan rand # room 0.5 # size 0.95
+
+-- the breakdown: a pad holds the chord, the stabs answer it a step at a time
+d1 $ slow 2 $ note "<a'min9 f'maj9>" # s "sdgpad" # legato 1 # sdgcut 900 # sdgmove 0.8 # gain 0.9
+
+d2 $ struct "t(3,16,<0 5 10>)" $ note ("<a'min9 f'maj9>" + 12) # s "sdgsupersaw"
+   # legato 0.3 # sdgcut 1400 # sdgenv 0.4 # sdgdecay 0.08 # room 0.5 # size 0.9 # gain 0.9
+
+-- points of light above it: an FM bell, now and then, somewhere in the chord
+d3 $ sometimesBy 0.3 (# gain 0) $ struct "t(5,16,2)" $ note (arp "up" "<a'min9'5 f'maj9'5>" + 24)
+   # s "sdgfm" # sdgratio 3.5 # sdgindex 1.5 # legato 1 # pan rand # room 0.4 # size 0.9 # gain 0.8
+
+hush
+
+-- all of it. The arpeggio phasing against the bar, the stabs, a pad, and the
+-- drums kept to almost nothing: a ticking hat and a clap, no kick at all
+d1 $ note (fast (16/7) "0 3 7 12 15 19 24" + "<-3 -7 0 -5>") # s "sdgsupersaw"
+   # legato 0.45 # sdgcut (slow 16 $ range 400 2500 sine) # sdgenv 0.7 # sdgdecay 0.1 # sdgq 0.3
+   # pan "0.35 0.65" # room 0.25 # size 0.7
+
+d2 $ (iter 4) $ struct "t(7,16)" $ note ("<a'min9 f'maj9 c'maj9 e'min9>" + 12) # s "sdgsupersaw"
+   # legato 0.3 # sdgcut 1000 # sdgenv 0.5 # sdgdecay 0.06 # sdgwidth 1 # gain 0.85 # room 0.4 # size 0.85
+
+d4 $ note ("<a'min9 f'maj9 c'maj9 e'min9>" - 12) # s "sdgpad" # legato 0.4 # sdgcut 700 # gain 0.8
+
+d4 $ s "~ sdghat:3 ~ sdghat:3" # gain 0.8 # sdgdecay "<0.05 0.08>"
+
+d5 $ s "<~ ~ ~ [~ ~ ~ sdgclap:2]>" # room 0.4
+
+hush

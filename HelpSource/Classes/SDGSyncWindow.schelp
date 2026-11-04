@@ -1,0 +1,62 @@
+TITLE:: SDGSyncWindow
+summary:: the window of an SDGSync: long samples on one tempo and in one key, and the Tidal code
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SDGSync, Classes/SDGWindow
+
+DESCRIPTION::
+Shows an link::Classes/SDGSync::: the tempo, the key, the chop, a row for each sample with what
+happens to it, and the Tidal code, to copy or to hear first with strong::play::. Everything is
+worked out again when a setting, a sample or the analysis changes.
+
+code::
+~sdg.sync.gui;
+::
+
+In the control window's sound explorer, strong::sync...:: opens it, and code::y:: or strong::add to
+sync:: in the right-click menu adds the selected sample, or every sample of a selected bank. In the
+list, delete removes a sample; space plays and stops.
+
+CLASSMETHODS::
+
+METHOD:: new
+ARGUMENT:: sync
+an link::Classes/SDGSync::. Use link::Classes/SDGSync#-gui::.
+
+METHOD:: windowBounds
+Where the next window opens: where the last one closed.
+
+METHOD:: keyChoices
+RETURNS:: the keys of the key menu after auto: twelve major, then twelve minor.
+
+METHOD:: chopLabels
+RETURNS:: the chop menu's items.
+
+INSTANCEMETHODS::
+
+METHOD:: sync
+RETURNS:: the link::Classes/SDGSync::.
+
+METHOD:: window
+METHOD:: hints
+METHOD:: list
+The Window, its link::Classes/SDGHintBar:: and the list of samples (an code::SDGExplorerView::).
+
+METHOD:: code
+RETURNS:: the code the window shows.
+
+METHOD:: refresh
+Everything worked out again and shown.
+
+METHOD:: addFromExplorer
+The control window's selection into the list.
+
+METHOD:: editBpm
+The selected sample's bpm by hand, in link::Classes/SDGWindow#*bpmDialog:: - strong::bpm...:: and code::b::.
+
+METHOD:: removeSelected
+
+METHOD:: togglePlay
+
+METHOD:: isOpen
+METHOD:: front
+METHOD:: close

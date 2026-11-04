@@ -1,0 +1,292 @@
+TITLE:: SDGSampleTags
+summary:: every sample of the library analysed and tagged: tags, bpm, key, dates, what was set by hand
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SDGSampleFeatures, Classes/SuperDirtGUI, Classes/SDGWindow, Classes/SDGSampleEditor
+
+DESCRIPTION::
+What the sound explorer sorts and narrows by, and what Tidal picks samples by.
+Every sample of the library is analysed once (link::Classes/SDGSampleFeatures::)
+and gets tags from the numbers; you add tags, take them away, set a bpm or a key,
+and those are kept apart from the analysis, so analysing again never loses
+them. Made by link::Classes/SuperDirtGUI#-tags::.
+
+code::
+t = ~sdg.tags;
+t.analyseLibrary;                                // in the background
+p = ~sdg.bufferAt(\bd, 0).path;
+t.infoOf(p);                                     // (tags:, bpm:, bpmSure:, key:, keySure: ...)
+t.addTag(p, "dusty"); t.removeTag(p, \kick);
+t.setBpm(p, 92); t.setKey(p, "Am");
+t.query([\percussive, \short], [\melodic]);      // [[\bd, 0], [\sn, 3] ...]
+t.query(bpm: 120);                               // also 60, 240, 30, 480, within 3%
+t.query(key: "am", bank: \superpiano);
+t.allTags;                                       // tag -> how many samples
+::
+
+A sample is known by its path. Its analysis is redone when the file's size or
+modification time changes. The tags the analysis gives:
+
+table::
+## code::short:: code::medium:: code::long:: || how long it sounds, to 20 dB under its peak: under 0.25 s, under 1.5 s, longer
+## code::oneshot:: || one attack, under two seconds
+## code::loop:: || a sure bpm, and the file a whole number of beats long
+## code::percussive:: || a fast attack and a short decay; or three attacks a second with little pitch
+## code::sustained:: || a level that holds for half a second or more
+## code::melodic:: || a key, or the note of a one-shot
+## code::noisy:: || a spectrum close to noise
+## code::kick:: code::snare:: code::hat:: code::bass:: || guesses from the shape and where the energy is
+## code::bright:: code::dark:: || the spectral centroid, over 3 kHz or under 250 Hz
+## code::bpm-unsure:: code::key-unsure:: || a bpm or key the analysis does not trust
+::
+
+Good guesses, not truths: change what is wrong by hand. The long version, with
+how each is measured, is code::docs/sample-tags.md::.
+
+subsection:: Where it is kept
+
+Two tab-separated files in link::#*folder::: code::analysis.tsv::, the numbers
+(delete it to analyse everything again), and code::tags.tsv::, what was set by
+hand (a code::.bak:: of the last version beside it). Nothing is ever written
+into a bank's own folder. Writes wait a moment, so a queue of a hundred files
+writes once; link::#-save:: writes now.
+
+It sends code::changed:: with code::\tags:: (a path, or nil for many) and
+code::\analysis:: (done, total) while the queue runs.
+
+
+CLASSMETHODS::
+
+METHOD:: new
+ARGUMENT:: sdg
+the link::Classes/SuperDirtGUI:: whose library it describes. Reads both files.
+
+METHOD:: folder
+Where the files are: a folder in the user support directory by default.
+Checks set it to a scratch folder.
+
+METHOD:: recordsPath
+METHOD:: manualPath
+The two files.
+
+METHOD:: autoAnalyse
+true: the window analyses the library when it opens, and the tag picker when it
+finds nothing.
+
+METHOD:: bpmTolerance
+How close a bpm query has to be, as a share; 0.03.
+
+METHOD:: bpmMultiples
+What a bpm query counts too, as factors of it: code::[0.25, 0.5, 1, 2, 4]::.
+
+METHOD:: chunk
+How many files have their dates read in one call to the system.
+
+METHOD:: autoTags
+The tags the numbers say.
+ARGUMENT:: r
+a record, as link::#*recordFrom:: makes.
+RETURNS:: an Array of Symbols.
+
+METHOD:: recordFrom
+What is kept of the features of a file.
+ARGUMENT:: f
+link::Classes/SDGSampleFeatures#*analyse::'s answer.
+ARGUMENT:: path
+the file.
+ARGUMENT:: dates
+code::[created, dateAdded]::, or nil.
+
+METHOD:: normaliseTag
+ARGUMENT:: str
+anything.
+RETURNS:: lowercase letters, digits, code::-:: and code::_::, as a Symbol; nil for nothing.
+
+METHOD:: bpmMatches
+ARGUMENT:: bpm
+a sample's.
+ARGUMENT:: target
+what is asked for.
+ARGUMENT:: tolerance
+nil for link::#*bpmTolerance::.
+ARGUMENT:: multiples
+nil for link::#*bpmMultiples::.
+RETURNS:: true when the bpm is within the tolerance of the target or one of its multiples.
+
+METHOD:: bpmDistance
+ARGUMENT:: bpm
+ARGUMENT:: target
+RETURNS:: how far apart they are as a ratio, the nearest multiple counted; inf for nil.
+
+METHOD:: keyMatches
+ARGUMENT:: info
+link::#-infoOf::'s answer.
+ARGUMENT:: key
+a String, or an Event from link::Classes/SDGSampleFeatures#*parseKey::.
+RETURNS:: true for the same tonic and mode; a note matches every key on its tonic.
+
+METHOD:: fileDates
+ARGUMENT:: paths
+files.
+RETURNS:: code::[created, dateAdded]:: per path, seconds since 1970, nil where the
+system does not say: the birth time and Spotlight's date added on macOS, the
+birth time on Linux, the modification time on Windows.
+
+METHOD:: parseDate
+ARGUMENT:: str
+code::"2025-08-25 03:27:00 +0000"::.
+RETURNS:: seconds since 1970, or nil.
+
+METHOD:: readRecords
+METHOD:: writeRecords
+METHOD:: readManual
+METHOD:: writeManual
+METHOD:: recordKeys
+The two files, read and written.
+
+
+INSTANCEMETHODS::
+
+METHOD:: infoOf
+Everything known about a file, what was set by hand over the analysis.
+ARGUMENT:: path
+the file.
+ARGUMENT:: check
+false: take the last analysis without asking the file whether it changed - for
+a list of thousands drawn often.
+RETURNS:: an Event: code::analysed::, code::duration::, code::numChannels::,
+code::sampleRate::, code::onsets::, code::beatOffset::, code::bpm::,
+code::bpmSure::, code::bpmByHand::, code::key::, code::keySure::,
+code::keyByHand::, code::tonic::, code::mode::, code::tags:: (what counts),
+code::auto::, code::added::, code::removed::, code::created::, code::dateAdded::.
+
+METHOD:: tagsOf
+ARGUMENT:: path
+ARGUMENT:: check
+RETURNS:: the tags that count: the analysis's, less those taken away, with those added.
+
+METHOD:: autoTagsOf
+ARGUMENT:: path
+RETURNS:: the analysis's tags.
+
+METHOD:: recordOf
+ARGUMENT:: path
+ARGUMENT:: check
+RETURNS:: the analysis of a file, or nil when there is none or the file changed since.
+
+METHOD:: isAnalysed
+ARGUMENT:: path
+RETURNS:: whether a fresh analysis is kept.
+
+METHOD:: addTag
+METHOD:: removeTag
+A tag on or off for one file, by hand.
+ARGUMENT:: path
+ARGUMENT:: tag
+a String or Symbol, see link::#*normaliseTag::.
+
+METHOD:: setTags
+A file's tags as given, whatever the analysis said.
+ARGUMENT:: path
+ARGUMENT:: tags
+an Array.
+
+METHOD:: resetTags
+Back to what the analysis says: tags, bpm and key.
+ARGUMENT:: path
+
+METHOD:: setBpm
+A bpm by hand, sure from then on; nil goes back to the analysis's.
+ARGUMENT:: path
+ARGUMENT:: bpm
+ARGUMENT:: offset
+where a beat falls, seconds, or nil to keep it.
+
+METHOD:: setBeatOffset
+ARGUMENT:: path
+ARGUMENT:: seconds
+
+METHOD:: setKey
+A key by hand; nil goes back to the analysis's.
+ARGUMENT:: path
+ARGUMENT:: key
+code::"Am"::, code::"F#"::, code::"Eb"::, code::"C3"::.
+
+METHOD:: analyse
+One file, now, in the calling thread; unchanged since its last analysis, it is
+not read again.
+ARGUMENT:: path
+ARGUMENT:: force
+true analyses it whatever.
+ARGUMENT:: dates
+code::[created, dateAdded]::, or nil to ask the system.
+RETURNS:: its record, or nil.
+
+METHOD:: analyseLibrary
+Every sample of the library with no fresh analysis, in the background.
+
+METHOD:: enqueue
+ARGUMENT:: paths
+files to analyse in the background.
+ARGUMENT:: front
+true: before the rest of the queue.
+
+METHOD:: prioritise
+A bank to the front of the queue, as the explorer does when it is opened.
+ARGUMENT:: bank
+
+METHOD:: isAnalysing
+METHOD:: done
+METHOD:: total
+METHOD:: routine
+The queue: running or not, how far it has got.
+
+METHOD:: stop
+Empty the queue and stop it. link::Classes/SuperDirtGUI#-free:: does.
+
+METHOD:: libraryPaths
+METHOD:: pathsOf
+The files of the whole library, or of one bank.
+ARGUMENT:: bank
+
+METHOD:: matches
+ARGUMENT:: path
+ARGUMENT:: include
+tags it must have.
+ARGUMENT:: exclude
+tags it must not.
+ARGUMENT:: bpm
+nil, or a bpm it must match, multiples counted.
+ARGUMENT:: key
+nil, or a key.
+ARGUMENT:: check
+as for link::#-infoOf::.
+
+METHOD:: query
+The samples of the library that match, in bank order. Kept until a tag or the
+library changes, so a pattern asking on every event costs a lookup.
+ARGUMENT:: include
+ARGUMENT:: exclude
+ARGUMENT:: bpm
+ARGUMENT:: key
+As for link::#-matches::.
+ARGUMENT:: bank
+nil for the whole library.
+RETURNS:: code::[[bank, index] ...]::.
+
+METHOD:: allTags
+RETURNS:: an IdentityDictionary: tag -> how many samples of the library have it.
+
+METHOD:: records
+METHOD:: manual
+METHOD:: stamp
+What is held: path -> record, path -> what was set by hand, and a count bumped on every change.
+
+METHOD:: load
+METHOD:: save
+METHOD:: saveRecords
+METHOD:: saveManual
+The two files, read again or written now.
+
+METHOD:: sdg
+METHOD:: dirt
+The loader and its SuperDirt.

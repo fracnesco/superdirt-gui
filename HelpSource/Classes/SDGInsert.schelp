@@ -1,0 +1,254 @@
+TITLE:: SDGInsert
+summary:: an insert effect on one orbit of a SuperDirtGUI: an eq, a compressor, an insight or a VST plugin, before the orbit's fader
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SuperDirtGUI, Classes/SDGWindow, Classes/GlobalDirtEffect, Classes/DirtOrbit
+
+DESCRIPTION::
+What a channel of a desk calls an insert: an effect in the orbit's own chain,
+before its fader, in an order you choose, as many as you like. Four kinds,
+each the work of another extension, looked up by name and offered only when it
+is installed:
+
+table::
+## strong::kind:: || strong::extension:: || strong::what it does on the orbit::
+## code::\eq:: || ParaEQ || five bands and two cuts, through code::ParaEQ.ar::
+## code::\compressor:: || Compressor || downward or upward compression, through code::Compressor.ar::
+## code::\insight:: || Insight || nothing: it copies the orbit's signal, at that point, to a bus an Insight reads
+## code::\vst:: || VSTPlugin || whatever the VST plugin does, with its own editor
+::
+
+They are made, moved and taken out by the link::Classes/SuperDirtGUI::, which
+keeps them per orbit; an insert itself is what you open, bypass and set.
+
+code::
+i = ~sdg.addInsert(0, \eq);           // orbit 0, after its other inserts
+i.gui;                                // the eq's own window
+i.unit.preset = \warm;                // the ParaEQ itself
+i.enabled = false;                    // bypassed
+c = ~sdg.addInsert(0, \compressor, 0);   // in front of the eq
+~sdg.moveInsert(c, 1);                // behind it again
+~sdg.insertsOf(0);                    // -> [ SDGInsert(eq, orbit 0, bypassed), SDGInsert(compressor, ...) ]
+~sdg.removeInsert(i);
+::
+
+An insert can also sit on a track, before or after a global effect:
+link::Classes/SuperDirtGUI#-addTrackInsert:: and link::Classes/SDGTrack::.
+
+In the window: + insert on a strip, or add on the effects tab, then a click on
+an insert for its window and a right click to bypass, move or remove it.
+
+subsection:: VST plugins
+
+A code::\vst:: insert hosts one VST2 or VST3 effect through the VSTPlugin
+extension. Its plugin is named when it is made - a name VSTPlugin's search found
+(link::Classes/SuperDirtGUI#-vstPlugins::) or a file path - and a click on it in
+the window shows the plugin's own editor, or VSTPlugin's generic one for a
+plugin without.
+
+code::
+v = ~sdg.addInsert(0, \vst, plugin: "ValhallaSupermassive");
+v.gui;                                // the plugin's editor
+v.genericGui;                         // its parameters as sliders
+v.controller.set(0, 0.5);             // its VSTPluginController
+::
+
+It is the one insert that is not one of SuperDirt's effects. A plugin lives in
+the synth that hosts it, and SuperDirt replaces an orbit's effect synths every
+time it rebuilds the orbit - which would close the plugin and lose what was set
+in it. So a VST insert is a synth of its own, which SuperDirtGUI walks back into
+its place after every rebuild it makes or sees (link::Classes/SuperDirtGUI#-orderInserts::):
+the plugin is never closed by a reload, by the window opening, by a change of
+output bus. It never sleeps either - a plugin may make sound out of silence,
+and nothing would wake it - so it costs what the plugin costs for as long as it
+is in.
+
+Only a cmd-period frees it. The insert is then made again and the plugin
+reopened with the state it last read back, which it does by itself a moment
+after anything is changed in the plugin's editor, and when asked
+(link::#-rememberState::). Bypassed, it uses VSTPlugin's soft bypass: a
+crossfade, with a reverb's tail left to fade.
+
+subsection:: Where it sits, and why it stays there
+
+Every insert but a VST one is a link::Classes/GlobalDirtEffect:: of SuperDirt's own kind,
+put into the orbit's code::globalEffects:: after SuperDirt's delay, reverb and
+leslie and before the add-on's fader - pre-fader, as on a desk, so the meters
+and the fader come after it. SuperDirt therefore keeps it in its place through
+every rebuild of the orbit: a reload, the window opening, a change of output
+bus, cmd-period.
+
+Its synth hears the orbit's two busses as one. Dry and effect are summed - the
+sum SuperDirt's monitor makes anyway - processed, and written to the dry bus,
+the effect bus cleared. Taking an insert out crossfades the two busses back to
+what they were. Like SuperDirt's own effects it sleeps after four seconds of
+silence and every event wakes it.
+
+subsection:: Driven by its own extension
+
+The DSP is the extension's pseudo-UGen and the object that drives it is the
+extension's own object, in driver mode, aimed at the insert - so the window,
+the presets, the clipboard and the meters are theirs, unchanged. What the
+object sends lands in the effect's state as well as on its synth, so a synth
+SuperDirt starts again begins with the settings the last one had; an eq set
+before a reload is the same eq after it.
+
+A compressor's external sidechain is wired by the insert: choose a bus in the
+compressor's window and the insert's synth reads it. The eq's spectrum is read
+on the orbit's dry bus at the tail of SuperDirt's group: the orbit after all
+its inserts and its fader.
+
+An insight insert only reads. Its Insight is named code::orbit<n>_insight<m>::
+and its window shows the orbit at the insert's place in the chain. There is
+nothing to bypass.
+
+
+CLASSMETHODS::
+
+METHOD:: kindNames
+code::[\eq, \compressor, \insight, \vst]::, in the order a menu lists them.
+
+METHOD:: kinds
+The kinds, as an IdentityDictionary from kind to an Event with code::label::,
+code::className:: and code::controlName::.
+
+METHOD:: kindLabel
+What a strip writes on a kind's button: code::"EQ"::, code::"Comp"::,
+code::"Insight"::, code::"VST":: - a VST insert shows its plugin's name instead.
+ARGUMENT:: kind
+a Symbol.
+
+METHOD:: available
+Whether the extension a kind needs is installed.
+ARGUMENT:: kind
+a Symbol.
+
+METHOD:: availableKinds
+The kinds whose extension is installed.
+
+METHOD:: effectName
+The name of a kind's GlobalDirtEffect, code::sdgins_<kind>::; its SynthDef
+adds the channel count.
+ARGUMENT:: kind
+a Symbol.
+
+METHOD:: isInsertName
+Whether a global effect's name is an insert's.
+ARGUMENT:: name
+a Symbol or String.
+
+METHOD:: makeDef
+The insert's SynthDef for a channel count, or nil when the kind's extension is
+not installed. link::Classes/SuperDirtGUI#-addInsert:: adds it the first time
+it is needed.
+ARGUMENT:: kind
+a Symbol.
+ARGUMENT:: numChannels
+SuperDirt's channel count.
+
+METHOD:: new
+Made by link::Classes/SuperDirtGUI#-addInsert::, which also puts it into the
+orbit; making one by hand puts it nowhere.
+ARGUMENT:: sdg
+the link::Classes/SuperDirtGUI::.
+ARGUMENT:: orbitIndex
+the orbit, 0 for the first.
+ARGUMENT:: kind
+a Symbol, see link::#*kindNames::.
+ARGUMENT:: label
+what its window calls it.
+ARGUMENT:: plugin
+a VST insert's plugin: a name VSTPlugin's search found, or a file path.
+
+
+INSTANCEMETHODS::
+
+METHOD:: gui
+Open its window: the eq's, the compressor's or the insight's.
+
+METHOD:: enabled
+Whether it is in. A bypassed eq or compressor crossfades to the signal it was
+given; an insight is always in. Setting it is the same as the switch in the
+effect's own window.
+
+METHOD:: canBypass
+False for an insight, which only reads.
+
+METHOD:: isVST
+Whether it hosts a VST plugin.
+
+METHOD:: node
+Its node on the server: the effect's synth, or a VST insert's own.
+
+METHOD:: unit
+The link::Classes/ParaEQ:: or Compressor that drives it, or nil for an insight.
+
+METHOD:: insight
+The Insight that reads it, or nil.
+
+METHOD:: tapBus
+The bus an insight insert copies the orbit to, or nil.
+
+METHOD:: plugin
+A VST insert's plugin, as it was named.
+
+METHOD:: controller
+A VST insert's VSTPluginController, or nil until the synth is up.
+
+METHOD:: synth
+A VST insert's synth.
+
+METHOD:: genericGui
+A VST insert's parameters as sliders: VSTPlugin's generic window.
+
+METHOD:: rememberState
+Read a VST plugin's state back now and keep it, to reopen the plugin with after
+a cmd-period. It happens on its own a second and a half after the last change in
+the plugin's editor.
+ARGUMENT:: action
+called with the data, an Int8Array, or nil when there was nothing to read.
+
+METHOD:: stateData
+What link::#-rememberState:: read last.
+
+METHOD:: fx
+Its link::Classes/GlobalDirtEffect::.
+
+METHOD:: kind
+METHOD:: orbitIndex
+METHOD:: orbit
+METHOD:: label
+METHOD:: shortLabel
+METHOD:: number
+What it is and where: the kind, the orbit's index and link::Classes/DirtOrbit::,
+its window's name, its button's text, and a number counting every insert made.
+
+METHOD:: sdg
+METHOD:: server
+METHOD:: numChannels
+The loader, its server and its channel count.
+
+METHOD:: free
+Free its object, window, insight and bus. link::Classes/SuperDirtGUI#-removeInsert::
+calls this after taking the effect out of the orbit; call that instead.
+
+
+EXAMPLES::
+
+code::
+// after ~dirt.start and ~sdg = SuperDirtGUI(~dirt)
+e = ~sdg.addInsert(0, \eq);
+e.unit.highPassOn = true;
+e.unit.highPassFreq = 120;
+e.gui;
+
+c = ~sdg.addInsert(0, \compressor);
+c.unit.threshold = -24;
+c.unit.ratio = 4;
+c.gui;
+
+m = ~sdg.addInsert(0, \insight);      // after both: what they made of the orbit
+m.gui;
+
+~sdg.moveInsert(m, 0);                // or before them: what came in
+~sdg.removeInserts(0);
+::

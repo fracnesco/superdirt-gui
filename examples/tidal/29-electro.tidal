@@ -1,0 +1,103 @@
+-- SuperDirtGUI from Tidal - 29: electro
+--
+-- Nine parts meant to play at once: evaluate d1 to d9 in order, then the
+-- variations. C minor, 118 bpm. The 808 alone for the drums (sdgkick, sdghat,
+-- sdgsnare, sdgclap, sdgtom, sdgcowbell) with a digital hat from sdgchaos;
+-- a reese with a short filter envelope for the bass, sync zaps for the stabs
+-- (sdgsync), a square lead with vibrato (sdglead) and FM bleeps (sdgfm).
+-- sdgtime 0.381 is a dotted eighth at this tempo.
+--
+-- Electro is syncopation: the kick off the grid, the bass between the kicks,
+-- the stabs on the last step of a phrase, and toms that zap down an octave
+-- at the end of the bar.
+
+setcps (118/60/4)
+
+let sdgdecay = pF "sdgdecay"
+    sdgpunch = pF "sdgpunch"
+    sdgbend = pF "sdgbend"
+    sdgdetune = pF "sdgdetune"
+    sdgcut = pF "sdgcut"
+    sdgenv = pF "sdgenv"
+    sdgsub = pF "sdgsub"
+    sdgsweep = pF "sdgsweep"
+    sdgsquare = pF "sdgsquare"
+    sdgvib = pF "sdgvib"
+    sdgvibdelay = pF "sdgvibdelay"
+    sdgslide = pF "sdgslide"
+    sdgratio = pF "sdgratio"
+    sdgindex = pF "sdgindex"
+    sdgtone = pF "sdgtone"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- d1, the kick: the 808 in the electro places - one, the "and" of one, three,
+-- the "and" of three, and every other bar one more before four
+d1 $ s "sdgkick ~ ~ sdgkick ~ ~ sdgkick ~ ~ ~ sdgkick ~ <sdgkick ~> ~ ~ ~" # sdgdecay 0.6 # sdgpunch 14
+
+-- d2, the hats: the 808 closed hat on the sixteenths, the open one on the
+-- third sixteenth of one and three, the pedal (:1) before four; cut 1 chokes
+d2 $ s "sdghat*16" # n "0 0 2 0 0 0 0 0 0 0 2 0 0 0 1 0" # cut 1 # gain "0.95 0.8 0.85 0.8"
+
+-- d3, snare and clap together on two and four, both the 808
+d3 $ s "~ [sdgsnare,sdgclap] ~ [sdgsnare,sdgclap]" # gain 0.9
+
+-- d4, the bass: the reese with a short filter envelope, so each note is a
+-- pluck; the saws barely apart, the sub most of it; the line sits between
+-- the kicks
+d4 $ note "c3 ~ c3 ~ ~ c3 ~ ef3 ~ c3 ~ ~ g2 ~ bf2 ~" # s "sdgreese" # legato 0.6 # sdgdetune 0.08
+   # sdgcut 700 # sdgenv 0.3 # sdgdecay 0.1 # sdgsub 0.8 # gain 0.9
+
+-- d5, the stabs: a sync chord on the fifth sixteenth, the thirteenth and the
+-- last, each note a zap (sdgsweep 4), the chord changing every bar, echoed
+d5 $ struct "~ ~ ~ ~ t ~ ~ ~ ~ ~ ~ ~ t ~ ~ t" $ note "<c5'min7 af4'maj7 g4'dom7 c5'min7>" # s "sdgsync"
+   # legato 1.2 # sdgsweep 4 # sdgdecay 0.15 # sdgcut 4000 # gain 0.8 # sdgspace 0.3 # sdgtime 0.381
+
+-- d6, the lead: a square an octave down under two detuned saws, a tune one
+-- bar and silence the next, the vibrato coming in almost at once
+d6 $ note "<[c6 ~ ~ ef6 ~ g6 ~ ~ ~ f6 ef6 ~ c6 ~ ~ ~] ~>" # s "sdglead" # sdgsquare 0.8 # sdgdetune 0.3
+   # sdgcut 1500 # sdgenv 0.4 # sdgvib 0.15 # sdgvibdelay 0.1 # legato 0.9 # gain 0.8
+
+-- d7, bleeps: a metal FM note (sdgratio 7.1) eight times a bar, its index
+-- changing on every step, four in ten left out, sweeping across the stereo
+d7 $ sometimesBy 0.4 (# gain 0) $ note "c7*8" # s "sdgfm" # sdgratio 7.1 # sdgindex "1 4 2 6" # sdgdecay 0.08
+   # legato 0.3 # gain 0.65 # pan (fast 3 sine)
+
+-- d8, the toms: the 808 deep tom (:5) with a long bend down - the electro
+-- zap - once in the last quarter of a bar now and then, and on every fourth
+-- bar a run of four down the scale
+d8 $ whenmod 4 3 (const $ note "~ ~ [7 5] [2 0 -3 -5]" # s "sdgtom:5" # sdgpunch 24 # sdgbend 0.25 # gain 0.9)
+   $ note "~ ~ ~ [~ ~ ~ <~ 0>]" # s "sdgtom:5" # sdgpunch 18 # sdgbend 0.2 # gain 0.85
+
+-- d9, the cowbell on the "and" of two and four, down a tone every other
+-- time, and a digital hat (sdgchaos:1) on the off-beat eighths
+d9 $ stack [
+     s "~ ~ ~ ~ ~ ~ sdgcowbell ~ ~ ~ ~ ~ ~ ~ sdgcowbell ~" # note "<0 -2>" # gain 0.85 # pan 0.6,
+     s "[~ sdgchaos:1]*4" # sdgtone 0.7 # gain 0.7 # pan 0.4
+   ]
+
+-- variations, over the top of all of it
+
+-- the bass an octave up every fourth bar with a longer envelope, and the
+-- stabs twice as often
+do
+  d4 $ every 4 (|+ note 12) $ note "c3 ~ c3 ~ ~ c3 ~ ef3 ~ c3 ~ ~ g2 ~ bf2 ~" # s "sdgreese" # legato 0.6
+     # sdgdetune 0.08 # sdgcut 700 # sdgenv 0.4 # sdgdecay 0.2 # sdgsub 0.8 # gain 0.9
+  d5 $ struct "~ ~ t ~ t ~ ~ ~ ~ ~ t ~ t ~ ~ t" $ note "<c5'min7 af4'maj7 g4'dom7 c5'min7>" # s "sdgsync"
+     # legato 1.2 # sdgsweep 4 # sdgdecay 0.15 # sdgcut 4000 # gain 0.8 # sdgspace 0.3 # sdgtime 0.381
+
+-- the lead with slides into every note - sdgslide is where a note starts,
+-- in semitones from where it lands - and the bleeps gone
+do
+  d6 $ note "<[c6 ~ ~ ef6 ~ g6 ~ ~ ~ f6 ef6 ~ c6 ~ ~ ~] ~>" # s "sdglead" # sdgsquare 0.8 # sdgdetune 0.3
+     # sdgcut 1500 # sdgenv 0.4 # sdgvib 0.15 # sdgvibdelay 0.1 # legato 0.9 # gain 0.8
+     # sdgslide "-5 ~ ~ 3 ~ -7 ~ ~ ~ 2 -2 ~ 5 ~ ~ ~"
+  d7 silence
+
+-- the kick straight for the last bar of eight, a tom run with it: a turnaround
+do
+  d1 $ whenmod 8 7 (const $ s "sdgkick*4" # sdgdecay 0.4 # sdgpunch 14) $ s "sdgkick ~ ~ sdgkick ~ ~ sdgkick ~ ~ ~ sdgkick ~ <sdgkick ~> ~ ~ ~" # sdgdecay 0.6 # sdgpunch 14
+  d8 $ whenmod 8 7 (const $ note "[12 10] [7 5] [2 0] [-3 -5]" # s "sdgtom:5" # sdgpunch 24 # sdgbend 0.25 # gain 0.9)
+     $ note "~ ~ ~ [~ ~ ~ <~ 0>]" # s "sdgtom:5" # sdgpunch 18 # sdgbend 0.2 # gain 0.85
+
+hush

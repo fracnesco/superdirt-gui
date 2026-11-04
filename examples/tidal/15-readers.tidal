@@ -1,0 +1,78 @@
+-- SuperDirtGUI from Tidal - 15: ten more ways of reading a sample
+--
+-- Each of these is a player in players/, switched on by its parameter. Every
+-- file there lists its parameters and their ranges, and the window's loaded tab
+-- shows them. They read the sample; the sample is yours to change.
+--
+-- sdghold works on scan, freeze, fold and smear: it makes the event last that
+-- many cycles. Nothing else can make a sample's event outlast the sample:
+-- SuperDirt cuts sustain and legato off at the sample's own length.
+
+let sdgscan = pF "sdgscan"
+    sdgstep = pF "sdgstep"
+    sdghold = pF "sdghold"
+    sdgscratch = pF "sdgscratch"
+    sdgdepth = pF "sdgdepth"
+    sdgfreeze = pF "sdgfreeze"
+    sdgself = pF "sdgself"
+    sdgfold = pF "sdgfold"
+    sdgcrush = pF "sdgcrush"
+    sdgsmear = pF "sdgsmear"
+    sdgpitch = pF "sdgpitch"
+    sdgcloud = pF "sdgcloud"
+    sdggrain = pF "sdggrain"
+    sdgscatter = pF "sdgscatter"
+    sdgspread = pF "sdgspread"
+    sdgrev = pF "sdgrev"
+    sdgonset = pF "sdgonset"
+    sdgcross = pS "sdgcross"
+    hz p = fmap (\x -> 110 * 2 ** (x / 12)) p
+
+-- scan: the sample as an oscillator. A break, played as a bass line
+d1 $ s "breaks152/2" # sdgscan (hz "<-12 -9 -5 -7>")
+
+-- slow steps through the file, then a blur
+d1 $ s "breaks152/2" # sdgscan 55 # sdgstep "<2 40>"
+
+-- a tune out of a hi-hat: it lasts as long as sdghold says
+d1 $ s "hh*4" # sdgscan (hz "0 3 7 12") # sdghold 0.25
+
+-- scratch: a hand on the record. Fast and deep, then slow and shallow
+d1 $ s "numbers:3" # sdgscratch "<8 2>" # sdgdepth "<0.1 0.003>"
+
+-- freeze: the word plays, then stops and rings
+d1 $ s "numbers:3/2" # sdgfreeze "<0.2 0.5>" # sdghold 2
+
+-- self: the sound throws its own read pointer
+d1 $ s "breaks125" # sdgself "<0.002 0.05>"
+
+-- fold: back and forth. Wide, then narrow enough to buzz
+d1 $ s "numbers:3" # sdgfold "<0.3 0.02>"
+
+-- crush: fewer places the pointer may stand
+d1 $ s "breaks125" # sdgcrush "<4 16 64 256>"
+
+-- smear: wash it out. A low speed stretches it without dropping the pitch
+d1 $ s "numbers:3" # sdgsmear "<0.2 0.8>"
+
+d1 $ s "breaks152/8" # sdgsmear 0.6 # speed 0.05
+
+-- cloud: separate grains, each with its own place, some backwards
+d1 $ s "numbers:3" # sdgcloud 40 # sdgscatter 0.2
+
+d1 $ s "breaks152" # sdgcloud 12 # sdggrain 0.15 # sdgrev 0.5 # speed 0.2
+
+-- onset: the file's real hits, not even slices. Compare with splice. The first
+-- event of a new file plays it whole while the hits are found
+d1 $ s "breaks125*8" # sdgonset "0 1 2 3 4 5 6 7"
+
+d1 $ splice 8 "0 1 2 3 4 5 6 7" $ s "breaks125"
+
+d1 $ s "breaks125*8" # sdgonset (irand 16)
+
+-- cross: one sample through another. The second is named as a string
+d1 $ s "breaks125" # sdgcross "numbers:3"
+
+d1 $ s "numbers:1 numbers:2" # sdgcross "breaks152"
+
+hush

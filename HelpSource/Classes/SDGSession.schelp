@@ -1,0 +1,137 @@
+TITLE:: SDGSession
+summary:: the whole mixer of a SuperDirtGUI saved under a name and brought back, VST plugin states included
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SuperDirtGUI, Classes/SDGWindow, Classes/SDGInsert, Classes/SDGTrack
+
+DESCRIPTION::
+What a session in a DAW is, for the orbits: where everything stood. You use it
+through the link::Classes/SuperDirtGUI:: or the top of the link::Classes/SDGWindow::;
+it makes one of these itself, and you ask this class only about the folder and the names.
+
+code::
+~sdg.saveSession("gig");
+~sdg.sessionNames;
+~sdg.loadSession("gig", { |ok| ok.postln });
+::
+
+subsection:: What a session holds
+
+table::
+## strong::orbit:: || fader, mute, solo, limiter mode, output bus
+## strong::tracks:: || which global effects, in what order, each one's fader, whether it is on, and what the knobs set
+## strong::inserts:: || every insert of an orbit or a track, in its place, bypassed or not
+## strong::eq, compressor:: || all of their settings; a compressor's sidechain too, by BusManager name when it has one
+## strong::insight:: || what it shows and aims at
+## strong::VST plugin:: || the plugin, and its state as the plugin hands it over
+## strong::window:: || the tab and orbit on show, and the explorer's speed, amp and pan
+::
+
+It does not hold the content files, which are on disk already; sample banks,
+which you load as you did; Tidal's patterns; or where the insert windows were.
+
+A parameter is saved as the knobs set it, in the orbit's default event. A
+value that only came in with a pattern is not: the pattern sends it again.
+
+subsection:: On disk
+
+A session is a folder in link::#*folder::, in the user's support directory so
+that it outlives an update of the quark. In it are code::session.scd:: and one
+code::.state:: file per VST insert. Copy the folder to give a session to someone;
+a folder put there shows in the window's menu within a second.
+
+The file code::session.scd:: is SuperCollider code, read by running it. strong::Load only
+sessions you trust.::
+
+subsection:: What loading does
+
+It replaces what the orbits hold. Every insert is taken out and made again, each
+plugin reopened with its state, so a plugin's sound stops for a moment. A track
+whose effect is in the session stays and keeps ringing; the others go, and the
+session's missing ones are added. Orbits beyond the session's are left as they are.
+
+What cannot come back is left out with a warning, and the rest loads: an effect
+with no SynthDef, an insert whose extension is not installed, a plugin that is
+neither known by name nor on disk at its saved path. link::#-problems:: lists them.
+
+A plugin saved by name opens through its saved file path when VSTPlugin has not
+searched yet in this sclang, so a load needs no search on the machine that saved it.
+Otherwise the search runs first, up to two minutes when it has never run.
+
+CLASSMETHODS::
+
+METHOD:: folder
+Where sessions are kept. By default code::superdirt-gui-sessions:: in
+code::Platform.userAppSupportDir::. Set it to keep them elsewhere.
+ARGUMENT:: path
+A folder; it is made at the first save.
+
+METHOD:: names
+The sessions in the folder, whatever the case.
+RETURNS:: an Array of link::Classes/String::.
+
+METHOD:: exists
+ARGUMENT:: name
+A session's name.
+RETURNS:: whether there is a session of that name.
+
+METHOD:: pathOf
+ARGUMENT:: name
+A session's name.
+RETURNS:: its folder, whether or not it exists, as a link::Classes/String::.
+
+METHOD:: nameProblem
+Why a name will not do. It names a folder, on any system a student has.
+ARGUMENT:: name
+The name to try.
+RETURNS:: a link::Classes/String::, or nil when the name will do.
+
+METHOD:: version
+RETURNS:: the version written into a session. One from a newer version loads
+with a warning, and what is not known is left out.
+
+METHOD:: new
+Made by code::SuperDirtGUI:session::; you do not need to.
+ARGUMENT:: sdg
+Its link::Classes/SuperDirtGUI::.
+
+INSTANCEMETHODS::
+
+METHOD:: save
+Ask each plugin for its state, at most five seconds in all, then write the session
+over any of that name. A plugin that does not answer is saved with the state it
+last gave. What would be written is read back first, and nothing is replaced if it
+cannot be. Happens on AppClock: from a Routine of your own, wait for the action.
+ARGUMENT:: argName
+The name.
+ARGUMENT:: action
+Called with true, or false with a warning.
+
+METHOD:: load
+Replaces the mixer, as the description says. A session loaded in the same breath as
+code::SuperDirtGUI(~dirt):: waits for the orbits to be ready, up to ten seconds.
+ARGUMENT:: argName
+The name.
+ARGUMENT:: action
+Called with true once every insert has its synth and every plugin its state, at
+most thirty seconds on; with false and a warning when the session could not be read,
+and then nothing was touched.
+
+METHOD:: capture
+The session as it would be written, on the clock the window's views allow: call it
+on AppClock while the window is open.
+RETURNS:: an link::Classes/Event::.
+
+METHOD:: name
+RETURNS:: the session saved or loaded last, nil before the first.
+
+METHOD:: busy
+RETURNS:: true during a save or a load. Another one meanwhile is refused with a warning.
+
+METHOD:: problems
+RETURNS:: what the last load left out, an Array of link::Classes/String::; empty when nothing.
+
+METHOD:: windowState
+The window's part of the last session, which a window opened later starts from.
+
+METHOD:: sdg
+RETURNS:: its link::Classes/SuperDirtGUI::.
