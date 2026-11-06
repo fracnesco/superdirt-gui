@@ -87,6 +87,7 @@ SDGSampleEditor {
 		edit.addDependant(this);
 		this.store !? (_.addDependant(this));
 		all.add(this);
+		CmdPeriod.add(this);
 		this.prListenForPosition;
 		this.prEnsureDef;
 		this.prGridFromStore;
@@ -784,7 +785,7 @@ SDGSampleEditor {
 			if (previewSynth.notNil and: { msg[1] == previewSynth.nodeID }) {
 				{ if (this.isOpen) { waveView.playhead = msg[3] } }.defer;
 			};
-		}, '/sdg_editpos', this.dirt.server.addr);
+		}, '/sdg_editpos', this.dirt.server.addr).fix; // a cmd-period frees the others; prClosed frees this
 	}
 
 	prDcArgs {
@@ -892,7 +893,16 @@ SDGSampleEditor {
 
 	// ------------------------------------------------------------ lifecycle
 
+	// a cmd-period has freed the preview synth and cleared the clock the
+	// analysis ran on: the playhead goes, and the analysis starts over
+	cmdPeriod {
+		previewSynth = nil;
+		{ if (this.isOpen) { waveView.playhead = nil } }.defer;
+		if (analysisRoutine.notNil) { analysisRoutine = nil; { if (this.isOpen) { this.analyse } }.defer };
+	}
+
 	prClosed {
+		CmdPeriod.remove(this);
 		this.stop;
 		analysisRoutine !? (_.stop);
 		analysisRoutine = nil;

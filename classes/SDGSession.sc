@@ -11,6 +11,7 @@
 //
 // A session is a folder of its own, in the user's support directory so that it
 // outlives an update of the quark: session.scd, readable, an orbit at a time,
+// midi.scd, the controller mappings as the code that makes them (SDGMidi),
 // and one .state file per VST insert, the plugin's state as it hands it over.
 // The state is a file of its own because a plugin's can run to megabytes, which
 // would bury the rest of the text. session.scd is SuperCollider
@@ -21,7 +22,9 @@
 // its tail rings on; the others go, and the session's missing ones are added.
 // Something that cannot come back - an effect whose file is gone, a kind whose
 // extension is not installed - is warned about and left out, and the rest loads.
-// Orbits beyond the session's are left as they are.
+// Orbits beyond the session's are left as they are. The mappings are always
+// replaced: a session saved with none, or from before there were mappings,
+// leaves none. ~sdg.midi.loadSession(name) takes another session's alone.
 //
 // What a session does not hold: content files (they are on disk), sample banks
 // (load them as you did), Tidal's own patterns, and the insert windows' places.
@@ -51,6 +54,9 @@ SDGSession {
 	}
 
 	*exists { |name| ^File.exists(this.pathOf(name) +/+ "session.scd") }
+
+	// the session's controller mappings, SDGMidi's code
+	*midiPathOf { |name| ^this.pathOf(name) +/+ "midi.scd" }
 
 	// Why a name will not do, as a String, or nil when it will. It names a
 	// folder, on any of the systems a student has.
@@ -105,7 +111,9 @@ SDGSession {
 			numChannels: sdg.dirt.numChannels,
 			window: sdg.controlWindow !? (_.sessionState) ?? { windowState },
 			returnFeedback: sdg.returnFeedback,
-			returns: sdg.returns.collect { |ret| this.prReturnData(ret) },
+			returns: sdg.returns.collect { |ret| ret.sessionData },
+			groups: sdg.groups.collect { |group| group.sessionData },
+			master: sdg.master !? { |m| m.sessionData },
 			orbits: orbits.collect { |orbit, i| this.prOrbitData(orbit, i) }
 		)
 	}
@@ -117,6 +125,8 @@ SDGSession {
 			solo: sdg.soloStates[i],
 			limitertype: (orbit.get(\limitertype) ? 1).asInteger,
 			outBus: (orbit.outBus.tryPerform(\index) ? orbit.outBus ? 0).asInteger,
+			dest: sdg.orbitDest(i),
+			directBus: sdg.directBusOf(i),
 			tracks: sdg.tracksOf(i).select { |track| track.fx.notNil }.collect { |track|
 				(
 					name: track.name,
@@ -131,12 +141,6 @@ SDGSession {
 			// pairs: a letter is a capital, which an Event's text could not have as a key
 			sends: sdg.returns.collect { |ret| [ret.letter, ret.orbitLevel(i)] }.flatten(1)
 		)
-	}
-
-	prReturnData { |ret|
-		var data = ret.sessionData;
-		data[\params] = ret.fx !? { |fx| this.prParamsOf(ret, fx) };
-		^data
 	}
 
 	// what the orbit's default event holds for an effect: what the knobs set.
@@ -169,7 +173,7 @@ SDGSession {
 
 	prEveryInsert {
 		^sdg.dirt.orbits.collect { |orbit| sdg.prEveryInsertOf(orbit.orbitIndex) }.flatten(1)
-			++ sdg.returns.collect(_.inserts).flatten(1)
+			++ sdg.busTracks.collect(_.inserts).flatten(1)
 	}
 
 	// The state files first, then the text, which is compiled and run before it
@@ -193,6 +197,8 @@ SDGSession {
 			File.use(dir +/+ pair[0], "wb", { |file| file.write(pair[1]) })
 		};
 		File.use(dir +/+ "session.scd", "w", { |file| file.write(text) });
+		// always, so loading it always says what the mappings are, none included
+		File.use(dir +/+ "midi.scd", "w", { |file| file.write(sdg.midi.code) });
 		keep = states.collect(_[0]);
 		(dir +/+ "*.state").pathMatch.do { |old|
 			if(keep.includesEqual(old.basename).not) { File.delete(old) }
@@ -207,18 +213,22 @@ SDGSession {
 			out = out ++ (orbit[\inserts] ? []);
 			(orbit[\tracks] ? []).do { |t| out = out ++ (t[\pre] ? []) ++ (t[\post] ? []) };
 		};
-		(data[\returns] ? []).do { |r| out = out ++ (r[\pre] ? []) ++ (r[\post] ? []) };
+		((data[\returns] ? []) ++ (data[\groups] ? []) ++ (data[\master] !? { |m| [m] } ? [])).do { |r|
+			out = out ++ (r[\pre] ? []) ++ (r[\inserts] ? []) ++ (r[\post] ? [])
+		};
 		^out
 	}
 
 	// an orbit or a return at a time, for a session that can be read and compared
 	prText { |argName, data|
 		var lines = { |list| list.collect { |x| "\t" ++ x.asCompileString }.join(",\n") };
-		^"// SuperDirtGUI session %, saved %\n(\nversion: %,\nnumChannels: %,\nwindow: %,\nreturnFeedback: %,\nreturns: [\n%\n],\norbits: [\n%\n]\n)\n".format(
+		^"// SuperDirtGUI session %, saved %\n(\nversion: %,\nnumChannels: %,\nwindow: %,\nreturnFeedback: %,\nreturns: [\n%\n],\ngroups: [\n%\n],\nmaster: %,\norbits: [\n%\n]\n)\n".format(
 			argName.asCompileString, Date.localtime.asString,
 			data[\version], data[\numChannels], data[\window].asCompileString,
 			data[\returnFeedback] ? false,
 			lines.(data[\returns] ? []),
+			lines.(data[\groups] ? []),
+			data[\master].asCompileString,
 			lines.(data[\orbits]))
 	}
 
@@ -257,6 +267,8 @@ SDGSession {
 				this.prFindPlugins(data);
 				try {
 					this.prApply(data, this.class.pathOf(argName));
+					// a mapping whose effect is not back yet waits for it
+					sdg.midi.load(this.class.midiPathOf(argName));
 					ok = true;
 				} { |err|
 					"SuperDirtGUI: session '%' stopped half way - %".format(argName, err.errorString).warn;
@@ -354,12 +366,14 @@ SDGSession {
 				data[\numChannels], sdg.dirt.numChannels));
 		};
 		this.prApplyReturns(data[\returns] ? [], data[\returnFeedback] ? false, dir);
+		this.prApplyGroups(data[\groups] ? [], dir);
+		this.prApplyMaster(data[\master] ? (), dir);
 		saved.size.min(orbits.size).do { |i| this.prApplyOrbit(orbits[i], i, saved[i], dir) };
 	}
 
-	// The returns first, so the orbits' sends have something to go to. One the session
-	// also has stays and its inserts are made again; the others go. A session from
-	// before there were returns has none, so none are left.
+	// The returns first, so the orbits' and groups' sends have something to go to. One
+	// the session also has stays and its inserts are made again; the others go. A
+	// session from before there were returns has none, so none are left.
 	prApplyReturns { |saved, feedback, dir|
 		var wanted = saved.collect { |d| d[\letter] };
 		sdg.returns.copy.do { |ret|
@@ -372,23 +386,12 @@ SDGSession {
 		saved.do { |d|
 			var ret = sdg.returnAt(d[\letter]) ?? { sdg.addReturn(d[\letter]) };
 			ret !? {
-				if(d[\effect].notNil and: { sdg.setReturnEffect(ret, d[\effect]).isNil }) {
-					problems = problems.add("% effect %: no such SynthDef".format(ret.where, d[\effect]));
+				// a return held one global effect once
+				d[\effect] !? { |name|
+					problems = problems.add("%'s effect %: a return holds inserts only now".format(ret.where, name))
 				};
-				if(d[\effect].isNil) { sdg.setReturnEffect(ret, nil) };
-				ret.fx !? { |fx|
-					this.prApplyParams(ret, fx, d[\params] ? (), true);
-					ret.effectOn = d[\effectOn] ? true;
-				};
-				d[\level] !? { |v| ret.level = v };
-				d[\mute] !? { |v| ret.mute = v };
-				d[\solo] !? { |v| ret.solo = v };
+				this.prApplyBus(ret, d, dir);
 				d[\preFader] !? { |v| ret.preFader = v };
-				d[\limitertype] !? { |v| ret.limitertype = v };
-				d[\outBus] !? { |v| ret.outBus = v };
-				[\pre, \post].do { |place|
-					(d[place] ? []).do { |x| this.prAddInsert(nil, x, ret, place, dir) }
-				};
 			}
 		};
 		// between returns: all of them are there by now
@@ -398,6 +401,56 @@ SDGSession {
 			}
 		};
 		sdg.returnFeedback = feedback;
+	}
+
+	// After the returns, before the orbits that go into them. A session from before
+	// there were groups has none, so none are left; their orbits go to the master.
+	prApplyGroups { |saved, dir|
+		var wanted = saved.collect { |d| d[\name] };
+		sdg.groups.copy.do { |group|
+			if(wanted.includes(group.name)) {
+				group.inserts.do { |x| sdg.removeInsert(x) }
+			} {
+				sdg.removeGroup(group)
+			}
+		};
+		saved.do { |d|
+			var group = sdg.groupAt(d[\name]) ?? { sdg.addGroup([], d[\name]) };
+			group !? {
+				this.prApplyBus(group, d, dir);
+				sdg.returns.do { |ret| sdg.setGroupSend(group, ret, 0) };
+				(d[\sends] ? []).pairsDo { |letter, value| sdg.setGroupSend(group, letter, value) };
+			}
+		};
+	}
+
+	// A session from before there was a master leaves it clean, at 0 dB.
+	prApplyMaster { |d, dir|
+		var m = sdg.master;
+		if(m.isNil) {
+			if((d[\inserts] ? []).notEmpty) { problems = problems.add("the master's inserts: there is no master (useMaster is false)") };
+			^this
+		};
+		m.inserts.do { |x| sdg.removeInsert(x) };
+		m.level = d[\level] ? 1;
+		m.limitertype = d[\limitertype] ? 0;
+		m.route(\direct, d[\directBus] ? sdg.hardwareOut);
+		(d[\inserts] ? []).do { |x| this.prAddInsert(nil, x, m, \chain, dir) };
+	}
+
+	// what a return and a group have in common
+	prApplyBus { |track, d, dir|
+		d[\level] !? { |v| track.level = v };
+		track.mute = d[\mute] ? false;
+		track.solo = d[\solo] ? false;
+		d[\limitertype] !? { |v| track.limitertype = v };
+		if(d[\dest].notNil or: { d[\directBus].notNil }) {
+			track.route(d[\dest] ? \master, d[\directBus])
+		} {
+			// a session from before there was a master: its output bus, if any
+			d[\outBus] !? { |v| if(v == sdg.hardwareOut) { track.route(\master) } { track.route(\direct, v) } }
+		};
+		((d[\pre] ? []) ++ (d[\inserts] ? []) ++ (d[\post] ? [])).do { |x| this.prAddInsert(nil, x, track, \chain, dir) };
 	}
 
 	// The output first: it rebuilds the orbit, which an insert still starting
@@ -410,8 +463,14 @@ SDGSession {
 		sdg.returns.do { |ret| sdg.setSend(i, ret, 0) };
 		(d[\sends] ? []).pairsDo { |letter, value| sdg.setSend(i, letter, value) };
 		d[\limitertype] !? { |v| sdg.setOrbitParam(i, \limitertype, v) };
-		d[\outBus] !? { |v|
-			if(v != (orbit.outBus.tryPerform(\index) ? orbit.outBus ? 0)) { sdg.setOutBus(i, v) }
+		// a session from before there was a master: its output bus says where
+		if(d[\dest].notNil) {
+			sdg.setOrbitDest(i, if(d[\dest] == \master or: { d[\dest] == \direct } or: { sdg.groupAt(d[\dest]).notNil }) { d[\dest] } { \master },
+				d[\directBus])
+		} {
+			d[\outBus] !? { |v|
+				if(v == sdg.hardwareOut) { sdg.setOrbitDest(i, \master) } { sdg.setOrbitDest(i, \direct, v) }
+			}
 		};
 		this.prApplyTracks(orbit, i, d[\tracks] ? [], dir);
 		(d[\inserts] ? []).do { |x| this.prAddInsert(i, x, nil, nil, dir) };
@@ -470,7 +529,7 @@ SDGSession {
 	// in its list, so the session's order is the order it is added in
 	prAddInsert { |i, d, track, place, dir|
 		var kind = d[\kind], plugin, insert, where;
-		where = if(track.isKindOf(SDGReturn)) { "% %".format(track.where, place) } {
+		where = if(track.isKindOf(SDGBusTrack)) { track.where } {
 			track !? { "orbit %'s % %".format(i, place, track.shortName) } ?? { "orbit %".format(i) }
 		};
 		if(SDGInsert.available(kind).not) {

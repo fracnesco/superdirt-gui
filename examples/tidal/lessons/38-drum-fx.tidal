@@ -1,0 +1,110 @@
+-- SuperDirtGUI from Tidal - 38: drum effects, one hit at a time
+--
+-- Eight modules (modules/) made for drums, each an effect on the events that
+-- ask for it, like sdgcomb in file 2. They work on samples and on the drum
+-- voices alike, and every hit gets its own: a pattern can give each step a
+-- different one. docs/drum-fx.md says what each does and where it comes from.
+--
+--   sdgtrans   a transient designer: more or less attack, more or less body
+--   sdgboom    a tuned sub under every hit
+--   sdgbody    the hit strikes a drum shell, a bar, a tube or a bell
+--   sdglatex   a squelch: a resonant filter diving with the hit
+--   sdgchrome  turns a hit to metal
+--   sdgroll    a roll from one hit, faster and faster
+--   sdggated   gated reverb, cut off dead
+--   sdgdive    the hit dives in pitch, a tape stop
+--
+-- The ones with a tail (boom, body, chrome, roll, gated, dive) make the event
+-- last as long as the tail, and cut a sample off at its own end so it does
+-- not start again.
+
+setcps (120/60/4)
+
+let sdgtrans = pF "sdgtrans"
+    sdgtransbody = pF "sdgtransbody"
+    sdgboom = pF "sdgboom"
+    sdgboomfreq = pF "sdgboomfreq"
+    sdgboomdecay = pF "sdgboomdecay"
+    sdgbody = pF "sdgbody"
+    sdgbodyfreq = pF "sdgbodyfreq"
+    sdgbodytype = pF "sdgbodytype"
+    sdgbodydecay = pF "sdgbodydecay"
+    sdglatex = pF "sdglatex"
+    sdglatexfreq = pF "sdglatexfreq"
+    sdglatextime = pF "sdglatextime"
+    sdgchrome = pF "sdgchrome"
+    sdgchromefreq = pF "sdgchromefreq"
+    sdgchromefb = pF "sdgchromefb"
+    sdgroll = pF "sdgroll"
+    sdgrolltime = pF "sdgrolltime"
+    sdgrollcurve = pF "sdgrollcurve"
+    sdgrollpitch = pF "sdgrollpitch"
+    sdggated = pF "sdggated"
+    sdggatedtime = pF "sdggatedtime"
+    sdgdive = pF "sdgdive"
+    sdgdivetime = pF "sdgdivetime"
+
+-- sdgtrans: the same break, the attack up on one cycle and down on the next.
+-- 1 is +15 dB of attack: loud. -1 takes the snap off and leaves the room.
+d1 $ s "breaks125" # legato 1 # sdgtrans "<1 -1>"
+
+-- the body after the attack, brought up: a dry kit sounds like a room
+d1 $ s "bd*4" # sdgtrans 0.3 # sdgtransbody "<0 0.8>"
+
+-- sdgboom: a hat gets a kick under it. sdgboomfreq is the note: 41 is E
+d1 $ s "hh*4" # sdgboom 0.7 # sdgboomfreq 41 # sdgboomdecay 0.6
+
+-- on every hit of a break it finds, following the bass line
+d1 $ s "breaks125" # legato 1 # sdgboom 0.4 # sdgboomfreq "<55 49 41 46>"
+
+-- sdgbody: a clap strikes a drum shell, tuned to a phrase
+d1 $ s "cp*4" # sdgbody 0.6 # sdgbodyfreq "110 165 220 147"
+
+-- the same hat on four objects: membrane, bar, tube, bell
+d1 $ s "hh*8" # sdgbody 0.6 # sdgbodyfreq 440 # sdgbodytype "<0 1 2 3>"
+
+-- a snare into a bell that rings on
+d1 $ s "~ sn" # sdgbody 0.7 # sdgbodytype 3 # sdgbodyfreq 220 # sdgbodydecay 2
+
+-- sdglatex: rubbery clicks, the cutoff landing on a note
+d1 $ s "hh*16" # sdglatex 0.8 # sdglatexfreq "200 400 300 600" # sdglatextime 0.02
+
+-- longer dives are a wet zap; slowly from click to zap
+d1 $ s "cp*4" # sdglatex 1 # sdglatextime (range 0.01 0.2 $ slow 4 sine)
+
+-- sdgchrome: metal. On a hat it is a struck plate; sdgchromefb is how long it rings
+d1 $ s "hh*8" # sdgchrome 0.7 # sdgchromefreq "<300 450>" # sdgchromefb 0.3
+
+-- a SOPHIE kit: drum voices, squashed and turned to metal
+d1 $ stack [s "sdgkick*2" # sdgchrome 0.4 # sdgchromefreq 90,
+            s "~ sdgsnare" # sdgchrome 0.6 # sdgchromefreq 600 # sdgchromefb 0.6,
+            s "sdghat*8" # sdglatex 0.6 # sdglatexfreq 900]
+
+-- sdgroll: one snare, eight repeats, each gap 0.8 times the last
+d1 $ s "~ sn ~ ~" # sdgroll 8 # sdgrollcurve 0.8
+
+-- a ratchet is a curve of 1; sdgrolltime is the first gap in cycles
+d1 $ s "bd ~ ~ cp" # sdgroll 3 # sdgrolltime (1/16) # sdgrollcurve 1
+
+-- rolls that rise in pitch, and ones that slow down and fall
+d1 $ s "drum:2 ~ ~ drum:3" # sdgroll 12 # sdgrollcurve "0.85 1.1" # sdgrollpitch "1 -1"
+
+-- sdggated: the 80s snare. Only the snare asks for it, so only the snare gets it
+d1 $ s "bd sn:3 bd sn:3" # sdggated "0 0.7" # sdggatedtime 0.3
+
+-- toms, each with a shorter gate
+d1 $ s "sdgtom*4" # n "0 1 2 3" # sdggated 0.5 # sdggatedtime "0.3 0.2 0.15 0.1"
+
+-- sdgdive: hats become zaps
+d1 $ s "hh*8" # sdgdive 24 # sdgdivetime 0.05
+
+-- a tape stop on the last kick of every bar
+d1 $ s "bd*4" # sdgdive "0 0 0 12" # sdgdivetime 0.3
+
+-- together: each part with its own effect, and some steps with two
+d1 $ stack [s "bd*4" # sdgboom 0.4 # sdgboomfreq 41 # sdgtrans 0.4,
+            s "~ sn" # sdggated 0.6,
+            s "hh*8" # sdgchrome 0.4 # sdgchromefreq 600 # sdgchromefb 0.2,
+            sometimesBy 0.25 (# sdgroll 4) $ s "~ ~ ~ cp" # sdglatex 0.5]
+
+hush

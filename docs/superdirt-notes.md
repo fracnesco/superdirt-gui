@@ -16,6 +16,23 @@ None of this is a complaint. It is what you need when something does not do what
 `min(unitDuration, sustain)`: `sustain 4` on a 0.5 s file stays 0.499. The modules run before `sendGateSynth`
 reads `~sustain`, so a player's `prepare` can set it. *Source: `DirtEvent.sc`. Measured 2026-11-01.*
 
+**A sample made to last longer starts again.** SuperDirt's sample synth reads its file in a loop and counts on
+the event's gate to stop it at the file's end. A module that lengthens `~sustain` for a tail of its own (it runs
+before `sendGateSynth` reads it) hears the sample begin again at the old length: a 151 ms snare under a 3 s tail
+came back at 151 ms. The drum modules close their own input 4 ms before the length they found
+([drum-fx.md](drum-fx.md)). *Measured 2026-11-05 in the drum lab.*
+
+**`XFade2` never quite reaches its ends.** At pan 1 it leaves about 1e-17 of the dry side, and a drum decaying
+under that becomes denormal numbers on the bus, which SuperDirt's output replaces without a word. A mix of
+`dry * sqrt(1 - a) + wet * sqrt(a)` is exactly 0 at both ends. *Measured 2026-11-05: `CheckBadValues` reported
+code 3 (denormal) 1.5 s into a kick through `sdglatex 1`, and nothing once the mix was changed.*
+
+**A two-channel `LocalBuf` read back in a module played buffer 0.** `RecordBuf` into a `LocalBuf(24000, 2)`,
+`PlayBuf` from it: inside SuperDirt every event played the server's first loaded sample, with `Buffer UGen channel
+mismatch: expected 2, yet buffer has 1 channels`, while the same SynthDef on a bare server played what it recorded.
+`BufChannels` of the same buffer answered 2. Cause not found; `sdgroll` replays through a `DelayC` instead.
+*Measured 2026-11-05.*
+
 **A voice's release cannot outlast `sustain`.** `dirt_gate` frees the event's group at the end of sustain, tail
 or no tail. So a pad's attack and release have to fit inside it. *Source: `core-synths.scd`, `doneAction: 14`.*
 
@@ -150,6 +167,15 @@ primitives, about a microsecond for 512 values; `sum` and `maxItem` are loops in
 **`Object.readArchive` of 5000 small Events takes 5.6 s, and `interpret` of their compile string 2.4 s.** The tag store
 is a tab-separated file instead. *Measured 2026-11-03.*
 
+**`(0..(n - 2))` counts down when n is 1.** An SC range whose end is under its start runs backwards (0, -1); it is never
+empty. The analysis failed with `binary operator '>=' failed` on every file shorter than one 256-sample hop, 26 of
+Dirt-Samples' 2038 files (3 to 11 ms: `armora`, `chin`, `e`, `msg` ...). Loop with `(n - 1).do`, or check the ends before a
+range. *Found in use, 2026-11-03.*
+
+**`List:reject` (and `select`, `collect`) answers an Array, and `Array:add` answers a new Array once the old one is full.**
+So `list = list.reject { ... }; list.add(x)` stops growing at its capacity: the window's MIDI registry held 4 of 19 controls.
+Assign what `add` answers, or keep a List and use `removeAllSuchThat`. *Found in use, 2026-11-04.*
+
 **`Date` has no constructor from seconds since 1970**, and `mdls -raw` with several files answers their values
 separated by NUL characters. Both are worked out by hand in `SDGSampleTags` and `SDGWindow.dateString`. *Source:
 `Date.sc`. Found in use.*
@@ -173,10 +199,26 @@ Qt may also hand over a control character (19 for s), so check the key code too.
 **`s.freeAll` in a headless session can crash sclang** in a server view's scope painting while the tree is made again. To simulate a
 cmd-period, send `/g_freeAll` to group 1, then remake the orbits. *Measured 2026-11-01.*
 
+**`CmdPeriod.run` clears both clocks first, then tells its objects, then frees the servers.** So a `cmdPeriod` method may start a new Routine
+on AppClock at once, but a Routine or a one-shot `AppClock.sched` from before is gone: a `pending` flag set for it stays true for ever, and
+nothing is ever redrawn again (the explorer after a cmd-period during analysis). An `OSCFunc` not made with `.fix` is freed too (meters, the
+editor's playhead); `SkipJack` restarts itself. The node tree is made again later, on `ServerTree`, after a sync. *Read in
+`SystemActions.sc`, measured 2026-11-06.*
+
 **A `TreeView` cannot say which items are open, nor open one, nor hear a click on its header.** `invokeMethod(\expandItem, item)`,
 `\expand` and `\isItemExpanded` all fail as primitives, and connecting to `itemExpanded` gets nothing. Only `expandAll` and
 `collapseAll` work, so a tree rebuilt to sort it loses what was open. The explorer is a `UserView` that draws its own list
 (`SDGExplorerView`). *Measured 2026-11-03.*
+
+**Qt sizes and mouse positions are Floats**, and `div:` of a Float answers a Float, so a row number worked out from them is
+0.0, which has no `odd`: the explorer's row shading broke on the first scroll. `asInteger` anything that indexes rows.
+*Found in use, 2026-11-03.*
+
+**A Qt getter called from a Routine fails** (a TextField's `string`, a NumberBox's `value`): Qt calls belong on AppClock.
+A check reads them inside a `defer`. *Found in use.*
+
+**`Image.fromWindow` right after a layout change can hang**: the handle between the strips and the right panel is a
+`UserView`, and the grab waits on its repaint. Take the picture a second after the last change. *Found in use, 2026-11-03.*
 
 **A screen capture only shows a headless sclang's window if it is in front**, and it is not. `Image.fromWindow` in a later `defer` works.
 *Found in use.*
@@ -186,6 +228,14 @@ cmd-period, send `/g_freeAll` to group 1, then remake the orbits. *Measured 2026
 `+/+` writes `\` there, while a path from elsewhere may have `/`, and `dirname` and `standardizePath` are primitives whose Windows spelling
 was not checked. So paths are compared with `SuperDirtGUI.samePath`, never `==`, and Explorer's `/select,` and `start` get `\`. *Found by
 reading, 2026-10-19. Not run on Windows.*
+
+**On Windows a folder from `pathMatch` ends in `\`, not `/`**, so `endsWith("/")` never spots one there: test `p.last.isPathSeparator`. The
+same file can come back in several spellings, so tags are kept under `SDGSampleTags.keyOf(path)`, the normalised path there. *Source:
+`SC_Filesystem_win.cpp`, `globNext`, SuperCollider 3.13. Not run on Windows.*
+
+**On Windows `unixCmd` runs `cmd /c` with the string as its command line**, which ends at the first newline and whose quoting a `"` in the
+text breaks. Tidal code has both, so the clipboard gets it through a temp file that PowerShell reads. *Source: `sc_popen.cpp`,
+SuperCollider 3.13. Not run on Windows.*
 
 ## SuperDirt and Tidal
 
@@ -201,6 +251,12 @@ hearing time against pitch. *Found in use.*
 **A word in Tidal's mini-notation takes letters, digits and `: . - _`**, and starts with a letter or a digit. So several tags
 go in one word joined with `.`, and a tag cannot start with `-`. *Source: tidal-core 1.10.1, `ParseBP.hs`, `pString`.*
 
+**`loopAt n` reads a sample at `speed / n × cps × duration`.** It sets `unit "c"`, which `DirtEvent:calcTimeSpan` turns into
+that rate, so a `# speed` inside the `loopAt` is a pure rate factor, and `# end e # speed e` plays the first e of a file over the
+same n cycles. Through Tidal 1.9.5, every piece of the sync window's code played at its planned rate to four decimals.
+A check's ghci script needs `import Control.Concurrent` for `threadDelay`, or Tidal hushes at once. *Source: `DirtEvent.sc`.
+Measured 2026-11-03.* [sync.md](sync.md).
+
 **Tidal's `a1` is 27.5 Hz:** octave 5 is middle C (`note 0`, midi 60). Bass sits around `a2` (55 Hz) and `e2` (41 Hz). *Found in use.*
 
 **`note "a'min9" - 12 # s "sdgpad" # gain 0.8` is not an octave down.** The `12` becomes a whole control map and the
@@ -208,6 +264,17 @@ subtraction runs over the event: the note stays, `n: -12` is added, and gain, le
 negative - the pad was silent. `+ 12` only works by luck (an extra `n: 12`, which a synth also takes as a transposition).
 Transpose inside the brackets: `note ("a'min9" - 12)`. *Measured 2026-11-03 with Tidal 1.9.5 (`queryArc`, then played
 through SuperDirt).*
+
+**In Tidal 1.9, a target's `oLatency` is taken off, not added.** An event is worked out 0.3 s ahead (`cProcessAhead`) and
+stamped, or sent, at its onset minus `oLatency`: a bigger latency is earlier. So a `Live` target - Tidal holds the message
+back and sends it unstamped, for a program that acts on arrival, as TouchDesigner does - with the same `oLatency` as
+SuperDirt's sends each message at the moment SuperDirt's bundle says the sound starts. Measured with a listener on both
+ports: the TouchDesigner message 1 to 3.6 ms after the sound's time, the SuperDirt bundle 274 ms before it. A `{word}` in
+a target's OSC path (`/tidal/{td}`) leaves out every event without that word, for that target only:
+`examples/tidal/multi target tidal/` routes with it. *Measured 2026-11-06 with Tidal 1.9.5.*
+
+**ghci runs the lines one `:def` macro returns out of order**: three `:script` lines from one macro ran last first. One
+command per call - `examples/tidal/boot.hs` calls its `:sdgload` once per file. *Measured 2026-11-06, GHC 9.12.*
 
 ## DSP and plugins
 
@@ -254,6 +321,12 @@ to one period instead. *Found in use.*
 **Greyhole's echoes come `delayTime` + 70 ms apart**, with the first at 70 ms whatever the time: at size 1 and diffusion 0.1, 0.25 gave 0.07, 0.391;
 1.0 gave 0.07, 1.141, 2.211. `sdgecho` takes 70 ms off and delays its input by the rest, so echoes land on 0.25, 0.501. At high feedback a Greyhole
 keeps its orbit awake long after it is inaudible: `sdghole`'s defaults slept after 49 s. *Measured 2026-11-02.*
+
+**The Mi effects at their edges.** MiWarps is silent from `algo` 7.9 to 8 whatever its help says, so `sdgwarps` stops at 7.5;
+its vocoder wants `vgain` near 5 to come near the other algorithms. MiRings' models 0 and 2 ring an octave above `pit` (60 peaks
+at 72 and 84; model 4 has 60 itself). A frozen `sdgclouds` held in 24 of 24 runs of one check, but faded to about 0.001 within a
+second in two other set-ups, for a reason not found: treat freeze as usually holding, not as proven. *Measured 2026-11-02 at
+44.1 kHz.*
 
 **mi-UGens need scsynth's plugin path, not sclang's.** To check them without installing, the class files go through a temp conf and the `.scx`
 through `o.ugenPluginsPath`, which replaces the defaults, so list the app's plugins and the extensions folder too. *Found in use.*

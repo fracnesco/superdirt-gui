@@ -9,13 +9,14 @@
 //   sdgmetal   0 to 1       the two rung against each other: 0 a clean pair, 1 clank
 //   sdgclick   0 to 1       how far the first 12 ms stand out over the tail
 //
-// presets, by n: 0 808, 1 808 short, 2 agogo, 3 bell, 4 clank. note tunes it in
-// semitones from the 808's 558 Hz; agogo pairs are a note apart, "0 5" or "0 7".
+// presets, by n: 0 808, 1 808 short, 2 agogo, 3 bell, 4 clank, 5 808 long, 6 fifth,
+// 7 tin can, 8 gamelan, 9 two-tone. note tunes it in semitones from the 808's 558 Hz;
+// agogo pairs are a note apart, "0 5" or "0 7".
 //
 //   d1 $ s "sdgcowbell(3,8)"
 //   d1 $ s "sdgcowbell:2*8" # note "7 0 0 7 0 7 0 0"
 //
-// examples/tidal/16-drums-classic.tidal plays it.
+// examples/tidal/lessons/16-drums-classic.tidal plays it.
 (
 var name = \sdgcowbell;
 SynthDef(name, { |out, sustain = 3.2, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -46,11 +47,16 @@ SynthDef(name, { |out, sustain = 3.2, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgdecay: 0.6, sdgtone: 0.45, sdgcolor: 0.476, sdgmetal: 0, sdgclick: 0.85),	// 0 808
-	(sdgdecay: 0.18, sdgtone: 0.55, sdgcolor: 0.476, sdgmetal: 0, sdgclick: 0.75),	// 1 808 short
-	(sdgdecay: 0.35, sdgtone: 0.1, sdgcolor: 1, sdgmetal: 0, sdgclick: 0.5),	// 2 agogo
-	(sdgdecay: 1.2, sdgtone: 0.15, sdgcolor: 0.76, sdgmetal: 0.35, sdgclick: 0.7),	// 3 bell
-	(sdgdecay: 0.3, sdgtone: 0.8, sdgcolor: 0.42, sdgmetal: 0.75, sdgclick: 0.85)	// 4 clank
+	(presetName: "808", sdgdecay: 0.6, sdgtone: 0.45, sdgcolor: 0.476, sdgmetal: 0, sdgclick: 0.85),	// 0 808
+	(presetName: "808 short", sdgdecay: 0.18, sdgtone: 0.55, sdgcolor: 0.476, sdgmetal: 0, sdgclick: 0.75),	// 1 808 short
+	(presetName: "agogo", sdgdecay: 0.35, sdgtone: 0.1, sdgcolor: 1, sdgmetal: 0, sdgclick: 0.5),	// 2 agogo
+	(presetName: "bell", sdgdecay: 1.2, sdgtone: 0.15, sdgcolor: 0.76, sdgmetal: 0.35, sdgclick: 0.7),	// 3 bell
+	(presetName: "clank", sdgdecay: 0.3, sdgtone: 0.8, sdgcolor: 0.42, sdgmetal: 0.75, sdgclick: 0.85),	// 4 clank
+	(presetName: "808 long", sdgdecay: 0.9, sdgtone: 0.3, sdgcolor: 0.476, sdgmetal: 0.05, sdgclick: 0.9),	// 5 808 long
+	(presetName: "fifth", sdgdecay: 0.45, sdgtone: 0.3, sdgcolor: 0.5, sdgmetal: 0.1, sdgclick: 0.85),	// 6 fifth
+	(presetName: "tin can", sdgdecay: 0.3, sdgtone: 0.9, sdgcolor: 0.3, sdgmetal: 0.9, sdgclick: 1),	// 7 tin can
+	(presetName: "gamelan", sdgdecay: 1, sdgtone: 0.05, sdgcolor: 0.18, sdgmetal: 0.5, sdgclick: 0.55),	// 8 gamelan
+	(presetName: "two-tone", sdgdecay: 0.3, sdgtone: 0.5, sdgcolor: 0.26, sdgmetal: 0.2, sdgclick: 0.5)	// 9 two-tone
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

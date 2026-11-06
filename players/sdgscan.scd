@@ -11,9 +11,9 @@
 //   sdgstep  1 to 40 per s     how often the piece moves on: low is stepped, high is a blur
 //   sdghold  0.1 to 16 cycles  makes the event last that long
 //
-//   d1 $ s "breaks152" # pF "sdgscan" "110 165"
-//   d1 $ s "numbers:3" # pF "sdgscan" 55 # speed 0.1
-//   d1 $ s "hh" # pF "sdgscan" "220 330" # pF "sdghold" 0.5
+//   d1 $ loopAt 2 (chop 4 $ s "breaks152") # pF "sdgscan" "110 165"
+//   d1 $ s "numbers:3" # end 0.4 # pF "sdgscan" 110 # pF "sdghold" 1
+//   d1 $ s "hh*2" # end 0.12 # pF "sdgscan" "220 330" # pF "sdghold" 0.5
 (
 ~sdg.addSamplePlayer(\sdgscan, { |sampleNumChannels, numChannels|
 	{ |out, bufnum, sustain = 1, begin = 0, end = 1, speed = 1, endSpeed = 1, freq = 440, pan = 0,

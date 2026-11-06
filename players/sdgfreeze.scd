@@ -10,7 +10,7 @@
 //   sdghold    0.1 to 16 cycles  makes the event last that long: the drone
 //
 //   d1 $ s "numbers:3" # pF "sdgfreeze" 0.3 # pF "sdghold" 4
-//   d1 $ s "breaks152/4" # pF "sdgfreeze" "<0.1 0.5>" # pF "sdghold" 4
+//   d1 $ slow 4 $ s "breaks152" # pF "sdgfreeze" "<0.1 0.5>" # pF "sdghold" 4
 (
 ~sdg.addSamplePlayer(\sdgfreeze, { |sampleNumChannels, numChannels|
 	{ |out, bufnum, sustain = 1, begin = 0, end = 1, speed = 1, endSpeed = 1, freq = 440, pan = 0, sdgfreeze = 0.25|

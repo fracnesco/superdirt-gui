@@ -12,13 +12,14 @@
 //   sdgtone    0 to 1          dark to bright: air above the band
 //   sdgspread  0 to 1          stereo width: each hand somewhere else
 //
-// presets, by n: 0 808, 1 909, 2 tight, 3 big room, 4 snap. note moves the band in
-// semitones; legato or sustain shorten it, like a choke. every clap is a little different.
+// presets, by n: 0 808, 1 909, 2 tight, 3 big room, 4 snap, 5 trap, 6 real hands, 7 crowd,
+// 8 lofi, 9 micro. note moves the band in semitones; legato or sustain shorten it, like a
+// choke. every clap is a little different.
 //
 //   d1 $ s "~ sdgclap ~ sdgclap"
 //   d1 $ s "~ sdgclap:3 ~ [sdgclap:4 sdgclap:4]" # pF "sdgspread" 0.6
 //
-// examples/tidal/16-drums-classic.tidal plays it.
+// examples/tidal/lessons/16-drums-classic.tidal plays it.
 (
 var name = \sdgclap;
 SynthDef(name, { |out, sustain = 1.5, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -65,11 +66,16 @@ SynthDef(name, { |out, sustain = 1.5, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgfreq: 1100, sdgq: 0.45, sdgcount: 4, sdgcolor: 0.35, sdgdecay: 0.12, sdgtail: 0.35, sdgtone: 0.3, sdgspread: 0),	// 0 808
-	(sdgfreq: 1250, sdgq: 0.35, sdgcount: 4, sdgcolor: 0.3, sdgdecay: 0.14, sdgtail: 0.5, sdgtone: 0.55, sdgspread: 0.15),	// 1 909
-	(sdgfreq: 1300, sdgq: 0.4, sdgcount: 3, sdgcolor: 0.1, sdgdecay: 0.07, sdgtail: 0.15, sdgtone: 0.4, sdgspread: 0),	// 2 tight
-	(sdgfreq: 1000, sdgq: 0.3, sdgcount: 5, sdgcolor: 0.7, sdgdecay: 0.18, sdgtail: 0.85, sdgtone: 0.35, sdgspread: 0.8),	// 3 big room
-	(sdgfreq: 2200, sdgq: 0.65, sdgcount: 1, sdgcolor: 0, sdgdecay: 0.035, sdgtail: 0.05, sdgtone: 0.7, sdgspread: 0)	// 4 snap
+	(presetName: "808", sdgfreq: 1100, sdgq: 0.45, sdgcount: 4, sdgcolor: 0.35, sdgdecay: 0.12, sdgtail: 0.35, sdgtone: 0.3, sdgspread: 0),	// 0 808
+	(presetName: "909", sdgfreq: 1250, sdgq: 0.35, sdgcount: 4, sdgcolor: 0.3, sdgdecay: 0.14, sdgtail: 0.5, sdgtone: 0.55, sdgspread: 0.15),	// 1 909
+	(presetName: "tight", sdgfreq: 1300, sdgq: 0.4, sdgcount: 3, sdgcolor: 0.1, sdgdecay: 0.07, sdgtail: 0.15, sdgtone: 0.4, sdgspread: 0),	// 2 tight
+	(presetName: "big room", sdgfreq: 1000, sdgq: 0.3, sdgcount: 5, sdgcolor: 0.7, sdgdecay: 0.18, sdgtail: 0.85, sdgtone: 0.35, sdgspread: 0.8),	// 3 big room
+	(presetName: "snap", sdgfreq: 2200, sdgq: 0.65, sdgcount: 1, sdgcolor: 0, sdgdecay: 0.035, sdgtail: 0.05, sdgtone: 0.7, sdgspread: 0),	// 4 snap
+	(presetName: "trap", sdgfreq: 1400, sdgq: 0.35, sdgcount: 5, sdgcolor: 0.45, sdgdecay: 0.16, sdgtail: 0.4, sdgtone: 0.65, sdgspread: 0.5),	// 5 trap
+	(presetName: "real hands", sdgfreq: 900, sdgq: 0.25, sdgcount: 3, sdgcolor: 0.6, sdgdecay: 0.09, sdgtail: 0.15, sdgtone: 0.45, sdgspread: 0.2),	// 6 real hands
+	(presetName: "crowd", sdgfreq: 1000, sdgq: 0.2, sdgcount: 8, sdgcolor: 1, sdgdecay: 0.2, sdgtail: 0.6, sdgtone: 0.5, sdgspread: 1),	// 7 crowd
+	(presetName: "lofi", sdgfreq: 800, sdgq: 0.45, sdgcount: 4, sdgcolor: 0.35, sdgdecay: 0.13, sdgtail: 0.25, sdgtone: 0.15, sdgspread: 0),	// 8 lofi
+	(presetName: "micro", sdgfreq: 2600, sdgq: 0.5, sdgcount: 2, sdgcolor: 0.15, sdgdecay: 0.03, sdgtail: 0.1, sdgtone: 0.8, sdgspread: 0.3)	// 9 micro
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

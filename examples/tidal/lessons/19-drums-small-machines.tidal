@@ -1,0 +1,136 @@
+-- SuperDirtGUI from Tidal - 19: small machines
+--
+-- Small dry sounds - pings, clicks, crushed noise - in parts of different
+-- lengths that drift apart, rolls that speed up like a dropped ball, and
+-- change that comes from rules rather than dice. Three voices:
+--
+--   sdgping     pinged resonators: blips, droplets, metal ticks, wood, zaps
+--   sdgratchet  a whole roll in one event: clicks that speed up or slow down
+--   sdgchaos    noise from a chaotic source: glitch snares, digital hats,
+--               broken kicks; no two hits are the same
+--
+-- Let the last blocks run for a few minutes: nothing in them repeats exactly
+-- for a long time, and yet the same bar always comes back the same.
+
+setcps (94/60/4)
+
+let sdgfreq = pF "sdgfreq"
+    sdgdecay = pF "sdgdecay"
+    sdgpunch = pF "sdgpunch"
+    sdgbend = pF "sdgbend"
+    sdgmetal = pF "sdgmetal"
+    sdgtone = pF "sdgtone"
+    sdgindex = pF "sdgindex"
+    sdgratio = pF "sdgratio"
+    sdgcolor = pF "sdgcolor"
+    sdgclick = pF "sdgclick"
+    sdgcount = pF "sdgcount"
+    sdglen = pF "sdglen"
+    sdgcurve = pF "sdgcurve"
+    sdgwalk = pF "sdgwalk"
+    sdgbits = pF "sdgbits"
+    sdgspread = pF "sdgspread"
+    sdgsnap = pF "sdgsnap"
+    sdgnoise = pF "sdgnoise"
+    sdgtail = pF "sdgtail"
+    sdgdrive = pF "sdgdrive"
+    -- a bouncing ball: n hits, each gap r times the one before, each quieter.
+    -- The type line is needed: without it Tidal cannot tell what n is
+    bounce :: Int -> Time -> ControlPattern -> ControlPattern
+    bounce n r p = timeCat [ (r ^ i, p # gain (1 - fromIntegral i * 0.03)) | i <- [0 .. n - 1] ]
+
+-- three loops of pings, 5, 7 and 11 steps long, all stepping at 16 a bar. They
+-- only line up again every 385 steps: the bar is never where you left it.
+-- sdgping is the blip, :1 the droplet, :2 the metal tick, :3 the wood. Now and
+-- then all three land on one step: gain 0.9 leaves room for that
+d1 $ stack [
+     s "{sdgping ~ ~ sdgping:3 ~}%16" # note "{0 7 3}%16",
+     s "{~ ~ sdgping:2 ~ ~ ~ sdgping:1}%16" # note "{12 5}%16",
+     s "{sdgping:3 ~ ~ ~ ~ sdgping ~ ~ ~ sdgping:2 ~}%16" # note "-5"
+   ] # gain 0.9
+
+-- tweak to taste, the pings, a bar each. sdgpunch is where the pitch starts:
+-- above, it falls; below (negative), it rises, a droplet. sdgmetal tunes the two
+-- upper resonators from harmonic to a struck bar, sdgindex adds FM, and sdgcolor
+-- on this voice is rattle: the resonators struck again and again as they ring
+d1 $ stack [
+     s "{sdgping ~ ~ sdgping:3 ~}%16" # note "{0 7 3}%16",
+     s "{~ ~ sdgping:2 ~ ~ ~ sdgping:1}%16" # note "{12 5}%16",
+     s "{sdgping:3 ~ ~ ~ ~ sdgping ~ ~ ~ sdgping:2 ~}%16" # note "-5"
+   ] # gain 0.9 # sdgpunch "<12 -14 30 3>" # sdgmetal "<0.15 0 1 0.6>" # sdgindex "<0 0 2.5 6>"
+     # sdgcolor "<0 0 0.3 0.8>"
+
+-- d2: the kick, broken. sdgchaos:2 is a dropping sine bent by its own noise and
+-- crushed. euclidOff spreads 3, then 5 hits over 16 steps and turns where they
+-- start every bar, so the kick is never in the same place twice running
+d2 $ euclidOff "<3 5 3 7>" 16 "<0 2 5>" $ s "sdgchaos:2" # sdgbits "<0.75 0.9 0.5>" # note "<0 -2>"
+
+-- tweak to taste, the chaos voice, as a snare on d3. sdgcolor on this voice is
+-- the source, one a bar here: 0 crackle, 0.33 the logistic map, 0.67 stepped
+-- noise, 1 Xenakis' gendy. sdgtail rings it through a comb at its pitch,
+-- sdgindex lets the source bend the body, sdgbits crushes it
+d3 $ s "~ sdgchaos ~ [~ sdgchaos]" # sdgcolor "<0 0.33 0.67 1>" # sdgtail "<0.25 0.8 0.25 0.5>"
+   # sdgindex "<0 0.5 0 1>" # sdgbits "<0.3 0 0.7 0.3>"
+
+-- d4: rolls, each one a single event. sdgratchet:0 bounces - the clicks come
+-- faster and quieter, like a dropped ball - and :2 slows down. sdglen is the
+-- roll's length in seconds: 0.64 is a beat at 94. Never give it legato: the
+-- roll lives inside the event, and legato would cut it off
+d4 $ s "~ ~ ~ sdgratchet ~ ~ ~ <sdgratchet:2 ~>" # sdglen "0.64 0.32" # pan 0.6
+
+-- tweak to taste, the ratchet. sdgcount is how many clicks, sdgcurve how they
+-- fall - 0 even, 1 a bouncing ball, -1 slowing - sdgwalk how far the pitch
+-- walks over the roll, in semitones. sdgcolor on this voice scatters each
+-- click's pitch at random; sdgbits crushes, sdgspread throws them left and right
+d4 $ s "~ ~ ~ sdgratchet ~ ~ ~ ~" # sdgcount "<6 12 24 8>" # sdgcurve "<0 0.8 1 -0.8>"
+   # sdgwalk "<0 7 -24 12>" # sdgcolor "<0 0 0.3 0.8>" # sdgbits "<0 0 0.6 0.2>"
+   # sdgspread "<0 0.5 1 0.5>" # sdglen 0.6
+
+-- the same ball made in Tidal: bounce plays a sound 10 times in half a bar,
+-- each gap 0.75 of the last, each hit a little quieter. Every fourth bar rev
+-- turns it round, and the ball slows down instead
+d5 $ every 4 rev $ timeCat [ (1, s "sdgping:3 ~ ~ sdgping:3" # note "-12"),
+                             (1, bounce 10 0.75 (s "sdgping:2" # note "<0 -3>")) ]
+
+-- rules, not dice. On d6 the chaos voice's digital hat (:1): which steps play
+-- and how long and bright each is are random - but Tidal's rand is a function
+-- of time, and repeatCycles 4 holds each bar's draw for four bars. iter 4 then
+-- starts the bar a step later each time. Change the 0 in (0 ~>) to any whole
+-- number for another seed: the same rhythm, other choices
+d6 $ iter 4 $ repeatCycles 4 $ (0 ~>) $ degradeBy 0.4 $ s "sdgchaos:1*16"
+   # sdgnoise (range 0.02 0.12 rand) # sdgtone (range 0.6 1 rand) # gain 0.9
+
+-- cross-timing: the kick and the snare lean late together. One slow perlin
+-- drives nudge on both, the snare further: they drift behind the grid and back,
+-- in step with each other, never with the pings
+do
+  d2 $ euclidOff "<3 5 3 7>" 16 "<0 2 5>" $ s "sdgchaos:2" # sdgbits "<0.75 0.9 0.5>"
+     # note "<0 -2>" # nudge (range 0 0.025 $ slow 4 perlin)
+  d3 $ s "~ sdgchaos ~ [~ sdgchaos]" # sdgtail 0.4 # nudge (range 0 0.04 $ slow 4 perlin)
+
+-- let it run, for minutes. The pings' parts skip around (bite plays eighths of
+-- the bar in an order of its own, five long against eight); their metal and
+-- rattle drift on slow noise. The kick's crush and the snare's source morph over
+-- 16 and 24 bars, the hats change their seed every 16, the rolls grow longer and
+-- more scattered over 32, and every eighth bar the ball bounces twice
+do
+  d1 $ bite 8 "{0 3 2 7 5}%8" $ stack [
+       s "{sdgping ~ ~ sdgping:3 ~}%16" # note "{0 7 3}%16",
+       s "{~ ~ sdgping:2 ~ ~ ~ sdgping:1}%16" # note "{12 5}%16",
+       s "{sdgping:3 ~ ~ ~ ~ sdgping ~ ~ ~ sdgping:2 ~}%16" # note "-5"
+     ] # gain 0.9 # sdgmetal (range 0 1 $ slow 12 perlin) # sdgcolor (range 0 0.6 $ slow 20 perlin)
+  d2 $ euclidOff "<3 5 3 7>" 16 "<0 2 5>" $ s "sdgchaos:2" # note "<0 -2>"
+     # sdgbits (range 0.3 0.95 $ slow 16 sine) # nudge (range 0 0.025 $ slow 4 perlin)
+  d3 $ s "~ sdgchaos ~ [~ sdgchaos]" # sdgcolor (slow 24 $ range 0 1 tri) # sdgtail 0.4
+     # nudge (range 0 0.04 $ slow 4 perlin)
+  d4 $ s "~ ~ ~ sdgratchet ~ ~ ~ <sdgratchet:2 ~>" # sdglen (range 0.2 1 $ slow 32 sine)
+     # sdgcolor (range 0 0.6 $ slow 32 sine) # pan 0.6
+  d5 $ every' 8 7 (fast 2) $ every 4 rev $ timeCat [ (1, s "sdgping:3 ~ ~ sdgping:3" # note "-12"),
+                                                     (1, bounce 10 0.75 (s "sdgping:2" # note "<0 -3>")) ]
+  d6 $ iter 4 $ repeatCycles 4 $ (slow 16 "<0 5 11 2>" ~>) $ degradeBy 0.4 $ s "sdgchaos:1*16"
+     # sdgnoise (range 0.02 0.12 rand) # sdgtone (range 0.6 1 rand) # gain 0.9
+
+-- strip it right back: only the parts that drift
+mapM_ (\f -> f silence) [d3, d4, d5, d6]
+
+hush

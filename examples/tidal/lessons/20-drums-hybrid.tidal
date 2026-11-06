@@ -1,0 +1,148 @@
+-- SuperDirtGUI from Tidal - 20: drums, half sampled, half synthesized
+--
+-- The drum voices of files 16 to 19, rendered: samples/ holds six banks made
+-- from them, one hit per file, and four one-bar loops. As samples they cost
+-- next to nothing to play, chop and striate cut them like any break, and the
+-- sample players read them. They go into the library when ~sdg is made, like the
+-- synths (unless SuperDirtGUI.loadOwnSamples was set false before that).
+--
+--   sdgbd      kicks: 0 808 long, 1 909, 2 606, 3 hard, 4 sub, 5 808 short,
+--              6 909 long, 7 FM, 8 slam, 9 dive, 10 boom, 11 broken
+--   sdgsd      snares: 0 808, 1 909, 2 tight, 3 piccolo, 4 fat, 5 FM, 6 glitch,
+--              7 latex; claps: 8 808, 9 909, 10 tight, 11 big; 12 snap, 13 FM clap
+--   sdghh      0 808 closed, 1 pedal, 2 808 open, 3 909 closed, 4 909 open,
+--              5 606, 6 digital, 7 digital open, 8 ride, 9 crash, 10 china,
+--              11 bell, 12 ride bell, 13 FM metal
+--   sdgperc    toms 0 to 5, 6 rim, 7 claves, 8 woodblock, 9 blip, 10 cowbell,
+--              11 agogo, 12 marimba, 13 glass, 14 tabla, 15 wood
+--   sdgfx      0 bubble, 1 squeak, 2 clank, 3 drip, 4 rubber, 5 to 7 slams,
+--              8 droplet, 9 metal tick, 10 zap, 11 to 14 rolls, 15 crackle
+--   sdgresamp  what only rendering makes: 0 to 2 three voices in one hit, 3 to 5
+--              backwards, 6 to 8 through feedback, 9 to 11 crushed, and 12 to 15
+--              one bar loops at 120 bpm: classic, FM, broken, SOPHIE
+--
+-- And sdglayer, a sample player: any drum sample, with a synthesized drum under it.
+
+-- 120 bpm: a loop is exactly one cycle at this tempo
+setcps (120/60/4)
+
+let sdglayer = pF "sdglayer"
+    sdgfreq = pF "sdgfreq"
+    sdgpunch = pF "sdgpunch"
+    sdgbend = pF "sdgbend"
+    sdgdecay = pF "sdgdecay"
+    sdgsnap = pF "sdgsnap"
+    sdgnoise = pF "sdgnoise"
+    sdgtone = pF "sdgtone"
+    sdgclick = pF "sdgclick"
+    sdgwarp = pF "sdgwarp"
+    sdgpitch = pF "sdgpitch"
+    sdgcrush = pF "sdgcrush"
+    sdgfreeze = pF "sdgfreeze"
+    sdghold = pF "sdghold"
+
+-- the banks as a plain kit: the 909 kick and clap, the 909 hats with the closed
+-- one choking the open. They sound like the voices, for the price of a sample
+do
+  d1 $ s "sdgbd:1*4"
+  d2 $ s "sdghh*16" # n "3 3 4 3" # cut 1 # gain "0.95 0.85 1 0.85"
+  d3 $ s "~ sdgsd:9 ~ sdgsd:9"
+
+-- n picks the sound, so one bank is a shelf of instruments: rim, claves and the
+-- cowbell or agogo from sdgperc, and every other bar something from sdgfx in the
+-- gaps the percussion leaves: a drip and a bubble, a droplet and a metal tick
+d4 $ stack [
+     n "6 ~ 7 6 ~ <10 11> 7 ~" # s "sdgperc" # gain 0.9,
+     n "<~ [~ 3 ~ ~ ~ ~ ~ 0] ~ [~ 8 ~ ~ 9 ~ ~ ~]>" # s "sdgfx" # pan rand
+   ]
+
+-- the same groove, live and rendered, a bar each: odd bars the voices (sdgkick,
+-- sdghat, sdgclap), even bars the files. Hard to tell apart - the hat presets
+-- and the sdghh files even share their numbers. The live voice can be tuned and
+-- locked on every step; the file can be chopped, and costs almost nothing
+do
+  d1 $ s "<[sdgkick:1*4] [sdgbd:1*4]>"
+  d2 $ s "<[sdghat*16] [sdghh*16]>" # n "3 3 4 3" # cut 1 # gain "0.95 0.85 1 0.85"
+  d3 $ s "<[~ sdgclap:1]*2 [~ sdgsd:9]*2>"
+  d4 silence
+
+-- sdglayer: weight for a thin kick. sdgbd:2 is the tight 606; the layer is a sine
+-- that drops onto sdgfreq and rings sdgdecay long, starting with the sample's own
+-- attack and scaled to its level. Bar 1 the file alone, then more and more
+-- layer, and in bar 4 a long tail: an 808 under a 606
+d1 $ s "sdgbd:2*4" # sdglayer "<0 0.4 0.8 0.8>" # sdgfreq 45 # sdgdecay "<0.3 0.3 0.3 0.9>"
+
+-- it works on any drum sample: bd and 808bd from Dirt-Samples, SuperDirt's own.
+-- Odd bars as they are, even bars layered; sdgpunch is how far above sdgfreq
+-- the sine starts. On d3 the tight snare gets a tail: sdgsnap 0.8 makes the
+-- layer mostly noise, sdgnoise how long it rings, sdgtone how bright
+do
+  d1 $ s "<[bd*4] [bd*4] [808bd*4] [808bd*4]>" # sdglayer "<0 0.6>" # sdgfreq 50
+     # sdgpunch 16 # sdgdecay 0.5
+  d3 $ s "~ sdgsd:2 ~ sdgsd:2" # sdglayer "<0 0.6>" # sdgfreq 190 # sdgsnap 0.8
+     # sdgnoise 0.3 # sdgtone 0.6
+
+-- sdgclick shapes a sample's own attack, through the same player: sdglayer 0
+-- switches the player on with no layer. Below 0 it softens the attack, above 0
+-- sharpens it and pulls the body down. The hats alternate soft and sharp; the
+-- snare goes a bar each soft, as it is, sharper, sharpest
+do
+  d1 $ s "sdgbd:1*4"
+  d2 $ s "sdghh*16" # n "3 3 4 3" # cut 1 # sdglayer 0 # sdgclick "[-1 1]*8"
+  d3 $ s "~ sdgsd:1 ~ sdgsd:1" # sdglayer 0 # sdgclick "<-1 0 0.6 1>"
+
+-- the loops, alone. One plays per cycle, in time. chop 16 cuts it into sixteenths,
+-- each its own event; bite 4 then plays its quarters in another order; every
+-- fourth bar the order turns round. The classic loop, then the FM one
+do
+  mapM_ (\f -> f silence) [d1, d2, d3, d4]
+  d5 $ every 4 rev $ bite 4 "0 [2 1] 3 <0 2>" $ chop 16 $ n "<12 13>" # s "sdgresamp"
+
+-- slice 8 plays eighths of a loop by number, in any order, as often as you like:
+-- the broken loop and the SOPHIE loop, re-sequenced
+d5 $ slice 8 "0 1 <2 6> 3 [4 4] 5 <6 2> [7 0]" $ n "<14 15>" # s "sdgresamp"
+
+-- loopAt 2 stretches a loop over two bars: half speed, an octave down, the FM
+-- loop slow and heavy. Every other two bars striate 4 instead: the first quarter
+-- of two loops in turn, then the second quarter, and so on, legato 1 keeping
+-- each piece to its step
+d5 $ whenmod 4 2 (const $ striate 4 $ n "12 15" # s "sdgresamp" # legato 1)
+   $ loopAt 2 $ chop 32 $ n 13 # s "sdgresamp"
+
+-- other players read the files their own way. sdgwarp reads the SOPHIE loop at
+-- half speed with its pitch kept (sdgpitch 1), then at an octave up. sdgcrush
+-- lets the pointer stand only on every n-th frame of the classic loop: 4 an old
+-- sampler, 64 broken. sdgfreeze stops the crash's spectrum a fifth of the way
+-- in and holds it for four bars (sdghold): a drone
+do
+  d5 $ slow 2 $ n 15 # s "sdgresamp" # sdgwarp 1 # speed 0.5 # sdgpitch "<1 2>"
+  d6 $ chop 8 $ n 12 # s "sdgresamp" # sdgcrush "<1 4 16 64>" # gain 0.85
+  d4 $ slow 4 $ s "sdghh:9" # sdgfreeze 0.2 # sdghold 4 # gain 0.85
+
+-- live and rendered together, each where it is best. The kick live, because it
+-- plays the bass line with note; the hats, the clap and the rim from the banks,
+-- because they never change and cost nothing; the broken loop chopped quietly
+-- underneath, some sixteenths an octave up
+do
+  d1 $ note "0 ~ ~ 0 ~ ~ <3 5> ~ 0 ~ ~ 0 ~ ~ <-2 7> ~" # s "sdgkick:4" # sdgdecay 0.8 # cut 1
+  d2 $ s "sdghh*16" # n "0 0 2 0" # cut 1 # gain "0.95 0.85"
+  d3 $ s "~ [sdgsd:8,sdgsd:0] ~ [sdgsd:8,sdgsd:0]"
+  d4 $ n "~ 6 ~ ~ 7 ~ 6 ~" # s "sdgperc" # gain 0.9
+  d5 $ sometimesBy 0.3 (# speed 2) $ chop 16 $ n 14 # s "sdgresamp" # gain 0.8
+  d6 silence
+
+-- let it run: the layer comes and goes under the 606 kick over 16 bars and its
+-- pitch wanders on slow noise; the hats sharpen and soften over 8; the clap's
+-- noise tail grows and shrinks; the loop's chop size changes every two bars - 4,
+-- 8, 16, 32 - and the order bite plays it in every three
+do
+  d1 $ s "sdgbd:2*4" # sdglayer (range 0 0.9 $ slow 16 sine) # sdgfreq (range 40 60 $ slow 24 perlin)
+     # sdgdecay (range 0.2 0.8 $ slow 12 sine)
+  d2 $ s "sdghh*16" # n "3 3 4 3" # cut 1 # sdglayer 0 # sdgclick (range (-1) 1 $ slow 8 sine)
+     # gain "0.95 0.85 1 0.85"
+  d3 $ s "~ sdgsd:9 ~ sdgsd:9" # sdglayer (range 0 0.5 $ slow 20 perlin) # sdgsnap 0.9 # sdgnoise 0.3
+  d4 silence
+  d5 $ bite 4 "<[0 1 2 3]!3 [0 0 2 1]!3 [3 2 1 0]!3>" $ chop "<4!2 8!2 16!2 32!2>" $ n 13 # s "sdgresamp"
+     # gain 0.85
+
+hush

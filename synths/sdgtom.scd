@@ -12,13 +12,14 @@
 //   sdgtone    0 to 1             dark to bright: the stick, the noise and the 909 body
 //   sdgcolor   0 to 1             0 the 808's sine, 1 the 909's rounded triangle
 //
-// presets, by n: 0 low tom, 1 mid tom, 2 high tom, 3 conga, 4 bongo, 5 808 deep. note
-// tunes it in semitones from its own pitch, so one preset plays a whole set of toms.
+// presets, by n: 0 low tom, 1 mid tom, 2 high tom, 3 conga, 4 bongo, 5 808 deep,
+// 6 909 low, 7 909 high, 8 syndrum, 9 floor tom. note tunes it in semitones from its
+// own pitch, so one preset plays a whole set of toms.
 //
 //   d1 $ s "sdgtom:2 sdgtom:1 ~ sdgtom" # legato 1
 //   d1 $ n "3 3 4 3" # s "sdgtom" # note "0 0 0 -5"
 //
-// examples/tidal/16-drums-classic.tidal plays it.
+// examples/tidal/lessons/16-drums-classic.tidal plays it.
 (
 var name = \sdgtom;
 SynthDef(name, { |out, sustain = 2.5, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -50,12 +51,16 @@ SynthDef(name, { |out, sustain = 2.5, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgfreq: 90, sdgdecay: 0.6, sdgpunch: 4, sdgbend: 0.08, sdgsnap: 0.12, sdgclick: 0.2, sdgtone: 0.3, sdgcolor: 0),	// 0 low tom
-	(sdgfreq: 136, sdgdecay: 0.42, sdgpunch: 4.5, sdgbend: 0.08, sdgsnap: 0.05, sdgclick: 0.2, sdgtone: 0.3, sdgcolor: 0),	// 1 mid tom
-	(sdgfreq: 190, sdgdecay: 0.33, sdgpunch: 3.5, sdgbend: 0.07, sdgsnap: 0.03, sdgclick: 0.2, sdgtone: 0.35, sdgcolor: 0),	// 2 high tom
-	(sdgfreq: 250, sdgdecay: 0.3, sdgpunch: 2, sdgbend: 0.04, sdgsnap: 0, sdgclick: 0.25, sdgtone: 0.5, sdgcolor: 0.1),	// 3 conga
-	(sdgfreq: 412, sdgdecay: 0.22, sdgpunch: 1.5, sdgbend: 0.03, sdgsnap: 0, sdgclick: 0.3, sdgtone: 0.6, sdgcolor: 0.1),	// 4 bongo
-	(sdgfreq: 62, sdgdecay: 1.3, sdgpunch: 7, sdgbend: 0.15, sdgsnap: 0.15, sdgclick: 0.05, sdgtone: 0.2, sdgcolor: 0)	// 5 808 deep
+	(presetName: "low tom", sdgfreq: 90, sdgdecay: 0.6, sdgpunch: 4, sdgbend: 0.08, sdgsnap: 0.12, sdgclick: 0.2, sdgtone: 0.3, sdgcolor: 0),	// 0 low tom
+	(presetName: "mid tom", sdgfreq: 136, sdgdecay: 0.42, sdgpunch: 4.5, sdgbend: 0.08, sdgsnap: 0.05, sdgclick: 0.2, sdgtone: 0.3, sdgcolor: 0),	// 1 mid tom
+	(presetName: "high tom", sdgfreq: 190, sdgdecay: 0.33, sdgpunch: 3.5, sdgbend: 0.07, sdgsnap: 0.03, sdgclick: 0.2, sdgtone: 0.35, sdgcolor: 0),	// 2 high tom
+	(presetName: "conga", sdgfreq: 250, sdgdecay: 0.3, sdgpunch: 2, sdgbend: 0.04, sdgsnap: 0, sdgclick: 0.25, sdgtone: 0.5, sdgcolor: 0.1),	// 3 conga
+	(presetName: "bongo", sdgfreq: 412, sdgdecay: 0.22, sdgpunch: 1.5, sdgbend: 0.03, sdgsnap: 0, sdgclick: 0.3, sdgtone: 0.6, sdgcolor: 0.1),	// 4 bongo
+	(presetName: "808 deep", sdgfreq: 62, sdgdecay: 1.3, sdgpunch: 7, sdgbend: 0.15, sdgsnap: 0.15, sdgclick: 0.05, sdgtone: 0.2, sdgcolor: 0),	// 5 808 deep
+	(presetName: "909 low", sdgfreq: 85, sdgdecay: 0.5, sdgpunch: 6, sdgbend: 0.1, sdgsnap: 0.1, sdgclick: 0.4, sdgtone: 0.5, sdgcolor: 1),	// 6 909 low
+	(presetName: "909 high", sdgfreq: 160, sdgdecay: 0.35, sdgpunch: 5, sdgbend: 0.08, sdgsnap: 0.05, sdgclick: 0.4, sdgtone: 0.55, sdgcolor: 1),	// 7 909 high
+	(presetName: "syndrum", sdgfreq: 220, sdgdecay: 0.45, sdgpunch: 24, sdgbend: 0.35, sdgsnap: 0, sdgclick: 0.1, sdgtone: 0.3, sdgcolor: 0),	// 8 syndrum
+	(presetName: "floor tom", sdgfreq: 70, sdgdecay: 0.9, sdgpunch: 3, sdgbend: 0.12, sdgsnap: 0.2, sdgclick: 0.3, sdgtone: 0.35, sdgcolor: 0.3)	// 9 floor tom
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

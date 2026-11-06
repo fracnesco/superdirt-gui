@@ -16,12 +16,13 @@
 //
 // the gaps shrink or grow by one ratio, so at sdgcurve 1 the last gap is 1/32 of
 // the first, at -1 32 times it. presets, by n: 0 bounce, 1 ratchet, 2 slowdown,
-// 3 zipper, 4 crushed. note tunes it; legato or sustain cut the roll short.
+// 3 zipper, 4 crushed, 5 ping pong, 6 machine gun, 7 tape stop, 8 geiger, 9 flam. note
+// tunes it; legato or sustain cut the roll short.
 //
 //   d1 $ s "sdgratchet ~ ~ ~" # pF "sdgcount" "<4 8 16>"
 //   d1 $ s "[sdgratchet:1, sdgkick]" # pF "sdgcurve" (range (-1) 1 sine)
 //
-// examples/tidal/19-drums-autechre.tidal plays it.
+// examples/tidal/lessons/19-drums-small-machines.tidal plays it.
 (
 var name = \sdgratchet;
 SynthDef(name, { |out, sustain = 3, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -69,11 +70,16 @@ SynthDef(name, { |out, sustain = 3, pan = 0.5, freq = 261.6256, accelerate = 0,
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgcount: 12, sdglen: 0.5, sdgcurve: 0.8, sdgfreq: 1400, sdgwalk: 7, sdgdecay: 0.035, sdgtone: 0.3),	// 0 bounce
-	(sdgcount: 6, sdglen: 0.12, sdgcurve: 0, sdgfreq: 900, sdgwalk: 0, sdgdecay: 0.03, sdgtone: 0.5),	// 1 ratchet
-	(sdgcount: 10, sdglen: 0.9, sdgcurve: -0.7, sdgfreq: 2600, sdgwalk: -12, sdgdecay: 0.05, sdgtone: 0.2, sdgspread: 0.6),	// 2 slowdown
-	(sdgcount: 32, sdglen: 0.45, sdgcurve: 0.5, sdgfreq: 1800, sdgwalk: 24, sdgdecay: 0.012, sdgtone: 0.6),	// 3 zipper
-	(sdgcount: 5, sdglen: 0.2, sdgcurve: 0.3, sdgfreq: 420, sdgwalk: -5, sdgdecay: 0.06, sdgtone: 0.4, sdgbits: 0.75)	// 4 crushed
+	(presetName: "bounce", sdgcount: 12, sdglen: 0.5, sdgcurve: 0.8, sdgfreq: 1400, sdgwalk: 7, sdgdecay: 0.035, sdgtone: 0.3),	// 0 bounce
+	(presetName: "ratchet", sdgcount: 6, sdglen: 0.12, sdgcurve: 0, sdgfreq: 900, sdgwalk: 0, sdgdecay: 0.03, sdgtone: 0.5),	// 1 ratchet
+	(presetName: "slowdown", sdgcount: 10, sdglen: 0.9, sdgcurve: -0.7, sdgfreq: 2600, sdgwalk: -12, sdgdecay: 0.05, sdgtone: 0.2, sdgspread: 0.6),	// 2 slowdown
+	(presetName: "zipper", sdgcount: 32, sdglen: 0.45, sdgcurve: 0.5, sdgfreq: 1800, sdgwalk: 24, sdgdecay: 0.012, sdgtone: 0.6),	// 3 zipper
+	(presetName: "crushed", sdgcount: 5, sdglen: 0.2, sdgcurve: 0.3, sdgfreq: 420, sdgwalk: -5, sdgdecay: 0.06, sdgtone: 0.4, sdgbits: 0.75),	// 4 crushed
+	(presetName: "ping pong", sdgcount: 14, sdglen: 1.2, sdgcurve: 0.9, sdgfreq: 2200, sdgwalk: 0, sdgcolor: 0.05, sdgdecay: 0.02, sdgtone: 0.4),	// 5 ping pong
+	(presetName: "machine gun", sdgcount: 12, sdglen: 0.4, sdgcurve: 0, sdgfreq: 700, sdgwalk: 0, sdgcolor: 0.2, sdgdecay: 0.02, sdgtone: 0.7, sdgbits: 0.3),	// 6 machine gun
+	(presetName: "tape stop", sdgcount: 24, sdglen: 1, sdgcurve: -0.8, sdgfreq: 1200, sdgwalk: -36, sdgdecay: 0.03, sdgtone: 0.3),	// 7 tape stop
+	(presetName: "geiger", sdgcount: 20, sdglen: 0.8, sdgcurve: 0, sdgfreq: 3000, sdgwalk: 0, sdgcolor: 1, sdgdecay: 0.005, sdgtone: 1, sdgspread: 0.5),	// 8 geiger
+	(presetName: "flam", sdgcount: 2, sdglen: 0.02, sdgcurve: 0, sdgfreq: 1000, sdgwalk: 0, sdgdecay: 0.06, sdgtone: 0.5)	// 9 flam
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

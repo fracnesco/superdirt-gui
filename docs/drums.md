@@ -13,27 +13,28 @@ d3 $ s "sdghat*8" # n "0 0 2 0 0 1 2 0" # cut 1          -- closed, pedal and op
 d4 $ s "sdgfmdrum*8" # n "0 2 1 4" # pF "sdgcolor" (range 0.1 0.9 sine)
 ```
 
-| family | voices | after |
-|--------|--------|-------|
-| classic | `sdgkick`, `sdgsnare`, `sdgclap`, `sdgtom`, `sdghat`, `sdgrim`, `sdgcowbell` | the Roland TR-808, 909 and 606 |
-| FM and Elektron | `sdgfmdrum`, `sdgcymbal`, `sdgmodal` | the Machinedrum, Digitone, Model:Cycles and Syntakt: FM drums and physical models |
-| hyper-real | `sdgplastic`, `sdgslam` | SOPHIE's habits: latex, plastic, bubbles, a kick limited flat |
-| small machines | `sdgping`, `sdgratchet`, `sdgchaos` | Autechre's habits: pinged filters, rolls in one event, chaotic noise |
+| family | voices | what they are |
+|--------|--------|---------------|
+| classic | `sdgkick`, `sdgsnare`, `sdgclap`, `sdgtom`, `sdghat`, `sdgrim`, `sdgcowbell` | modelled on the Roland TR-808, 909 and 606 |
+| FM and Elektron | `sdgfmdrum`, `sdgcymbal`, `sdgmodal` | FM drums and physical models, modelled on the Machinedrum, Digitone, Model:Cycles and Syntakt |
+| hyper-real | `sdgplastic`, `sdgslam` | materials pushed past the real: latex, plastic, bubbles, a kick limited flat |
+| small machines | `sdgping`, `sdgratchet`, `sdgchaos` | small dry sounds: pinged filters, rolls in one event, chaotic and crushed noise |
 | hybrid | `sdglayer` (a sample player) | any drum sample with a synthesized drum under it |
 | rendered | the banks `sdgbd`, `sdgsd`, `sdghh`, `sdgperc`, `sdgfx`, `sdgresamp` | the voices played once each into files, stacked, reversed, crushed |
 
-The Tidal files [16-drums-classic](../examples/tidal/16-drums-classic.tidal),
-[17-drums-fm](../examples/tidal/17-drums-fm.tidal),
-[18-drums-sophie](../examples/tidal/18-drums-sophie.tidal) and
-[19-drums-autechre](../examples/tidal/19-drums-autechre.tidal) play each family,
-[20-drums-hybrid](../examples/tidal/20-drums-hybrid.tidal) the banks and `sdglayer`, and
+The Tidal files [16-drums-classic](../examples/tidal/lessons/16-drums-classic.tidal),
+[17-drums-fm](../examples/tidal/lessons/17-drums-fm.tidal),
+[18-drums-hyperreal](../examples/tidal/lessons/18-drums-hyperreal.tidal) and
+[19-drums-small-machines](../examples/tidal/lessons/19-drums-small-machines.tidal) play each family,
+[20-drums-hybrid](../examples/tidal/lessons/20-drums-hybrid.tidal) the banks and `sdglayer`, and
 [library.md](library.md) lists every parameter of every voice with its default.
 
 ## How a drum voice differs from the other synths
 
-The other synths in `synths/` are one SynthDef each: `s "sdgacid"` plays it, `n` is its pitch,
-and the note lasts one step. A drum voice is a SynthDef *and* a list of events in SuperDirt's
-sound library, one per preset, registered at the end of its file:
+A drum voice is a SynthDef *and* a list of events in SuperDirt's sound library, one per preset,
+registered at the end of its file. The pitched synths in `synths/` have presets too, so `n` picks
+there as well ([presets.md](presets.md)), but their notes last one step; a drum voice's preset
+also says how long it rings:
 
 ```supercollider
 (
@@ -139,21 +140,21 @@ Every preset, by `n`, with the role it was levelled as and its loudness at gain 
 
 | voice | presets by n: name (role, LUFS) |
 |-------|---------------------------------|
-| [`sdgkick`](library.md#sdgkick) | 0 808 long boom (kick, -24.0) · 1 909 (kick, -25.2) · 2 606 tight (kick, -25.7) · 3 hard techno (kick, -22.7) · 4 deep sub (kick, -24.8) |
-| [`sdgsnare`](library.md#sdgsnare) | 0 808 (snare, -27.0) · 1 909 (snare, -24.8) · 2 tight (snare, -26.5) · 3 piccolo (snare, -25.8) · 4 fat (snare, -24.9) |
-| [`sdgclap`](library.md#sdgclap) | 0 808 (clap, -27.8) · 1 909 (clap, -25.9) · 2 tight (clap, -29.6) · 3 big room (clap, -27.0) · 4 snap (perc, -30.7) |
-| [`sdgtom`](library.md#sdgtom) | 0 low tom (tom, -26.8) · 1 mid tom (tom, -26.7) · 2 high tom (tom, -26.8) · 3 conga (tom, -27.0) · 4 bongo (tom, -27.3) · 5 808 deep (tom, -26.5) |
-| [`sdghat`](library.md#sdghat) | 0 808 closed (closed hat, -34.3) · 1 pedal (closed hat, -36.6) · 2 808 open (open hat, -28.8) · 3 909 closed (closed hat, -32.8) · 4 909 open (open hat, -27.9) · 5 606 closed (closed hat, -36.5) |
-| [`sdgrim`](library.md#sdgrim) | 0 808 rim (perc, -32.0) · 1 claves (perc, -30.5) · 2 woodblock (perc, -30.8) · 3 909 rim (perc, -29.5) · 4 stick (perc, -32.5) |
-| [`sdgcowbell`](library.md#sdgcowbell) | 0 808 (metal, -29.5) · 1 808 short (metal, -29.9) · 2 agogo (metal, -28.4) · 3 bell (metal, -28.8) · 4 clank (metal, -30.7) |
-| [`sdgfmdrum`](library.md#sdgfmdrum) | 0 FM kick (kick, -24.3) · 1 FM snare (snare, -27.3) · 2 FM tom (tom, -25.2) · 3 FM clap (clap, -27.4) · 4 FM metal (metal, -29.2) · 5 perc, a struck signpost (perc, -30.9) |
-| [`sdgcymbal`](library.md#sdgcymbal) | 0 ride (cymbal, -28.1) · 1 crash (cymbal, -26.7) · 2 china (cymbal, -28.7) · 3 gong (cymbal, -27.9) · 4 bell (metal, -28.7) |
-| [`sdgmodal`](library.md#sdgmodal) | 0 drum (tom, -28.0) · 1 marimba (perc, -30.9) · 2 glass (metal, -28.1) · 3 metal plate (metal, -28.7) · 4 tabla (tom, -26.8) · 5 wood (perc, -35.9) |
-| [`sdgplastic`](library.md#sdgplastic) | 0 bubble (perc, -32.4) · 1 latex snap (perc, -29.3) · 2 squeak (fx, -25.6) · 3 plastic clank (perc, -30.3) · 4 drip (perc, -32.1) · 5 rubber (fx, -25.4) |
-| [`sdgslam`](library.md#sdgslam) | 0 slam (kick, -24.5) · 1 dive (kick, -21.6) · 2 clank (kick, -25.2) · 3 gated (kick, -25.6) · 4 crunch (kick, -24.4) · 5 boom (kick, -25.1) |
-| [`sdgping`](library.md#sdgping) | 0 blip (perc, -29.9) · 1 droplet (perc, -33.5) · 2 metal tick (perc, -31.4) · 3 wood (perc, -34.7) · 4 zap (fx, -24.6) · 5 rubber (perc, -32.4) |
-| [`sdgratchet`](library.md#sdgratchet) | 0 bounce (perc, -29.9) · 1 ratchet (perc, -29.6) · 2 slowdown (fx, -27.0) · 3 zipper (fx, -26.0) · 4 crushed (perc, -28.4) |
-| [`sdgchaos`](library.md#sdgchaos) | 0 glitch snare (snare, -27.5) · 1 digital hat (closed hat, -32.8) · 2 broken kick (kick, -23.0) · 3 crackle (perc, -34.7) · 4 gendy tom (tom, -25.4) · 5 static (fx, -24.4) |
+| [`sdgkick`](library.md#sdgkick) | 0 808 long boom (kick, -24.0) · 1 909 (kick, -25.2) · 2 606 tight (kick, -25.7) · 3 hard techno (kick, -22.7) · 4 deep sub (kick, -24.8) · 5 linn (kick, -24.7) · 6 gabber (kick, -24.4) · 7 lofi soft (kick, -24.6) · 8 trap 808 (kick, -24.1) · 9 minimal click (kick, -26.5) |
+| [`sdgsnare`](library.md#sdgsnare) | 0 808 (snare, -27.0) · 1 909 (snare, -24.8) · 2 tight (snare, -26.5) · 3 piccolo (snare, -25.8) · 4 fat (snare, -24.9) · 5 rimshot crack (snare, -24.4) · 6 brush (snare, -24.0) · 7 trap (snare, -23.6) · 8 lofi dusty (snare, -25.5) · 9 gated 80s (snare, -23.8) |
+| [`sdgclap`](library.md#sdgclap) | 0 808 (clap, -27.8) · 1 909 (clap, -25.9) · 2 tight (clap, -29.6) · 3 big room (clap, -27.0) · 4 snap (perc, -30.7) · 5 trap (clap, -26.5) · 6 real hands (clap, -30.6) · 7 crowd (clap, -26.8) · 8 lofi (clap, -30.7) · 9 micro (perc, -28.6) |
+| [`sdgtom`](library.md#sdgtom) | 0 low tom (tom, -26.8) · 1 mid tom (tom, -26.7) · 2 high tom (tom, -26.8) · 3 conga (tom, -27.0) · 4 bongo (tom, -27.3) · 5 808 deep (tom, -26.5) · 6 909 low (tom, -28.2) · 7 909 high (tom, -27.9) · 8 syndrum (tom, -25.8) · 9 floor tom (tom, -27.1) |
+| [`sdghat`](library.md#sdghat) | 0 808 closed (closed hat, -34.3) · 1 pedal (closed hat, -36.6) · 2 808 open (open hat, -28.8) · 3 909 closed (closed hat, -32.8) · 4 909 open (open hat, -27.9) · 5 606 closed (closed hat, -36.5) · 6 606 open (open hat, -30.8) · 7 shaker (closed hat, -33.7) · 8 crushed (closed hat, -36.3) · 9 dark open (open hat, -28.9) |
+| [`sdgrim`](library.md#sdgrim) | 0 808 rim (perc, -32.0) · 1 claves (perc, -30.5) · 2 woodblock (perc, -30.8) · 3 909 rim (perc, -29.5) · 4 stick (perc, -32.5) · 5 cross stick (perc, -30.3) · 6 high block (perc, -31.8) · 7 low block (perc, -31.0) · 8 castanet (perc, -34.5) · 9 hi click (perc, -33.4) |
+| [`sdgcowbell`](library.md#sdgcowbell) | 0 808 (metal, -29.5) · 1 808 short (metal, -29.9) · 2 agogo (metal, -28.4) · 3 bell (metal, -28.8) · 4 clank (metal, -30.7) · 5 808 long (metal, -30.8) · 6 fifth (metal, -31.7) · 7 tin can (metal, -32.9) · 8 gamelan (metal, -29.1) · 9 two-tone (metal, -27.2) |
+| [`sdgfmdrum`](library.md#sdgfmdrum) | 0 FM kick (kick, -24.3) · 1 FM snare (snare, -27.3) · 2 FM tom (tom, -25.2) · 3 FM clap (clap, -27.4) · 4 FM metal (metal, -29.2) · 5 perc, a struck signpost (perc, -30.9) · 6 FM hat (closed hat, -33.1) · 7 FM zap (fx, -23.1) · 8 FM rim (perc, -35.4) · 9 FM hard kick (kick, -21.9) |
+| [`sdgcymbal`](library.md#sdgcymbal) | 0 ride (cymbal, -28.1) · 1 crash (cymbal, -26.7) · 2 china (cymbal, -28.7) · 3 gong (cymbal, -27.9) · 4 bell (metal, -28.7) · 5 splash (cymbal, -28.9) · 6 sizzle ride (cymbal, -26.7) · 7 swell (cymbal, -27.0) · 8 dark crash (cymbal, -28.7) · 9 singing bowl (cymbal, -25.8) |
+| [`sdgmodal`](library.md#sdgmodal) | 0 drum (tom, -28.0) · 1 marimba (perc, -30.9) · 2 glass (metal, -28.1) · 3 metal plate (metal, -28.7) · 4 tabla (tom, -26.8) · 5 wood (perc, -35.9) · 6 vibes (metal, -27.3) · 7 kalimba (metal, -28.0) · 8 steel pan (metal, -28.2) · 9 snare drum (snare, -27.6) |
+| [`sdgplastic`](library.md#sdgplastic) | 0 bubble (perc, -32.4) · 1 latex snap (perc, -29.3) · 2 squeak (fx, -25.6) · 3 plastic clank (perc, -30.3) · 4 drip (perc, -32.1) · 5 rubber (fx, -25.4) · 6 cork pop (perc, -31.8) · 7 balloon rub (fx, -26.5) · 8 boing (fx, -25.8) · 9 bottle tap (perc, -29.2) |
+| [`sdgslam`](library.md#sdgslam) | 0 slam (kick, -24.5) · 1 dive (kick, -21.6) · 2 clank (kick, -25.2) · 3 gated (kick, -25.6) · 4 crunch (kick, -24.4) · 5 boom (kick, -25.1) · 6 sub drop (kick, -21.1) · 7 industrial (kick, -25.2) · 8 hardstyle (kick, -23.8) · 9 soft thud (kick, -25.1) |
+| [`sdgping`](library.md#sdgping) | 0 blip (perc, -29.9) · 1 droplet (perc, -33.5) · 2 metal tick (perc, -31.4) · 3 wood (perc, -34.7) · 4 zap (fx, -24.6) · 5 rubber (perc, -32.4) · 6 sonar (fx, -24.1) · 7 laser (fx, -23.9) · 8 bar (perc, -31.7) · 9 glitch rattle (perc, -29.5) |
+| [`sdgratchet`](library.md#sdgratchet) | 0 bounce (perc, -29.9) · 1 ratchet (perc, -29.6) · 2 slowdown (fx, -27.0) · 3 zipper (fx, -26.0) · 4 crushed (perc, -28.4) · 5 ping pong (perc, -33.7) · 6 machine gun (perc, -28.9) · 7 tape stop (fx, -28.4) · 8 geiger (perc, -31.6) · 9 flam (perc, -31.2) |
+| [`sdgchaos`](library.md#sdgchaos) | 0 glitch snare (snare, -27.5) · 1 digital hat (closed hat, -32.8) · 2 broken kick (kick, -23.0) · 3 crackle (perc, -34.7) · 4 gendy tom (tom, -25.4) · 5 static (fx, -24.4) · 6 gendy kick (kick, -23.3) · 7 logistic open hat (open hat, -27.9) · 8 broken clap (clap, -29.2) · 9 digital rim (perc, -28.1) |
 
 `sdgslam` is louder than its peak suggests: it is driven, equalised and limited inside, so preset 0
 reads -24.5 LUFS at a peak of only -21.3 dBFS, a few dB between peak and body like a mastered hit.
@@ -182,7 +183,7 @@ so `gain 1.2` measured +6.3 dB and `gain 0.8` -7.7 dB, about 3.5 dB per 0.1. Sho
 room because a 400 ms window averages a 13 ms rimshot over 400 ms: the 808's reads -35.2 LUFS at a
 -13.5 dBFS peak.
 
-All 83 presets measured inside their role's tolerance. The three voices whose preset 0 is a kick
+All 150 presets measured inside their role's tolerance (the 67 after the first five or six of each voice on 2026-11-06, the same way). The three voices whose preset 0 is a kick
 read -24.0 (`sdgkick`), -24.3 (`sdgfmdrum`) and -24.5 (`sdgslam`), level with stock `bd` at -24.9.
 Every preset alone peaks at -8.4 dBFS or under on each side (the hottest, the 606 kick), against
 -11.0 for every normalized stock sample: the loudness comes from the body and its length, not from
@@ -299,12 +300,9 @@ What was learnt building them, for anyone writing one:
 
 ## The rendered banks
 
-`samples/` holds 88 short files in six banks, 5.7 MB, rendered from the voices. Load them like any
-folder of banks:
-
-```supercollider
-~sdg.loadSamples(~sdg.path +/+ "samples");
-```
+`samples/` holds 88 short files in six banks, 5.7 MB, rendered from the voices. They go into the
+sound library when `~sdg` is made, like the synths (`SuperDirtGUI.loadOwnSamples = false` before
+`SuperDirtGUI(~dirt)` leaves them out):
 
 ```haskell
 d1 $ s "sdgbd sdgsd:7 sdgbd sdgsd"
@@ -388,12 +386,8 @@ words are the drum voices' words: `sdgfreq`, `sdgpunch`, `sdgbend`, `sdgdecay`, 
 - [FM, additive and Karplus-Strong drums](https://ccrma.stanford.edu/~sdill/220A-project/drums.html)
   at CCRMA: Chowning's wood drum at 1:1.4, chimes, sheet metal.
 - Dan Stowell, [cymbal synthesis in SuperCollider](https://mcld.co.uk/cymbalsynthesis/).
-- SOPHIE in her own words, [on Google Arts & Culture](https://artsandculture.google.com/story/2wWx4L63W07OIQ),
-  and [Elektronauts on her sound design](https://www.elektronauts.com/t/sophies-sound-design-digitone-or-monomachine/60043?page=8).
 - Moss and others, [Sounding Liquids](https://gamma.cs.unc.edu/SoundingLiquids/soundingliquids.pdf):
   a bubble's rising pitch, in `sdgplastic`.
-- Autechre on their methods: [Confield](https://aepages.org/wiki/Confield) and
-  [Sean Booth, interviewed by Peter Hollo in 2005](https://aepages.org/wiki/Sean_Booth_Interview_taken_by_Peter_Hollo,_March_2005).
 
 None of the voices copies a track or a sample. What came from the hardware is numbers, from its
-circuits and from recordings; what came from the artists is habits.
+circuits and from recordings.

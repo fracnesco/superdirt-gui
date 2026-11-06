@@ -15,14 +15,15 @@
 //   sdgdrive   0 to 1           saturation: trashier, a china
 //   sdgspread  0 to 1           stereo width of the wash
 //
-// presets, by n: 0 ride, 1 crash, 2 china, 3 gong, 4 bell. note tunes it in
-// semitones from its own pitch. it rings up to 10 seconds: legato or sustain
-// shorten it, like a hand that grabs the cymbal.
+// presets, by n: 0 ride, 1 crash, 2 china, 3 gong, 4 bell, 5 splash, 6 sizzle ride,
+// 7 swell, 8 dark crash, 9 singing bowl. note tunes it in semitones from its own pitch.
+// it rings up to 10 seconds: legato or sustain shorten it, like a hand that grabs the
+// cymbal.
 //
 //   d1 $ s "sdgcymbal*8" # legato 1
 //   d1 $ s "sdgcymbal:1" # pF "sdgbloom" "<0 0.5>"
 //
-// examples/tidal/17-drums-fm.tidal plays it.
+// examples/tidal/lessons/17-drums-fm.tidal plays it.
 (
 var name = \sdgcymbal;
 SynthDef(name, { |out, sustain = 10.5, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -75,15 +76,20 @@ SynthDef(name, { |out, sustain = 10.5, pan = 0.5, freq = 261.6256, accelerate = 
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(),	// 0 ride: the def's defaults
-	(sdgfreq: 230, sdgdecay: 2.5, sdgcolor: 0.08, sdgmetal: 0.3, sdgtone: 0.75, sdgclick: 0.5,
+	(presetName: "ride"),	// 0 ride: the def's defaults
+	(presetName: "crash", sdgfreq: 230, sdgdecay: 2.5, sdgcolor: 0.08, sdgmetal: 0.3, sdgtone: 0.75, sdgclick: 0.5,
 		sdgindex: 5, sdgspread: 0.9),	// 1 crash
-	(sdgfreq: 380, sdgdecay: 1.6, sdgcolor: 0.15, sdgmetal: 0.8, sdgtone: 0.4, sdgclick: 0.4,
+	(presetName: "china", sdgfreq: 380, sdgdecay: 1.6, sdgcolor: 0.15, sdgmetal: 0.8, sdgtone: 0.4, sdgclick: 0.4,
 		sdgdrive: 0.7, sdgratio: 2.7, sdgindex: 6),	// 2 china
-	(sdgfreq: 45, sdgdecay: 6, sdgcolor: 0.8, sdgmetal: 0.6, sdgtone: 0.2, sdgbloom: 0.35,
+	(presetName: "gong", sdgfreq: 45, sdgdecay: 6, sdgcolor: 0.8, sdgmetal: 0.6, sdgtone: 0.2, sdgbloom: 0.35,
 		sdgratio: 2.2, sdgindex: 4, sdgclick: 0, sdgspread: 0.8),	// 3 gong
-	(sdgfreq: 260, sdgdecay: 2.5, sdgcolor: 1, sdgmetal: 0.2, sdgratio: 1.41, sdgindex: 2.5,
-		sdgclick: 0.1)	// 4 bell
+	(presetName: "bell", sdgfreq: 260, sdgdecay: 2.5, sdgcolor: 1, sdgmetal: 0.2, sdgratio: 1.41, sdgindex: 2.5,
+		sdgclick: 0.1),	// 4 bell
+	(presetName: "splash", sdgfreq: 400, sdgdecay: 0.9, sdgcolor: 0.05, sdgmetal: 0.3, sdgtone: 0.85, sdgclick: 0.6, sdgindex: 5, sdgspread: 0.8),	// 5 splash
+	(presetName: "sizzle ride", sdgfreq: 320, sdgdecay: 4, sdgcolor: 0.35, sdgmetal: 0.4, sdgtone: 0.7, sdgclick: 0.3, sdgdrive: 0.2, sdgspread: 0.7),	// 6 sizzle ride
+	(presetName: "swell", sdgfreq: 250, sdgdecay: 3, sdgcolor: 0.1, sdgmetal: 0.3, sdgtone: 0.7, sdgbloom: 1, sdgindex: 5, sdgclick: 0, sdgspread: 0.9),	// 7 swell
+	(presetName: "dark crash", sdgfreq: 180, sdgdecay: 3, sdgcolor: 0.05, sdgmetal: 0.4, sdgtone: 0.3, sdgclick: 0.4, sdgindex: 4, sdgspread: 0.9),	// 8 dark crash
+	(presetName: "singing bowl", sdgfreq: 440, sdgdecay: 8, sdgcolor: 1, sdgmetal: 0.1, sdgratio: 2.76, sdgindex: 1, sdgclick: 0.05, sdgbloom: 0.15)	// 9 singing bowl
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

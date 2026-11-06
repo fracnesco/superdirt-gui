@@ -1,0 +1,266 @@
+-- SuperDirtGUI from Tidal - 15: ten more ways of reading a sample
+--
+-- SuperDirt reads a sample straight through, from begin to end at speed. A
+-- sample player reads it some other way. Each of the ten here (players/) is
+-- switched on by its word: add # sdgcrush 16 to any sample and that event goes
+-- through sdgcrush. n, begin, end, speed, chop, loopAt and the effects mean what
+-- they always mean.
+--
+--   sdgscan     the sample as an oscillator: you choose the pitch, the sample
+--               gives the tone. A bass line or chords out of anything
+--   sdgfreeze   plays, then stops the spectrum and holds it: a drone
+--   sdgfold     back and forth inside a window: a palindrome, or a buzz
+--   sdgscratch  a hand on the record: the read pointer swings
+--   sdgself     the sound pushes its own read pointer: grit to shatter
+--   sdgcrush    the pointer on every k-th frame: old sampler to broken
+--   sdgsmear    stretched without dropping the pitch, washed into a cloud
+--   sdgcloud    separate grains, scattered: a mist, or a shuffled break
+--   sdgonset    slices where the hits really are, not equal parts
+--   sdgcross    one sample through the spectrum of another: a tuned break
+--
+-- Three things to know first, or some of these play silence and others will
+-- not stop.
+--
+-- 1. A sample's event lasts as long as the sample takes to play, not one step.
+--    s "breaks152" every cycle piles up (4.7 s of break on a 1.9 s cycle), and
+--    speed 0.05 makes one event last 94 s. hush stops new events only: what
+--    has started plays to its end. So every example here gives its events an
+--    end: loopAt n (exactly n cycles), legato 1 (its step) or sdghold.
+--    panic stops whatever is still sounding.
+--
+-- 2. A reader that stays in one place plays what is there. numbers:3 is 2 s
+--    long and the word is over by 0.8 s; hh:0 is a 0.1 s hit and 0.8 s of
+--    nothing. Freeze, fold or scan in the silence and you hear silence: frame
+--    the part that sounds with begin and end.
+--
+-- 3. sdghold n (on scan, freeze, fold and smear) makes the event last n cycles,
+--    past the end of the sample. Nothing else can: SuperDirt cuts sustain and
+--    legato off at the sample's own length.
+--
+-- At 125 bpm loopAt 1 fits breaks125 to one cycle. Start the drums on d1 and
+-- leave them running: most examples play on d2 and d3 over them, and the ones
+-- that change the break itself replace d1.
+
+setcps (125/60/4)
+
+let sdgscan = pF "sdgscan"
+    sdgstep = pF "sdgstep"
+    sdghold = pF "sdghold"
+    sdgscratch = pF "sdgscratch"
+    sdgdepth = pF "sdgdepth"
+    sdgfreeze = pF "sdgfreeze"
+    sdgself = pF "sdgself"
+    sdgfold = pF "sdgfold"
+    sdgcrush = pF "sdgcrush"
+    sdgsmear = pF "sdgsmear"
+    sdgpitch = pF "sdgpitch"
+    sdgcloud = pF "sdgcloud"
+    sdggrain = pF "sdggrain"
+    sdgscatter = pF "sdgscatter"
+    sdgspread = pF "sdgspread"
+    sdgrev = pF "sdgrev"
+    sdgonset = pF "sdgonset"
+    sdgcross = pS "sdgcross"
+    -- notes to Hz, read as note reads them: "a2" is 55, "a3'min7" a chord,
+    -- 0 middle C. (A Pattern Double would read "e" as 1/8 and "f" as 1/5)
+    hz :: Pattern Note -> Pattern Double
+    hz p = fmap (\x -> 261.6256 * 2 ** (unNote x / 12)) p
+    -- semitones to a ratio, for speed: 7 is 1.498, a fifth up
+    semi :: Pattern Double -> Pattern Double
+    semi p = fmap (\x -> 2 ** (x / 12)) p
+
+-- the drums: a plain break, in eight slices fitted to one cycle
+d1 $ loopAt 1 $ chop 8 $ s "breaks125"
+
+
+-- sdgscan: the sample as an oscillator ----------------------------------------
+--
+-- A piece of the sample two periods long is repeated at the pitch sdgscan asks
+-- for, in Hz, and the piece crawls from begin to end over the event. The pitch
+-- is yours, the tone is whatever the sample holds at that moment: a break
+-- makes a bass whose tone changes with its kicks and snares. sdgstep is how
+-- many times a second the piece moves on: low steps, high blurs.
+--
+-- (the pattern after loopAt (...) gives each slice its own value: inside the
+-- brackets the # would apply once, to the one breaks125 event of the cycle)
+
+-- a bass line played by the break: each quarter crawls through its own beat
+d2 $ loopAt 1 (chop 4 $ s "breaks125")
+   # sdgscan (hz "<[a2 a2 c3 a2] [a2 a2 g2 e3]>") # lpf 1500
+
+-- the tone moving on every 16th (8.33 a second at 125 bpm), in a blur, in slow steps
+d2 $ loopAt 1 (chop 4 $ s "breaks125") # sdgscan (hz "a2") # sdgstep "<8.33 40 2>"
+
+-- chords out of a pad, and not the chord the pad plays: four scans at once.
+-- sdghold 2 makes each last two cycles, the same as slow 2's step
+d3 $ slow 2 $ s "pad:1" # sdgscan (hz "<a3'min7 f3'maj7>") # sdghold 2 # gain 0.85
+
+-- a tune out of a hi-hat. end 0.12 keeps the crawl inside the hit (after it is
+-- 0.8 s of silence) and sdghold 0.25 stretches it to a quarter cycle
+d3 $ s "hh*4" # end 0.12 # sdgscan (hz "a4 c5 e5 a5") # sdghold 0.25 # gain 1.2
+
+
+-- sdgfreeze: play, then stop --------------------------------------------------
+--
+-- The sample plays until the reading is sdgfreeze of the way through (0 to 1).
+-- There its spectrum stops, and rings for as long as the event lasts: with
+-- sdghold, a drone. Freeze where there is sound.
+
+-- one sax note held as a minor chord: speed makes the three notes
+d3 $ slow 4 $ s "sax" # sdgfreeze 0.3 # speed (semi "[0,3,7]") # sdghold 4
+
+-- the word plays, stops and rings. end 0.4 cuts the 1.2 s of silence off the
+-- file, so the freeze lands on the word: early in it, then late in it
+d3 $ slow 2 $ s "numbers:3" # end 0.4 # sdgfreeze "<0.3 0.7>" # sdghold 2
+
+-- a frozen hit of the break, a cycle long, a different hit each cycle
+d3 $ s "breaks125" # begin "<0 0.25 0.5 0.75>" # sdgfreeze 0.1 # sdghold 1
+   # lpf 3000
+
+
+-- sdgfold: back and forth -----------------------------------------------------
+--
+-- The reading bounces between two walls: the start of the trim (begin) and
+-- sdgfold of the trim after it. Wide, it plays a piece forwards and back: a
+-- palindrome. Narrow, it repeats a few milliseconds so fast that it buzzes;
+-- half the width is an octave up.
+
+-- each slice of the break folds back on itself: whole, half, a quarter, an eighth
+d1 $ loopAt 1 (chop 8 $ s "breaks125") # sdgfold "<1 0.5 0.25 0.125>"
+
+-- the word, from where it starts (begin 0.1 skips the breath before it):
+-- a palindrome, then a buzz
+d3 $ slow 2 $ s "numbers:3" # begin 0.1 # sdgfold "<0.2 0.005>" # sdghold 2
+
+-- a buzz with a pitch, from inside a sax note: the width is the note
+d3 $ s "sax*4" # begin 0.3 # sdgfold "0.002 0.001 0.0015 0.001" # legato 1 # gain 1.1
+
+
+-- sdgscratch: a hand on the record --------------------------------------------
+--
+-- The read pointer swings around where it would be, sdgscratch times a second
+-- and sdgdepth seconds to either side. A small depth is tape wow; once the
+-- swing is faster than the reading the pointer runs backwards, and that is a
+-- scratch. sdgscratch 0 reads straight. At 125 bpm 4.17 is a swing an eighth,
+-- 8.33 one a sixteenth.
+
+-- the end of every other bar scratched
+d1 $ loopAt 1 (chop 8 $ s "breaks125")
+   # sdgscratch "<0 [0 0 0 0 0 0 4.17 8.33]>" # sdgdepth 0.06
+
+-- tape wow on a pad: slow and shallow, the pitch sways
+d3 $ slow 2 $ s "pad:1" # sdgscratch 0.5 # sdgdepth 0.004 # legato 1
+
+
+-- sdgself: the sound throws its own pointer -----------------------------------
+--
+-- What comes out is added to where it reads next, up to sdgself seconds at
+-- full level: quiet parts play straight, loud ones knock the pointer about.
+-- 0.002 is grit, 0.02 tears, 0.1 shatters. The level never grows.
+
+-- a cycle of each, then the clean break
+d1 $ loopAt 1 (chop 8 $ s "breaks125") # sdgself "<0.002 0.02 0.1 0>"
+
+-- now and then a 16th shatters
+d1 $ sometimesBy 0.2 (# sdgself 0.08) $ loopAt 1 $ chop 16 $ s "breaks125"
+
+
+-- sdgcrush: fewer places to stand ---------------------------------------------
+--
+-- The pointer may only stand on every sdgcrush-th frame, so the file is read
+-- as a staircase: 1 is clean, 4 an old sampler, 16 grit, 64 broken, 256 a buzz.
+
+-- a cycle of each
+d1 $ loopAt 1 (chop 8 $ s "breaks125") # sdgcrush "<1 4 16 64>"
+
+-- clean, and the last beat of the bar breaking up
+d1 $ loopAt 1 (chop 16 $ s "breaks125") # sdgcrush "1!12 8 32 128 256"
+
+
+-- sdgsmear: stretched and washed ----------------------------------------------
+--
+-- The sample is read in grains (Warp1), so speed is time and the pitch stays;
+-- then sdgsmear (0 to 1) spreads every moment over its neighbouring
+-- frequencies. sdgpitch transposes. loopAt is the way to stretch: the event
+-- lasts exactly n cycles (a low speed alone stretches too, but with no end
+-- in sight).
+
+-- the break over four cycles, at its own pitch, under the real one: a little
+-- washed, then a lot
+d3 $ loopAt 4 $ s "breaks125" # sdgsmear "<0.2 0.8>" # gain 0.85
+
+-- a pad an octave down, slowly
+d3 $ loopAt 4 $ s "pad:1" # sdgsmear 0.6 # sdgpitch 0.5
+
+
+-- sdgcloud: grains ------------------------------------------------------------
+--
+-- sdgcloud grains a second, each sdggrain seconds long, each from a place of
+-- its own: up to sdgscatter seconds either side of the reading, anywhere in
+-- sdgspread of the stereo image, backwards with a chance of sdgrev. sdgpitch
+-- transposes them. Eight sound at once at most: keep sdgcloud x sdggrain
+-- under 8.
+
+-- the break shuffled on the grid: a grain every 16th (8.33 a second), each
+-- from anywhere within half a second of where the break is
+d1 $ loopAt 1 $ s "breaks125" # sdgcloud 8.33 # sdggrain 0.1 # sdgscatter 0.5
+
+-- a mist made of the break, four cycles long, over the real one
+d3 $ loopAt 4 $ s "breaks125" # sdgcloud 40 # sdggrain 0.15 # sdgscatter 0.05
+   # sdgspread 1 # sdgrev 0.3 # gain 1.05
+
+-- a pad as a shimmer: at its pitch, a fifth up and an octave up, some backwards
+d3 $ loopAt 2 $ s "pad:1" # sdgcloud 30 # sdggrain 0.2 # sdgscatter 1
+   # sdgrev 0.4 # sdgpitch "[1,1.5,2]" # gain 0.95
+
+
+-- sdgonset: the real hits -----------------------------------------------------
+--
+-- chop and splice cut a sample into equal parts wherever its hits are;
+-- sdgonset k plays from the file's k-th hit to the next, wherever they fall
+-- (numbers wrap round). The file is searched for its hits the first time it is
+-- asked for, and until that is done (a moment) each event plays the whole
+-- file: legato 1 keeps those to their step, and cuts long hits off on the grid.
+
+-- the hits in order, one an eighth: the break pulled onto the grid
+d1 $ s "breaks125*8" # sdgonset "0 1 2 3 4 5 6 7" # legato 1
+
+-- equal slices, to compare
+d1 $ splice 8 "0 1 2 3 4 5 6 7" $ s "breaks125"
+
+-- a new order, the fourth one backwards
+d1 $ sdgonset "0 0 2 3 0 5 [6 7] 4" # s "breaks125" # speed "1 1 1 -1 1 1 1 1" # legato 1
+
+-- any hit, every 16th
+d1 $ s "breaks125*16" # sdgonset (irand 16) # legato 1
+
+
+-- sdgcross: one sample through another ----------------------------------------
+--
+-- The event's own sample keeps its frequencies only where the second one has
+-- them too: the rhythm and level of the first, the pitch and colour of the
+-- second. The second is named as a string and read from its start, round again
+-- if it is shorter.
+
+-- a tuned break: the drums play the sax's note, a new one each cycle
+d1 $ loopAt 1 $ s "breaks125" # sdgcross "<sax:0 sax:2 sax:4 sax:3>"
+
+-- a pad that says the numbers: it only sounds where a word does
+d3 $ s "pad:1*2" # sdgcross "<numbers:1 numbers:2 numbers:3 numbers:4>" # legato 1
+   # gain 0.85
+
+
+-- together: one break, read four ways ------------------------------------------
+
+do
+  d1 $ loopAt 1 (chop 16 $ s "breaks125") # sdgcrush "1!12 8 32 128 256"
+  d2 $ loopAt 1 (chop 4 $ s "breaks125")
+     # sdgscan (hz "<[a2 a2 c3 a2] [a2 a2 g2 e3]>") # lpf 1200 # gain 0.9
+  d3 $ loopAt 4 $ s "pad:1" # sdgcloud 30 # sdggrain 0.2 # sdgscatter 1
+     # sdgpitch "[1,1.5]" # gain 0.9
+  d4 $ s "<~ ~ ~ numbers:3>" # end 0.4 # sdgfreeze 0.5 # sdghold 1 # room 0.3
+
+hush
+
+-- and if something still rings after hush
+panic

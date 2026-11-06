@@ -9,7 +9,7 @@
 //   sdgfold  0 to 1            how wide the window is, of the trim
 //   sdghold  0.1 to 16 cycles  makes the event last that long
 //
-//   d1 $ s "numbers:3" # pF "sdgfold" 0.2
+//   d1 $ s "numbers:3" # begin 0.1 # pF "sdgfold" 0.2
 //   d1 $ s "breaks125" # begin 0.25 # pF "sdgfold" "0.02 0.1"
 //   d1 $ s "cp" # pF "sdgfold" 0.01 # pF "sdghold" 1
 (

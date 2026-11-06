@@ -11,13 +11,17 @@
 //   sdgglide   0.01 to 1 s          how long that glide takes
 //   sdgwave    0 to 1               0 a saw, 1 a square
 //
+// presets, by n: 0 303, 1 squelch, 2 square, 3 deep rubber, 4 plucky, 5 screamer,
+// 6 open, 7 muted, 8 long decay, 9 slow glide. a pattern's n picks one of them and note
+// plays the pitch: s "sdgacid:1" # note "0 7".
+//
 // a synth forgets the note before it, so a slide is written as the distance
 // back to that note: after a2, a3 with sdgslide -12 glides up from a2.
 //
 //   d1 $ note "a2 a2 a3 a2" # s "sdgacid" # legato 0.6 # pF "sdgq" 0.8
 //   d1 $ note "a2 a3" # s "sdgacid" # legato 1 # pF "sdgslide" "0 -12"
 //
-// examples/tidal/11-acid.tidal plays it.
+// examples/tidal/lessons/11-acid.tidal plays it.
 (
 SynthDef(\sdgacid, { |out, sustain = 0.2, pan = 0.5, freq = 110, accelerate = 0,
 	sdgcut = 300, sdgq = 0.6, sdgenv = 0.6, sdgdecay = 0.15, sdgaccent = 0,
@@ -31,4 +35,19 @@ SynthDef(\sdgacid, { |out, sustain = 0.2, pan = 0.5, freq = 110, accelerate = 0,
 	sig = (sig * (1.5 + sdgq + sdgaccent)).tanh * (1.65 + (sdgaccent * 0.9));
 	Out.ar(out, DirtPan.ar(sig, ~dirt.numChannels, pan, env));
 }).add;
+// the presets, by n: note plays the pitch, n picks one of these
+[
+	(presetName: "303"),	// 0 303: the def's defaults
+	(presetName: "squelch", sdgcut: 200, sdgq: 0.85, sdgenv: 0.85, sdgdecay: 0.25),	// 1 squelch
+	(presetName: "square", sdgcut: 350, sdgq: 0.7, sdgenv: 0.6, sdgdecay: 0.2, sdgwave: 1),	// 2 square
+	(presetName: "deep rubber", sdgcut: 120, sdgq: 0.3, sdgenv: 0.35, sdgdecay: 0.3),	// 3 deep rubber
+	(presetName: "plucky", sdgcut: 500, sdgq: 0.4, sdgenv: 0.7, sdgdecay: 0.06, sdgaccent: 0.2),	// 4 plucky
+	(presetName: "screamer", sdgcut: 400, sdgq: 0.85, sdgenv: 1, sdgdecay: 0.4, sdgaccent: 0.4),	// 5 screamer
+	(presetName: "open", sdgcut: 2500, sdgq: 0.5, sdgenv: 0.3, sdgdecay: 0.5, sdgwave: 0.5),	// 6 open
+	(presetName: "muted", sdgcut: 180, sdgq: 0.2, sdgenv: 0.2, sdgdecay: 0.1, sdgwave: 0.3),	// 7 muted
+	(presetName: "long decay", sdgcut: 250, sdgq: 0.8, sdgenv: 0.75, sdgdecay: 1.2),	// 8 long decay
+	(presetName: "slow glide", sdgcut: 600, sdgq: 0.6, sdgenv: 0.5, sdgdecay: 0.3, sdgglide: 0.25, sdgwave: 0.2)	// 9 slow glide
+].do { |preset, i|
+	~dirt.soundLibrary.addSynth(\sdgacid, (instrument: \sdgacid, note: 0) ++ preset, appendToExisting: i > 0)
+};
 )

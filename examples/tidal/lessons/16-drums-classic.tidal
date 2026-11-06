@@ -1,0 +1,161 @@
+-- SuperDirtGUI from Tidal - 16: drum machines, the classic way
+--
+-- after the Roland boxes, the 808, 909 and 606:
+-- sdgkick, sdgsnare, sdgclap, sdghat, sdgtom, sdgrim and sdgcowbell. Each one
+-- is a kit by itself. n picks a preset - s "sdgkick:1" is the 909 kick, the
+-- list is at the top of the voice's file - note tunes it in semitones, and
+-- every knob is a Tidal parameter. The same word does the same job everywhere:
+--
+--   sdgdecay   how long it rings, in seconds    sdgtone    dark to bright
+--   sdgpunch   how far the pitch drops, in      sdgsnap    noise against the
+--              semitones, as it is struck                  body: the snares
+--   sdgclick   the beater, the stick            sdgdrive   saturation
+--
+-- and sdgcolor is each voice's own knob: 808 to 909 on the kick and the snare,
+-- the interval of the cowbell, how loose the clap is. Each use below says which.
+--
+-- A hit rings its own length, however short the step. legato or sustain cut
+-- it short, like a hand on it, and cut 1 makes the hits of one d choke each
+-- other: a closed hat stops an open one, as on the 808.
+
+setcps (124/60/4)
+
+let sdgfreq = pF "sdgfreq"
+    sdgdecay = pF "sdgdecay"
+    sdgpunch = pF "sdgpunch"
+    sdgbend = pF "sdgbend"
+    sdgclick = pF "sdgclick"
+    sdgtone = pF "sdgtone"
+    sdgcolor = pF "sdgcolor"
+    sdgdrive = pF "sdgdrive"
+    sdgsnap = pF "sdgsnap"
+    sdgnoise = pF "sdgnoise"
+    sdgmetal = pF "sdgmetal"
+    sdgbits = pF "sdgbits"
+    sdgq = pF "sdgq"
+    sdgcount = pF "sdgcount"
+    sdgtail = pF "sdgtail"
+    sdgspread = pF "sdgspread"
+
+-- house: the 909 kick on every beat. :1 is its preset; plain sdgkick is the 808
+d1 $ s "sdgkick:1*4"
+
+-- hats: 3 is the 909 closed hat, 4 the open one on the off beat. With cut 1 the
+-- closed hat after it chokes it, the way one pedal would. Leave cut out and the
+-- open hats ring into each other: a wash
+d2 $ s "sdghat*16" # n "3 3 4 3" # cut 1 # gain "0.95 0.85 1 0.85"
+
+-- the 909 clap on two and four, with the room the preset gives it
+d3 $ s "~ sdgclap:1 ~ sdgclap:1"
+
+-- the kick's knobs, a bar each. sdgcolor is the kick's model: 0 the 808's sine,
+-- 1 the 909's rounded triangle. Bar 1 the 808, long; bar 2 halfway; bar 3 the
+-- 909; bar 4 short and struck hard - sdgpunch is how far above its pitch it
+-- starts, sdgdecay how long it booms - which is close to the 606
+d1 $ s "sdgkick*4" # sdgcolor "<0 0.5 1 0.3>" # sdgdecay "<1.6 0.8 0.45 0.22>"
+   # sdgpunch "<12 16 20 30>"
+
+-- tweak to taste, the snare and the clap together, as on many house records.
+-- The snare: sdgsnap moves from the shells to the snares, sdgtone darkens or
+-- brightens both, sdgcolor 0 the 808's clean shells, 1 the 909's. The clap:
+-- sdgcount is how many hands, sdgcolor how loose they are, sdgtail its room
+d3 $ stack [
+     s "~ sdgsnare ~ sdgsnare" # sdgsnap "<0.3 0.55 0.85 0.6>" # sdgtone "<0.4 0.2 0.8 0.6>"
+       # sdgcolor "<0 0 0 1>" # gain 0.9,
+     s "~ sdgclap ~ sdgclap" # sdgcount "<4 2 6 4>" # sdgcolor "<0.35 0.1 0.8 0.5>"
+       # sdgtail "<0.35 0.1 0.9 0.5>"
+   ]
+
+-- tweak to taste, the hats. sdgdecay goes from closed to open and back in a
+-- slow sine, so the groove opens up and shuts; sdgmetal is what rings, 0 the
+-- 909's noise, 1 the 808's six squares; sdgcolor tunes those squares, 0 the
+-- 808, 1 the tighter 606 (it changes nothing at sdgmetal 0); sdgbits is the
+-- 909's sampled grit
+d2 $ s "sdghat*16" # sdgdecay (range 0.04 0.45 $ slow 4 sine) # sdgmetal "<1 1 0.4 0>"
+   # sdgcolor "<0 1 0.5 0>" # sdgbits "<0 0 0.3 0.7>" # gain "0.95 0.85"
+
+-- percussion on d4: the 808 rim (:0) and claves (:1) on a 16-step part, and the
+-- cowbell. The rim's sdgcolor is where the low body sits under the ping, its
+-- sdgdrive the crack. The cowbell's sdgcolor is its interval - the upper tone
+-- is 1 + color times the lower, 0.48 the 808's - and sdgmetal rings the two
+-- together into a clank
+d4 $ stack [
+     s "{~ ~ sdgrim ~ ~ sdgrim:1 ~ ~ ~ sdgrim ~ ~ sdgrim:1 ~ ~ sdgrim ~}%16"
+       # sdgcolor "<0.5 0.2 0.8>" # sdgdrive "<0.8 0.2>" # gain 0.9,
+     s "~ ~ ~ ~ ~ ~ sdgcowbell ~" # note "<0 0 5 -2>" # sdgcolor "<0.476 0.476 1 0.3>"
+       # sdgmetal "<0 0.4 0 0.8>" # gain 0.9
+   ]
+
+-- techno: faster and harder. :3 is the hard kick, driven, struck far above its
+-- pitch; under it a rumble of short, driven sub hits between the beats; the 909
+-- hats crushed with sdgbits; a 909 rim on the 16ths, its level moving
+do
+  setcps (132/60/4)
+  d1 $ s "sdgkick:3*4"
+  d2 $ s "[~ sdghat:3 sdghat:4 sdghat:3]*4" # cut 1 # sdgbits 0.85 # gain 0.95
+  d3 $ s "~ sdgclap:3 ~ sdgclap:3" # sdgcolor 0.2 # sdgtail 0.6
+  d4 $ s "[~ sdgkick:4 sdgkick:4 sdgkick:4]*4" # sdgdecay 0.18 # sdgpunch 2 # sdgclick 0
+     # sdgdrive 0.7 # gain 0.8
+  d5 $ s "sdgrim:3*16" # gain (range 0.75 0.95 $ slow 2 sine) # pan (slow 3 sine)
+
+-- electro: the 808 alone, syncopated. A shorter 808 kick, snare and clap
+-- together, the closed and open hats in one cut group, the cowbell, and toms
+-- running down at the end of the bar. sdgtom with a lot of sdgpunch and a slow
+-- sdgbend is the electro zap: a tom that falls an octave and a half
+do
+  setcps (118/60/4)
+  d1 $ s "sdgkick ~ ~ ~ ~ ~ sdgkick ~ ~ ~ sdgkick ~ ~ ~ ~ ~" # sdgdecay 0.8
+  d2 $ s "sdghat*16" # n "0 0 2 0 0 0 0 2" # cut 1 # gain "1 0.85"
+  d3 $ s "~ [sdgsnare,sdgclap] ~ [sdgsnare,sdgclap]"
+  d4 $ note "~ ~ ~ [7 5 2 0]" # s "sdgtom:5" # sdgpunch "<7 24>" # sdgbend "<0.15 0.3>"
+  d5 $ s "~ ~ sdgcowbell ~ ~ ~ ~ sdgcowbell:1 ~ ~ ~ ~ ~ sdgcowbell ~ ~" # note "0 0 0 5"
+
+-- tweak to taste, the toms: one preset plays a whole set, tuned by note. sdgbend
+-- is how long the skin takes to settle, sdgsnap the noise under it, and
+-- sdgcolor rounds the 808's sine (0) toward the 909's triangle (1)
+d4 $ note "[7 ~ 5] [~ 2] [0 ~ -3] [~ -5]" # s "sdgtom" # sdgbend "<0.08 0.25 0.08 0.4>"
+   # sdgsnap "<0.12 0 0.4 0.12>" # sdgcolor "<0 0 1 0.5>"
+
+-- trap: the 808 kick is the bass. :4 is the deep sub, note plays the line, and
+-- cut 1 keeps it to one note at a time, each one stopping the last. Clap and
+-- snare on the third beat, half time; the hats roll - ply turns a step into 2,
+-- 3 or 4 hits
+do
+  setcps (140/60/4)
+  d1 $ note "0 ~ ~ 0 ~ ~ ~ ~ ~ ~ <3 -2> ~ ~ ~ <7 5> ~" # s "sdgkick:4" # sdgdecay 1.6 # cut 1
+  d2 $ ply "1 1 1 <1 3> 1 1 2 <1 4>" $ s "sdghat:5*8" # gain 0.9 # pan (slow 2 sine)
+  d3 $ s "~ ~ [sdgclap:1,sdgsnare:2] ~"
+  d4 $ s "~ ~ ~ ~ ~ ~ ~ sdgrim:4 ~ ~ ~ ~ ~ ~ ~ ~" # gain 0.9
+  d5 silence
+
+-- breakbeat: a break in sixteenths, with ghost notes on the snare (gain 0.8 is
+-- a ghost), the tight 606 kick and the 909 snare. Every fourth bar bite chops it
+-- into eighths and plays them out of order, the way a jungle record re-cuts a break
+do
+  setcps (170/60/4)
+  d1 $ every 4 (bite 8 "0 1 2 3 0 1 6 [7 7]") $ stack [
+       s "sdgkick:2 ~ sdgkick:2 ~ ~ ~ ~ ~ ~ ~ sdgkick:2 sdgkick:2 ~ ~ ~ ~",
+       s "~ ~ ~ ~ sdgsnare:1 ~ ~ sdgsnare:2 ~ sdgsnare:2 ~ ~ sdgsnare:1 ~ ~ sdgsnare:2"
+         # gain "[1 0.8]*8"
+     ]
+  d2 $ s "sdghat*8" # n "0 0 0 0 0 0 2 0" # cut 1 # gain 0.9
+  d3 silence
+  d4 silence
+
+-- let it run: the house kit, moving by itself. The kick walks from the 808 to
+-- the 909 and back over 32 bars and its boom breathes over 8; its drive climbs
+-- for 16 bars and falls back clean, a build you do not have to play. The hats
+-- brighten and dull on slow noise, the clap's room swells, the toms fill every
+-- eighth bar
+do
+  setcps (124/60/4)
+  d1 $ s "sdgkick*4" # sdgcolor (slow 32 sine) # sdgdecay (range 0.35 1.2 $ slow 8 sine)
+     # sdgdrive (slow 16 $ range 0 0.7 saw)
+  d2 $ s "sdghat*16" # n "0 0 2 0" # cut 1 # sdgtone (range 0.4 0.95 $ slow 12 perlin)
+     # sdgmetal (range 0.3 1 $ slow 24 sine) # gain "0.95 0.85"
+  d3 $ s "~ sdgclap ~ sdgclap" # sdgtail (range 0.1 0.8 $ slow 16 perlin)
+  d4 $ every' 8 7 (const $ note "~ ~ [7 5] [2 0 -3 -5]" # s "sdgtom")
+     $ s "{~ ~ sdgrim ~ ~ sdgrim:1 ~}%16" # gain 0.9
+  d5 $ s "~ ~ ~ ~ ~ ~ sdgcowbell ~" # sdgdecay (range 0.15 0.6 $ slow 20 sine) # gain 0.9
+
+hush

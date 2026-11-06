@@ -13,14 +13,14 @@
 //   sdgbend    0.001 to 1 s       how long it takes to settle
 //   sdgsnap    0 to 1             snare wires that rattle as long as the body rings
 //
-// presets, by n: 0 drum (a tom-like skin), 1 marimba, 2 glass, 3 metal plate,
-// 4 tabla, 5 wood. note tunes it in semitones from its own pitch; legato or
-// sustain shorten it, like a hand on the head.
+// presets, by n: 0 drum (a tom-like skin), 1 marimba, 2 glass, 3 metal plate, 4 tabla,
+// 5 wood, 6 vibes, 7 kalimba, 8 steel pan, 9 snare drum. note tunes it in semitones
+// from its own pitch; legato or sustain shorten it, like a hand on the head.
 //
 //   d1 $ s "sdgmodal*4" # note "0 5 7 12"
 //   d1 $ s "sdgmodal*8" # pF "sdgmetal" (slow 4 saw) # pF "sdgcolor" "0 0.5 1 0.3"
 //
-// examples/tidal/17-drums-fm.tidal plays it.
+// examples/tidal/lessons/17-drums-fm.tidal plays it.
 (
 var name = \sdgmodal;
 // mode ratios per material, ten each; sdgmetal morphs between neighbours mode by mode
@@ -90,12 +90,16 @@ SynthDef(name, { |out, sustain = 8, pan = 0.5, freq = 261.6256, accelerate = 0,
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(),	// 0 drum: the def's defaults
-	(sdgfreq: 523.25, sdgdecay: 0.55, sdgmetal: 0.5, sdgcolor: 0.3, sdgtone: 0.55, sdgpunch: 0),	// 1 marimba
-	(sdgfreq: 1400, sdgdecay: 1.4, sdgmetal: 0.75, sdgcolor: 0.6, sdgtone: 0.9, sdgpunch: 0),	// 2 glass
-	(sdgfreq: 330, sdgdecay: 1, sdgmetal: 1, sdgcolor: 0.7, sdgtone: 0.5, sdgpunch: 0.3),	// 3 metal plate
-	(sdgfreq: 300, sdgdecay: 0.9, sdgmetal: 0, sdgcolor: 0.2, sdgtone: 0.75, sdgpunch: 3, sdgbend: 0.08),	// 4 tabla
-	(sdgfreq: 700, sdgdecay: 0.3, sdgmetal: 0.6, sdgcolor: 0.5, sdgtone: 0.9, sdgpunch: 0)	// 5 wood
+	(presetName: "drum"),	// 0 drum: the def's defaults
+	(presetName: "marimba", sdgfreq: 523.25, sdgdecay: 0.55, sdgmetal: 0.5, sdgcolor: 0.3, sdgtone: 0.55, sdgpunch: 0),	// 1 marimba
+	(presetName: "glass", sdgfreq: 1400, sdgdecay: 1.4, sdgmetal: 0.75, sdgcolor: 0.6, sdgtone: 0.9, sdgpunch: 0),	// 2 glass
+	(presetName: "metal plate", sdgfreq: 330, sdgdecay: 1, sdgmetal: 1, sdgcolor: 0.7, sdgtone: 0.5, sdgpunch: 0.3),	// 3 metal plate
+	(presetName: "tabla", sdgfreq: 300, sdgdecay: 0.9, sdgmetal: 0, sdgcolor: 0.2, sdgtone: 0.75, sdgpunch: 3, sdgbend: 0.08),	// 4 tabla
+	(presetName: "wood", sdgfreq: 700, sdgdecay: 0.3, sdgmetal: 0.6, sdgcolor: 0.5, sdgtone: 0.9, sdgpunch: 0),	// 5 wood
+	(presetName: "vibes", sdgfreq: 330, sdgdecay: 1.1, sdgmetal: 0.5, sdgcolor: 0.35, sdgtone: 0.15, sdgpunch: 0),	// 6 vibes
+	(presetName: "kalimba", sdgfreq: 587.33, sdgdecay: 0.9, sdgmetal: 0.62, sdgcolor: 0.6, sdgtone: 0.55, sdgpunch: 0),	// 7 kalimba
+	(presetName: "steel pan", sdgfreq: 392, sdgdecay: 1.1, sdgmetal: 0.08, sdgcolor: 0.7, sdgtone: 0.65, sdgpunch: 0.5),	// 8 steel pan
+	(presetName: "snare drum", sdgfreq: 190, sdgdecay: 0.3, sdgmetal: 0.25, sdgcolor: 0.6, sdgtone: 0.85, sdgpunch: 2, sdgbend: 0.03, sdgsnap: 0.85)	// 9 snare drum
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

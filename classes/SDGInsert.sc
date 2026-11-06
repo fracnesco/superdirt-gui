@@ -45,8 +45,8 @@
 //
 // An insert can also sit on a track (SDGTrack, SuperDirtGUI:addTrackInsert):
 // before a global effect or after it, the same object on the track's own bus.
-// Or on a return track (SDGReturn), the same way: it has no orbit then, and
-// no event wakes it, so the return does.
+// Or on a return, a group or the master (SDGBusTrack), in its one chain: it has
+// no orbit then, and no event wakes it, so the bus track does.
 //
 // The four extensions are looked up by name, never compiled against: a
 // kind whose extension is not installed is not offered.
@@ -91,6 +91,9 @@ SDGInsert {
 
 	// the kinds in the order a menu lists them
 	*kindNames { ^#[\eq, \compressor, \insight, \vst] ++ fxKinds }
+
+	// the kinds that come from sc fx kit (FxParamUnit), in menu order
+	*fxKindNames { ^fxKinds.copy }
 
 	*kindLabel { |kind| ^kinds[kind.asSymbol] !? { |k| k[\label] } }
 
@@ -193,11 +196,11 @@ SDGInsert {
 	numChannels { ^sdg.dirt.numChannels }
 	orbit { ^orbitIndex !? { sdg.dirt.orbits[orbitIndex] } }
 
-	// a return track's insert has no orbit
-	isOnReturn { ^track.isKindOf(SDGReturn) }
+	// an insert of a return, a group or the master has no orbit
+	isOnBus { ^track.isKindOf(SDGBusTrack) }
 
 	// what a message calls where it is
-	where { ^if(this.isOnReturn) { track.where } { "orbit %".format(orbitIndex) } }
+	where { ^if(this.isOnBus) { track.where } { "orbit %".format(orbitIndex) } }
 
 	// the busses its synth hears as dry and effect: the orbit's two - or on a
 	// track, the track's bus at its place, and one nothing writes to
@@ -404,13 +407,13 @@ SDGInsertTarget {
 	numChannels { ^insert.numChannels }
 	bus { ^insert.dryBus }
 	group {
-		^if(insert.isOnReturn) { insert.sdg.returnGroup } { Group.basicNew(insert.server, insert.sdg.dirt.group) }
+		^if(insert.isOnBus) { insert.sdg.returnGroup } { Group.basicNew(insert.server, insert.sdg.dirt.group) }
 	}
 
 	// what the eq's and the compressor's windows say they are driving
 	printOn { |stream|
-		stream << if(insert.isOnReturn) {
-			insert.where ++ ", " ++ insert.place ++ " its effect"
+		stream << if(insert.isOnBus) {
+			insert.where
 		} {
 			"orbit " ++ insert.orbitIndex ++ if(insert.track.notNil) {
 				", " ++ insert.place ++ " " ++ insert.track.shortName

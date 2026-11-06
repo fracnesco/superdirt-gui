@@ -21,6 +21,8 @@ last width, and a session keeps it.
 | the session menu | the saved sessions. Choosing one changes nothing |
 | **load session** | replaces the mixer with the one in the menu |
 | **save session** | asks for a name, and keeps the mixer under it. Over an existing name the button says **replace**. [sessions.md](sessions.md) |
+| **midi** | the MIDI window: controllers, **midi learn** and every mapping ([midi.md](midi.md)). Lit while midi learn is on. Without Modality it still maps Tidal controls |
+| **from tidal** | a window with every event Tidal sends, a line each, newest at the top ([below](#from-tidal)) |
 | **bus manager** | BusManager's window; disabled when it is not installed |
 | **recorder** | BusRecorder's window, ready to write a file per orbit and return; disabled when it is not installed |
 
@@ -45,28 +47,42 @@ One per orbit, named after it: orbit 0 is where `d1` plays. Top to bottom:
 Strips side by side keep their faders level whatever each one holds: every strip leaves
 room for the longest insert list in the row.
 
-## Return strips
+With Modality installed, a right click on a fader, **M**, **S** or a send knob gives its MIDI menu
+(learn midi, edit mapping..., remove midi mapping, post its code), and so does one on a return's or
+a track's fader and on a parameter's knob. A control a controller moves is marked in blue. While
+**midi learn** is on, every control that can be mapped has a blue ground: click one, it turns
+orange, and the next control moved on the controller is mapped to it. See [midi.md](midi.md).
 
-After the orbits. **+ return** adds one, named by the next free letter. **feedback off**
-beside it is the switch for sends between returns.
+## Group, return and master strips
+
+Groups come after the orbits, in the part that scrolls; **+ group** makes one with the
+selected orbit in it. Returns and the master stay on the right, as in Ableton. **+ return**
+adds a return, named by the next free letter; **feedback off** beside it is the switch for
+sends between returns. The master is always there, last.
 
 | control | gesture | does |
 |---------|---------|------|
-| the name | click | shows its effect's parameters on the effects tab, in the orbit's place |
-| **✕** | click | takes it out, with its effect, inserts and every send to it |
-| the effect menu | | the global effect on this return, or none. It comes out fully wet |
-| **on** | click | off bypasses the effect: the line passes as if it were not there |
-| **+ pre**, **+ post** | click | an insert before or after the effect |
-| send knobs | drag | to each return, itself too. They work while feedback is on |
-| the meters and fader | | what the return plays, after its fader |
-| **M**, **S** | click | mute; solo, which stops the orbits' direct sound and keeps what they send here |
-| **post fader** | click | **pre fader**: what is sent into this return ignores the source's fader |
-| the limit menu, out | | as on an orbit: a feedback loop can get loud, so keep the limiter on |
+| the name | click | shows its effects on the effects tab, in the orbit's place |
+| **✕** | click | takes it out, with its effects and every send to it; a group's orbits go to the master |
+| **‹** | click | folds it thin (**›** unfolds it) |
+| effect buttons | click, right click | as an orbit's inserts: its window; bypass, move, copy, paste, remove |
+| **+ effect** | click | an effect at the end of the chain - eq, compressor, insight, an fx kit effect, a VST plugin - or what was copied |
+| send knobs | drag | a group's: to each return. A return's: to each return, itself too, while feedback is on |
+| the meters and fader | | what it plays, after its fader |
+| **M**, **S** | click | mute; solo. A group's solo solos its orbits; a return's stops the orbits' direct sound and keeps what they send here |
+| **post fader** | click | a return's **pre fader**: what is sent into it ignores the source's fader |
+| the output menu, out | | the master, or direct to the hardware bus in the box; the master's box is where everything goes |
+| the limit menu | | as on an orbit: a feedback loop can get loud, so keep the limiter on |
+
+An orbit's own output menu offers the master, each group and direct; a right click on an
+orbit's name folds it, puts it in a group or takes it out, and copies or pastes its inserts
+or an effect track.
 
 ## The effects tab
 
-The global effects of the selected orbit, as tracks. Clicking a return's name puts that return in
-the orbit's place: its parameters as knobs, with no track strips, since its own strip has those controls.
+The global effects of the selected orbit, as tracks. Clicking a group's, return's or the master's
+name puts it in the orbit's place: its effects as rows, with no track strips. A right click on a
+track's name copies it; **paste**, beside **add**, puts it on the selected orbit.
 
 | control | gesture | does |
 |---------|---------|------|
@@ -139,6 +155,7 @@ global effects.
 | double click, enter, **edit...** | opens its file: in the IDE as a document whose environment holds `~dirt` and `~sdg`, or in the default app outside the IDE |
 | **new...** | a dialog: a name, and which file to copy. It refuses a name that is taken and says why |
 | right click | a menu: edit, new from it, new, show the file, copy its path |
+| a synth selected | under its notes, a **preview**: a knob per parameter of its header and one for `sustain`, a note (0 is c5), the preset menu (`n`) and an orbit. **play** sends one event, as Tidal would; letting go of a knob, or changing the note or preset, plays too. **copy** puts it on the clipboard as a line of Tidal - `d1 $ s "sdgkick:1" # note (-2) # pF "sdgdecay" 0.3` - with only what you moved away from the preset. **random** throws every knob, **reset** goes back to the preset, **save as...** keeps the knobs as a new preset, **delete** (twice) takes one out, **file presets** brings back the synth's own: [presets.md](presets.md) |
 | **reload** | reads every file again |
 | **free** | takes the modules, players and global effects out of SuperDirt, and closes the window |
 | **load folder...** | as on the explorer |
@@ -147,8 +164,28 @@ A file that failed is marked in its list, and what plays is the version that loa
 that needs a plugin you do not have is listed as needing it. While the window is open, saving
 a file reads it again within a second (`SDGWindow.reloadOnSave`).
 
+## From tidal
+
+`~sdg.tidalLog.gui`, or **from tidal** along the top. Every `/dirt/play` message that reaches
+SuperDirt's port, as a line: the pattern (`d1`, or the name of a `p "name"`), the orbit, the cycle
+the event starts on, the sound as `s:n`, and every other parameter in the order Tidal sent it. It
+listens with an `OSCFunc` of its own beside SuperDirt's, only while the window is open, so nothing of
+SuperDirt changes and every event plays whether or not it is shown.
+
+| control | does |
+|---------|------|
+| **pause**, space | holds the lines still; events still play |
+| **clear** | forgets every line so far |
+| **post** | writes the lines into the post window, oldest first |
+| the orbit menu | only one orbit's events |
+| the filter | only lines with that text in them: a sound, a pattern (`d2`), a parameter |
+| **timing** | adds `cps` and `delta` to each line |
+
+It keeps the last 500 lines (`SDGTidalLog.maxEntries`), and draws the list again at most ten times a
+second, so a busy pattern costs the language little.
+
 ## What the window keeps
 
 The three panels are tabs along the right. All the window holds of its own is the tab, the
 selected orbit, the orbit sounds play into and the speed, amp and pan knobs, the right panel's width,
-and a session keeps those too. The mixer itself is `SuperDirtGUI`'s.
+the explorer's sort and columns, and a session keeps those too. The mixer itself is `SuperDirtGUI`'s.

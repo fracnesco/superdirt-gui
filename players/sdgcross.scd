@@ -11,7 +11,7 @@
 //   sdgcross  a sample name  the second sample, as a string: "numbers:3"
 //
 //   d1 $ s "breaks125" # pS "sdgcross" "numbers:3"
-//   d1 $ s "numbers:1 numbers:2" # pS "sdgcross" "breaks152"
+//   d1 $ s "numbers:1 numbers:2" # pS "sdgcross" "breaks152" # legato 1
 (
 var dirt = ~dirt;
 var warned = Set.new;

@@ -12,13 +12,17 @@
 //   sdgatk     0 to 4 s        attack
 //   sdgrel     0 to 4 s        release
 //
+// presets, by n: 0 trance, 1 big room, 2 subtle, 3 pluck, 4 pad, 5 mono, 6 filtered,
+// 7 wide, 8 stab, 9 lead. a pattern's n picks one of them and note plays the pitch: s
+// "sdgsupersaw:1" # note "0 7".
+//
 // SuperDirt ends the event at the end of sustain, so attack and release happen
 // inside it: a chord that should ring out wants a long legato.
 //
 //   d1 $ note "a'min7 f'maj7" # s "sdgsupersaw" # legato 1
 //   d1 $ note (arp "up" "a'min7'8") # s "sdgsupersaw" # pF "sdgdetune" 0.6 # pF "sdgrel" 0.3
 //
-// examples/tidal/14-synths.tidal plays it.
+// examples/tidal/lessons/14-synths.tidal plays it.
 (
 SynthDef(\sdgsupersaw, { |out, sustain = 1, pan = 0.5, freq = 440, accelerate = 0,
 	sdgdetune = 0.35, sdgmix = 0.75, sdgwidth = 0.9, sdgcut = 7000, sdgq = 0.1, sdgenv = 0,
@@ -41,4 +45,19 @@ SynthDef(\sdgsupersaw, { |out, sustain = 1, pan = 0.5, freq = 440, accelerate = 
 	sig = (sig * 1.2).tanh * 1.3;
 	Out.ar(out, DirtPan.ar(sig, ~dirt.numChannels, pan, env));
 }).add;
+// the presets, by n: note plays the pitch, n picks one of these
+[
+	(presetName: "trance"),	// 0 trance: the def's defaults
+	(presetName: "big room", sdgdetune: 0.5, sdgmix: 0.9, sdgwidth: 1, sdgcut: 9000, sdgrel: 0.2),	// 1 big room
+	(presetName: "subtle", sdgdetune: 0.12, sdgmix: 0.5, sdgwidth: 0.6, sdgcut: 5000),	// 2 subtle
+	(presetName: "pluck", sdgdetune: 0.3, sdgmix: 0.7, sdgwidth: 0.8, sdgcut: 700, sdgq: 0.3, sdgenv: 0.8, sdgdecay: 0.15),	// 3 pluck
+	(presetName: "pad", sdgdetune: 0.3, sdgmix: 0.8, sdgwidth: 1, sdgcut: 3000, sdgatk: 1, sdgrel: 1.5),	// 4 pad
+	(presetName: "mono", sdgdetune: 0.4, sdgmix: 0.8, sdgwidth: 0, sdgcut: 6000),	// 5 mono
+	(presetName: "filtered", sdgcut: 2000, sdgq: 0.4, sdgenv: 0.3, sdgdecay: 0.5),	// 6 filtered
+	(presetName: "wide", sdgdetune: 1, sdgmix: 1, sdgwidth: 1, sdgcut: 4000, sdgq: 0.2),	// 7 wide
+	(presetName: "stab", sdgdetune: 0.4, sdgmix: 0.8, sdgcut: 2000, sdgq: 0.2, sdgenv: 0.6, sdgdecay: 0.12, sdgatk: 0.002),	// 8 stab
+	(presetName: "lead", sdgdetune: 0.25, sdgmix: 0.6, sdgwidth: 0.7, sdgcut: 8000, sdgq: 0.2, sdgenv: 0.2, sdgdecay: 0.4, sdgatk: 0.01, sdgrel: 0.15)	// 9 lead
+].do { |preset, i|
+	~dirt.soundLibrary.addSynth(\sdgsupersaw, (instrument: \sdgsupersaw, note: 0) ++ preset, appendToExisting: i > 0)
+};
 )

@@ -15,8 +15,8 @@
 //   sdgpitch    0.25 to 4 x     transposes every grain
 //
 //   d1 $ s "numbers:3" # pF "sdgcloud" 30
-//   d1 $ s "breaks152" # pF "sdgcloud" 80 # pF "sdggrain" 0.03 # pF "sdgscatter" 0.5
-//   d1 $ s "numbers:3" # pF "sdgcloud" 12 # pF "sdgrev" 0.5 # pF "sdgpitch" "1 1.5" # speed 0.2
+//   d1 $ loopAt 2 $ s "breaks152" # pF "sdgcloud" 80 # pF "sdggrain" 0.03 # pF "sdgscatter" 0.5
+//   d1 $ s "numbers:3" # end 0.4 # pF "sdgcloud" 12 # pF "sdgrev" 0.5 # pF "sdgpitch" "<1 1.5>"
 (
 ~sdg.addSamplePlayer(\sdgcloud, { |sampleNumChannels, numChannels|
 	{ |out, bufnum, sustain = 1, begin = 0, end = 1, speed = 1, endSpeed = 1, freq = 440, pan = 0,

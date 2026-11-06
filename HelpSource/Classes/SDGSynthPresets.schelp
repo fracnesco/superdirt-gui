@@ -1,0 +1,68 @@
+TITLE:: SDGSynthPresets
+summary:: a synth's presets as changed in the window, kept on this machine outside the repo
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SuperDirtGUI, Classes/SDGWindow
+
+DESCRIPTION::
+A synth's presets are its events in SuperDirt's sound library, the ones Tidal's code::n:: picks
+(code::s "sdgkick:3"::). Its file registers them. When you press save as... or delete in the
+window's synth preview, the synth's whole new list is written to a file of its own in
+link::#*folder::, the user support directory, and from then on that list replaces the one the
+synth's file registers - when the file is read again, and in every later session.
+
+The list stays outside the repo on purpose: updating the quark never clashes with it, and a
+student's presets survive a reinstall. file presets in the window, or
+link::Classes/SuperDirtGUI#-restoreFilePresets::, deletes the file and brings back the synth's own list.
+
+The file is plain SuperCollider, one preset a line, and can be edited by hand. A preset holds
+its code::presetName:: and the synth's controls, nothing else; SuperDirtGUI puts each one on top
+of what the file's first preset holds besides those (code::instrument::, code::note: 0::, a drum
+voice's code::unitDuration::), so a saved drum preset still rings as long as the voice does.
+
+code::
+SDGSynthPresets.folder.openOS;      // where they are
+SDGSynthPresets.read(\sdgkick);     // nil until a preset of sdgkick was saved or deleted
+::
+
+CLASSMETHODS::
+
+METHOD:: folder
+Where the files are: code::Platform.userAppSupportDir +/+ "superdirt-gui-presets":: unless set.
+Checks set it to a scratch folder.
+ARGUMENT:: path
+a folder; made when the first file is written.
+
+METHOD:: fileFor
+The file of a synth's list, code::<folder>/<synth>.scd::, whether it exists or not.
+ARGUMENT:: synth
+the synth's name.
+RETURNS:: a link::Classes/String::
+
+METHOD:: exists
+Whether the synth plays this machine's list.
+ARGUMENT:: synth
+the synth's name.
+RETURNS:: a link::Classes/Boolean::
+
+METHOD:: read
+The synth's list, each preset an link::Classes/Event:: of code::presetName:: and controls.
+ARGUMENT:: synth
+the synth's name.
+RETURNS:: an link::Classes/Array::, or nil when there is no file or it could not be read (that
+is posted, and the synth's own presets play).
+
+METHOD:: write
+Write a synth's list, replacing the file. SuperDirtGUI calls it; use
+link::Classes/SuperDirtGUI#-savePreset:: and link::Classes/SuperDirtGUI#-removePreset::, which
+also put the list into the sound library.
+ARGUMENT:: synth
+the synth's name.
+ARGUMENT:: list
+Events of code::presetName:: and controls.
+RETURNS:: the file's path.
+
+METHOD:: forget
+Delete the synth's file. The sound library keeps what it holds until
+link::Classes/SuperDirtGUI#-restoreFilePresets:: or the synth's file is read again.
+ARGUMENT:: synth
+the synth's name.

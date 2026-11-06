@@ -1,0 +1,114 @@
+TITLE:: SDGBusTrack
+summary:: what a return, a group and the master share: a chain of effects, sends, a fader, mute, solo and an output
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SDGReturn, Classes/SDGGroup, Classes/SDGMaster, Classes/SuperDirtGUI, Classes/SDGInsert
+
+DESCRIPTION::
+A track of the mixer that is not an orbit. Audio comes in on a bus, runs through a
+chain of effects - link::Classes/SDGInsert::s, the same objects as on an orbit: eq,
+compressor, insight, an sc fx kit effect, a VST plugin - then sends to the returns, a
+fader with mute and solo, a meter, and out: to the master, or straight to a hardware bus.
+
+code::
+g = ~sdg.addGroup([0, 1]);                // orbits 0 and 1 into a group
+~sdg.addBusInsert(g, \compressor);        // glue them
+g.level = 0.8;
+g.route(\direct, 2);                      // the group to hardware 2-3, past the master
+g.route(\master);                         // back
+::
+
+subsection:: Where it runs
+
+Nothing of it is in an orbit. Its synths run in the link::Classes/SuperDirtGUI#-returnGroup::
+after SuperDirt's group, in the order the signal takes: the groups, the returns' heads,
+the returns, the master. A group's and the master's effects work in place on their in
+bus, since everything that writes to it has run by then.
+
+subsection:: Who owns what
+
+The link::Classes/SuperDirtGUI:: makes and frees them. No event reaches a bus track, so
+an effect's own sleep would cut its tail: a tick once a second resumes its effects, and
+it is always on, as in a DAW. After a cmd-period everything comes back with its levels,
+a VST plugin with the state it last read back. A link::Classes/SDGSession:: saves them.
+
+INSTANCEMETHODS::
+
+METHOD:: shortName
+RETURNS:: what a person calls it, and the window's name for its strip.
+
+METHOD:: inserts
+RETURNS:: its chain, link::Classes/SDGInsert::s in signal order.
+
+METHOD:: level
+The fader, an amplitude from 0 to 4.
+ARGUMENT:: amp
+the amplitude.
+
+METHOD:: muted
+RETURNS:: whether it is muted. Set it with link::#-mute::.
+
+METHOD:: mute
+Mute it, and what it sends.
+ARGUMENT:: bool
+true or false.
+
+METHOD:: soloed
+RETURNS:: whether it is soloed. Set it with link::#-solo::.
+
+METHOD:: solo
+Solo it: see link::Classes/SDGReturn#Rules for sends::.
+ARGUMENT:: bool
+true or false.
+
+METHOD:: preFader
+On a return: whether what is sent into it is taken before the source's fader.
+ARGUMENT:: bool
+true or false.
+
+METHOD:: limitertype
+The output's guard: 0 nothing, 1 a limiter, 2 a soft clip.
+ARGUMENT:: value
+the number.
+
+METHOD:: route
+Where it goes. Nothing restarts.
+ARGUMENT:: argDest
+code::\master:: or code::\direct::.
+ARGUMENT:: bus
+for code::\direct::, the hardware bus; nil keeps the one it had.
+
+METHOD:: dest
+RETURNS:: code::\master:: or code::\direct::.
+
+METHOD:: directBus
+RETURNS:: the hardware bus it writes to when it goes direct.
+
+METHOD:: outBus
+The bus it writes to now. Setting it sends it direct to that bus.
+ARGUMENT:: index
+a bus number, or a link::Classes/Bus::.
+
+METHOD:: returnLevel
+ARGUMENT:: target
+an link::Classes/SDGReturn::.
+RETURNS:: the level of the send to it, 0 to 1.
+
+METHOD:: targets
+RETURNS:: the returns it sends to.
+
+METHOD:: inBus
+RETURNS:: the link::Classes/Bus:: that comes in.
+
+METHOD:: lineBus
+RETURNS:: the link::Classes/Bus:: its effects work on.
+
+METHOD:: tapBus
+RETURNS:: the link::Classes/Bus:: holding what it plays, after its fader: what the recorder reads.
+
+METHOD:: nodes
+RETURNS:: its synths in signal order.
+
+METHOD:: metering
+Whether it sends its levels as code::'/sdgtrack'::, 20 a second. The window turns this on.
+ARGUMENT:: bool
+true or false.

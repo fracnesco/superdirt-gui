@@ -1,0 +1,41 @@
+-- SuperDirtGUI from Tidal - 23: long samples on one tempo and in one key
+--
+-- The sync window (sync... in the explorer, y on a sample) writes this kind
+-- of code for you, from each sample's bpm, first beat and key. loopAt n
+-- stretches a sample over n cycles: with n = its beats / 4, a loop of any
+-- bpm lands on the grid, read faster or slower, so higher or lower. chop
+-- cuts it into pieces that each start on their own beat. These are three of
+-- Dirt-Samples' breaks, at 128, 152 and 158 bpm, all at 125.
+
+setcps (125/60/4)
+
+-- breaks125:0: 128.3 bpm, 4 beats in 1.87 s, read at x0.975 (-0.45 st)
+d1 $ loopAt 1 $ chop 8 $ s "breaks125:0"
+
+-- breaks152:0, the amen: 152 bpm, 12 beats in 4.7 s, 3 cycles, read at x0.816 (-3.52 st)
+d2 $ loopAt 3 $ chop 24 $ s "breaks152:0" # gain 0.95
+
+-- breaks157:0 is 4.78 beats long at 158: its first 4 beats only (end), read
+-- at the tempo (the same number as speed)
+d3 $ loopAt 1 $ chop 8 $ s "breaks157:0" # end 0.8363 # speed 0.8363
+
+-- the pieces are on the grid, so any of Tidal's reordering stays in time
+d1 $ loopAt 1 $ (1/8) <~ (chop 8 $ s "breaks125:0")
+
+d2 $ loopAt 3 $ rev $ chop 24 $ s "breaks152:0"
+
+d3 $ loopAt 1 $ every 2 (0.25 <~) $ chop 8 $ s "breaks157:0" # end 0.8363 # speed 0.8363
+
+-- a melodic loop gets a speed too, to move it into the key: the window
+-- writes the number. The pieces read a little faster or slower than the
+-- grid, and every one still starts on its beat; legato 1 cuts one that runs
+-- late at the next. More pieces a beat, the smaller the joins.
+--   d4 $ loopAt 2 $ chop 16 $ s "myarp:0" # speed 0.991 # legato 1
+
+hush
+
+all $ ((|* legato 0.5).(hurry 2))
+
+all $ id
+
+all $ (# lpf 800)

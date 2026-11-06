@@ -28,6 +28,8 @@ orbits to disk, **DigitDrag** lets the
 number boxes drag by the digit under the pointer, and **ParaEQ**,
 **Compressor**, **Insight** and **VSTPlugin** are the four kinds of insert an
 orbit can have — each is offered in the window only when it is installed.
+[docs/requirements.md](docs/requirements.md) lists every piece, required and
+optional, with how to install it.
 
 Written for SuperCollider 3.13 on macOS. Nothing in it is platform specific
 apart from the symlink in `install.scd`, which Linux shares and Windows does not.
@@ -125,14 +127,14 @@ hand.
 | `players/` | `~sdg.addSamplePlayer(name, synthFunc, test)`: another way of reading a sample buffer, one SynthDef per sample channel count | the parameter its test looks for: `# pF "sdgwarp" 1` |
 | `effects/` | `SynthDef("global_name" ++ ~dirt.numChannels)` reading the orbit's `dryBus` into its `effectBus`, then `~sdg.addGlobalEffect(\global_name, [\params])` | one of its parameters: `# pF "sdgspace" 0.5` |
 
-[examples/tidal/](examples/tidal/) plays each of them from Tidal, a file at a
-time, starting with `00-setup.tidal`: the shortcuts that let you write
-`sdgcomb 0.4` for `pF "sdgcomb" 0.4`, to paste into your `BootTidal.hs`.
-Files 24 to 37 are pieces: nine parts each, `d1` to `d9`, one style each -
-techno, deep house, drum and bass, ambient, trap, electro, footwork, dub
-techno, hyperpop, polyrhythms, big beat, synthwave, downtempo, minimal - in one
+[examples/tidal/](examples/tidal/README.md) plays each of them from Tidal. Make
+[examples/tidal/boot.hs](examples/tidal/boot.hs) your Boot Tidal Path (Pulsar:
+Settings, Packages, tidalcycles): it declares every word, so you write
+`sdgcomb 0.4` for `pF "sdgcomb" 0.4`, and loads the extra functions. Then the
+files in `lessons/`, a file at a time, starting with `00-setup.tidal`.
+Files 26 to 34 are pieces: nine parts each, `d1` to `d9`, one style each -
+drum and bass, ambient, electro, polyrhythms, big beat - in one
 key and one tempo, meant to play at once, with variations to drop over them.
-Between them they use every synth, every drum voice and most of the players.
 
 A module runs once per event, behind the sound, and only when its test passes.
 A global effect runs once per orbit for as long as the orbit lives, sleeps while
@@ -269,14 +271,30 @@ name become `_`, so `my kit` is `s "my_kit"`. Banks already loaded stay, and a
 file a bank already holds is not read again. The window's `sound explorer` and
 `modules` tabs have a button for the same thing.
 
+## Presets
+
+Every synth but the `sdgsine` template has ten presets or more, and `n` picks one, the way it picks
+a sample out of a bank. So on these synths **`n` picks the preset and `note` plays the pitch**:
+
+```haskell
+d1 $ s "sdgacid:1*8" # note "a2 a2 a3 a2"       -- the acid's squelch
+d2 $ s "sdgfm:1" # note "c6 e6 g6"              -- the FM bell
+```
+
+Select a synth in the window's modules tab to try them: a preview with a knob per parameter, a
+note, the preset menu, play, random, and copy, which puts what you dialed on the clipboard as a
+line of Tidal. save as... keeps it as a preset of your own, on your machine.
+[docs/presets.md](docs/presets.md) lists every preset and how loud it is.
+
 ## The drum machine
 
 Fifteen of the synths are drums, each a kit by itself: `n` picks a preset, `note` tunes it, and
 every knob is a Tidal parameter, the same word doing the same job in every voice (`sdgdecay`,
 `sdgpunch`, `sdgtone`, `sdgcolor` ...). The classic ones follow the 808, 909 and 606 (`sdgkick`,
 `sdgsnare`, `sdgclap`, `sdgtom`, `sdghat`, `sdgrim`, `sdgcowbell`); `sdgfmdrum`, `sdgcymbal` and
-`sdgmodal` the Elektron machines; `sdgplastic` and `sdgslam` SOPHIE's hyper-real hits; `sdgping`,
-`sdgratchet` and `sdgchaos` Autechre's small machines. They need no plugins.
+`sdgmodal` the Elektron machines; `sdgplastic` and `sdgslam` are hyper-real hits, materials
+pushed past the real; `sdgping`, `sdgratchet` and `sdgchaos` small machines: pinged filters, rolls
+in one event, chaotic noise. They need no plugins.
 
 ```haskell
 d1 $ s "sdgkick:1*4"                                -- the 909 kick
@@ -294,13 +312,28 @@ for `sdgkick` and nothing jumps.
 cymbals, percussion, effects, and stacked, reversed and crushed hits with four one-bar loops.
 
 ```supercollider
-~sdg.loadSamples(~sdg.path +/+ "samples");   // sdgbd, sdgsd, sdghh, sdgperc, sdgfx, sdgresamp
+// sdgbd, sdgsd, sdghh, sdgperc, sdgfx, sdgresamp are loaded with the rest when ~sdg is made;
+// SuperDirtGUI.loadOwnSamples = false, before SuperDirtGUI(~dirt), leaves them out
 ```
 
 [docs/drums.md](docs/drums.md) has every preset, the shared words, how the levels were measured
-and how to write a drum voice of your own; `examples/tidal/16-drums-classic.tidal` to
-`19-drums-autechre.tidal` play each family, and `20-drums-hybrid.tidal` the banks
+and how to write a drum voice of your own; `examples/tidal/lessons/16-drums-classic.tidal` to
+`19-drums-small-machines.tidal` play each family, and `20-drums-hybrid.tidal` the banks
 and `sdglayer`.
+
+Eight modules process drums one hit at a time, on samples and voices alike: `sdgtrans` (more or
+less attack and body), `sdgboom` (a tuned sub under each hit), `sdgbody` (the hit strikes a drum
+skin, a bar, a tube or a bell), `sdglatex` (a resonant squelch), `sdgchrome` (metal), `sdgroll`
+(a roll from one hit, speeding up), `sdggated` (gated reverb) and `sdgdive` (a tape stop).
+
+```haskell
+d1 $ s "bd*4" # pF "sdgboom" 0.4 # pF "sdgboomfreq" 41
+d2 $ s "~ sn" # pF "sdggated" 0.6
+d3 $ s "~ ~ ~ cp" # pF "sdgroll" 6 # pF "sdgrollcurve" 0.8
+```
+
+[docs/drum-fx.md](docs/drum-fx.md) says how each works and how loud it is;
+`examples/tidal/lessons/38-drum-fx.tidal` plays them all.
 
 ## The window
 
@@ -426,22 +459,21 @@ v = ~sdg.addInsert(0, \vst, plugin: "ValhallaSupermassive");   // a VST plugin, 
 
 ### Return tracks
 
-**+ return**, after the orbit strips, adds a return track, as in Ableton: return A,
-then B, and a send knob for it on every orbit, from nothing to 0 dB. One reverb can
-then serve all your orbits.
+**+ return**, on the right of the orbit strips, adds a return track, as in Ableton:
+return A, then B, and a send knob for it on every orbit and group, from nothing to
+0 dB. One reverb can then serve all your orbits.
 
 ```supercollider
 a = ~sdg.addReturn;
-~sdg.setReturnEffect(a, \dirt_reverb);
+~sdg.addBusInsert(a, \vst, plugin: "ValhallaSupermassive");   // its effects are inserts
+~sdg.addBusInsert(a, \eq);               // after it; or \compressor, \insight, an fx kit effect
 ~sdg.setSend(0, a, 0.5);                 // orbit 0 into it
-~sdg.addTrackInsert(a, \post, \eq);      // or \compressor, \insight, \vst
 ```
 
-A return's strip has **load effect...** and **on**, **+ pre** and **+ post** for
-inserts and VST plugins before and after the effect, send knobs, a fader, mute,
-solo, the limiter and its output. The effect comes out fully wet; with no effect,
-or with it off, the sound passes as it came. Click its name to see its parameters on the
-effects tab. They are not Tidal's, because no event reaches a return, so you set them there.
+A return's strip has **+ effect** for its chain of effects - the same kinds as an
+orbit's inserts: eq, compressor, insight, the sc fx kit effects and VST plugins - send
+knobs, a fader, mute, solo, the limiter and its output. SuperDirt's own reverb and
+delay stay on the orbits, where Tidal's parameters drive them: no event reaches a return.
 
 **post fader** on a return means what goes into it follows the source's fader; click
 it for **pre fader**. A muted orbit sends nothing either way. A soloed orbit keeps
@@ -460,8 +492,51 @@ b = ~sdg.addReturn;
 ~sdg.setReturnSend(b, a, 0.4);
 ```
 
-A return is always on, so it uses CPU even when nothing plays, and it keeps tails
-ringing. The recorder writes a file per return as well. Sessions save returns and every send.
+### Groups and the master
+
+**+ group**, after the orbit strips, makes a group with the selected orbit in it. An
+orbit's output menu (under its limiter) says where it goes: **master**, a group, or
+**direct** to the hardware bus in the box beside it; a right click on its name does the
+same. A group sums its orbits and has its own effects, sends to the returns, fader,
+mute and solo. Soloing a group solos its orbits.
+
+Everything that is not sent direct ends in the **master**, the last strip on the
+right: a chain of effects for mastering, a fader, a limiter, and the hardware bus it
+writes to - where orbit 0 wrote before. With nothing on it, it changes nothing.
+
+```supercollider
+g = ~sdg.addGroup([0, 1]);               // orbits 0 and 1
+~sdg.addBusInsert(g, \compressor);       // on both together
+~sdg.setGroupSend(g, \A, 0.3);           // the group into return A
+~sdg.setOrbitDest(2, g.name);            // orbit 2 joins; \master or \direct to leave
+~sdg.addBusInsert(~sdg.master, \eq);     // the mastering chain
+~sdg.master.level = 0.9;
+```
+
+`SuperDirtGUI.useMaster = false` before `SuperDirtGUI(~dirt)` leaves the orbits writing
+to the hardware as stock SuperDirt does.
+
+### Folding, copying, pasting
+
+The **‹** beside a strip's name folds it thin: its name upright, one meter, mute and
+solo. **›** unfolds it. Sessions keep what is folded.
+
+A right click on an effect (an insert button) copies it, or its whole chain, with
+every setting - a plugin with its state. **+ insert**, **+ effect** and the right click
+on another effect paste it, on any orbit, effect track, group, return or the master. A
+right click on an effect track's name copies the track; **paste** under the tracks, or
+a right click on an orbit's name, puts it on another orbit.
+
+```supercollider
+~sdg.copyInserts(~sdg.insertsOf(0));
+~sdg.pasteInserts(nil, ~sdg.master);     // orbit index, or nil and a track
+~sdg.copyTrack(~sdg.tracksOf(0).first);
+~sdg.pasteTrack(3);
+```
+
+Returns, groups and the master are always on, so they use CPU even when nothing plays,
+and keep tails ringing. The recorder writes a file per return as well. Sessions save
+returns, groups, the master, every send and route.
 
 ### Sessions
 
@@ -514,7 +589,7 @@ d3 $ s "sdgany(3,8)" # sdgkey "am" # n (irand 8)
 
 `sdgany` is the whole library; a bank's name picks inside it. Without an `n`
 the pick is random. See [docs/sample-tags.md](docs/sample-tags.md) and
-[examples/tidal/21-tags.tidal](examples/tidal/21-tags.tidal).
+[examples/tidal/lessons/21-tags.tidal](examples/tidal/lessons/21-tags.tidal).
 
 ## Sync
 
@@ -540,7 +615,7 @@ sample gets a `speed` that takes it the rest of the way into the key, and
 `chop` keeps it in time: every piece starts on its own beat. **play** hears
 them together before Tidal does; **copy code** puts the code on the clipboard.
 See [docs/sync.md](docs/sync.md) and
-[examples/tidal/23-sync.tidal](examples/tidal/23-sync.tidal).
+[examples/tidal/lessons/23-sync.tidal](examples/tidal/lessons/23-sync.tidal).
 
 ## The sample editor
 
@@ -594,9 +669,13 @@ mouse wheel where it says two fingers.
 | [classes/SDGExplorerView.sc](classes/SDGExplorerView.sc) | the sound explorer's list: columns, sorting, banks that open |
 | [classes/SDGSync.sc](classes/SDGSync.sc) | long samples on one tempo and in one key: the plan, the Tidal code, the preview |
 | [classes/SDGSyncWindow.sc](classes/SDGSyncWindow.sc) | the sync window |
+| [classes/SDGSynthPresets.sc](classes/SDGSynthPresets.sc) | a synth's presets as changed in the window, kept on this machine outside the repo |
 | [classes/SDGSession.sc](classes/SDGSession.sc) | the whole mixer saved under a name and brought back, VST plugin states included |
 | [classes/SDGTrack.sc](classes/SDGTrack.sc) | a global effect of an orbit as a track: inserts before and after it, a fader on what it adds |
-| [classes/SDGReturn.sc](classes/SDGReturn.sc) | a return track: sends from every orbit, inserts, an effect, sends to other returns for feedback |
+| [classes/SDGBusTrack.sc](classes/SDGBusTrack.sc) | what returns, groups and the master share: a chain of effects, sends, fader, mute, solo, output |
+| [classes/SDGReturn.sc](classes/SDGReturn.sc) | a return track: sends from every orbit and group, a chain of effects, sends to other returns for feedback |
+| [classes/SDGGroup.sc](classes/SDGGroup.sc) | a group track: orbits summed, a chain of effects, sends to the returns |
+| [classes/SDGMaster.sc](classes/SDGMaster.sc) | the master track: everything not sent direct, a mastering chain, the hardware output |
 | [classes/SDGInsert.sc](classes/SDGInsert.sc) | an insert on an orbit - an eq, a compressor, an insight or a VST plugin - and the target its ParaEQ or Compressor drives |
 | [classes/SDGHintBar.sc](classes/SDGHintBar.sc) | the strip along the bottom of both windows that says what the pointer is over |
 | [synths/example-synth.scd](synths/example-synth.scd) | template for a Tidal synth, `sdgsine` |
@@ -616,6 +695,7 @@ mouse wheel where it says two fingers.
 | [synths/sdgplastic.scd](synths/sdgplastic.scd), [sdgslam](synths/sdgslam.scd) | hyper-real hits: bubbles, latex, squeaks, and a kick limited flat |
 | [synths/sdgping.scd](synths/sdgping.scd), [sdgratchet](synths/sdgratchet.scd), [sdgchaos](synths/sdgchaos.scd) | pinged resonators, a roll in one event, chaotic noise percussion |
 | [modules/example-module.scd](modules/example-module.scd) | template for a per-event effect, `sdgcomb` |
+| [modules/sdgtrans.scd](modules/sdgtrans.scd), [sdgboom](modules/sdgboom.scd), [sdgbody](modules/sdgbody.scd), [sdglatex](modules/sdglatex.scd), [sdgchrome](modules/sdgchrome.scd), [sdgroll](modules/sdgroll.scd), [sdggated](modules/sdggated.scd), [sdgdive](modules/sdgdive.scd) | effects for drums, one hit at a time: attack and body, a sub, a resonating body, a squelch, metal, a roll, gated reverb, a tape stop |
 | [players/example-player.scd](players/example-player.scd) | template for a sample player, `sdgwarp` |
 | [players/sdgscan.scd](players/sdgscan.scd) | the sample as an oscillator, `sdgscan` |
 | [players/sdgscratch.scd](players/sdgscratch.scd) | a wobbling read pointer, from tape wow to a scratch, `sdgscratch` |
@@ -632,12 +712,14 @@ mouse wheel where it says two fingers.
 | [effects/sdghole.scd](effects/sdghole.scd), [sdgecho](effects/sdgecho.scd) | offered effects on Greyhole |
 | [effects/sdgjverb.scd](effects/sdgjverb.scd), [sdgroom](effects/sdgroom.scd), [sdgshimmer](effects/sdgshimmer.scd) | offered effects on JPverb |
 | [effects/sdgmiverb.scd](effects/sdgmiverb.scd), [sdgclouds](effects/sdgclouds.scd), [sdgrings](effects/sdgrings.scd), [sdgwarps](effects/sdgwarps.scd) | offered effects on mi-UGens |
-| [samples/](samples/) | six banks rendered from the drum voices, loaded with `~sdg.loadSamples(~sdg.path +/+ "samples")` |
+| [samples/](samples/) | six banks rendered from the drum voices, loaded into the library when `~sdg` is made (`SuperDirtGUI.loadOwnSamples`) |
 | [samples/render.scd](samples/render.scd) | renders those banks, and banks of your own, a block at a time |
 | [HelpSource/Classes/](HelpSource/Classes/) | the help files, cmd/ctrl + d on a class name |
 | [docs/](docs/README.md) | the long version: how it is built, the mixer, the window, every parameter, the drum machine, what SuperDirt does underneath |
 | [examples/superdirt-gui-demo.scd](examples/superdirt-gui-demo.scd) | a startup you can evaluate a block at a time |
-| [examples/tidal/](examples/tidal/) | the same from Tidal, a file per thing: the parameter shortcuts, the synth, the module, choosing a player, the warp player, the global effect, your own copies, all of it together; then music: IDM in three manners, acid, arpeggios, stuttery beats, every voice in `synths/`, ten sample readers, samples picked by their tags, the drum machine family by family, pointillistic trance arpeggios after Lorenzo Senni, loops on one tempo with loopAt and chop; then fourteen pieces of nine parts each, meant to play at once - techno, deep house, drum and bass, ambient, trap, electro, footwork, dub techno, hyperpop, polyrhythms, big beat, synthwave, downtempo, minimal |
+| [examples/tidal/](examples/tidal/README.md) | `boot.hs`, the Tidal boot file with every word and the functions (`functions/`); `multi target tidal/`, a boot that sends to TouchDesigner too; then `lessons/`, the same from Tidal, a file per thing: the parameter shortcuts, the synth, the module, choosing a player, the warp player, the global effect, your own copies, all of it together; then music: IDM in two manners, acid, arpeggios, stuttery beats, every voice in `synths/`, ten sample readers, samples picked by their tags, the drum machine family by family, effects for drums, pointillistic trance arpeggios after Lorenzo Senni, loops on one tempo with loopAt and chop; then five pieces of nine parts each, meant to play at once - drum and bass, ambient, electro, polyrhythms, big beat |
+| [examples/grooves/](examples/grooves/) | a Tidal study in rhythm on the library - the Egyptian maqsum at jungle speed, chopped like the Amen, in the manner of ABADIR - with variations, a section that pushes it, and lines that drift by themselves; the Haskell functions that change a running pattern in place, crossfade scenes as an Octatrack does, and pick sample players are in `examples/tidal/functions/` |
+| [examples/pdef/](examples/pdef/) | the same sounds sequenced from SuperCollider with Pdefs and no Tidal: an `\sdg` event type that keeps a Pbind's beats, cycles and levels in line with Tidal's, then first beats, synths and scales, a step-grid drum machine, acid with slides, effects and the mixer from code, live changes, polyrhythm and euclid, chance and Markov chains, sliced breaks, a piece in sections; its README sets Tidal and Pbind side by side |
 | [install.scd](install.scd) | symlinks the repository into the extensions folder |
 | [superdirt-gui.quark](superdirt-gui.quark) | the quark manifest, named after the repository so `Quarks` can find it |
 
@@ -646,7 +728,7 @@ mouse wheel where it says two fingers.
 [docs/](docs/README.md) goes further than this page: [how it is built](docs/architecture.md),
 [the mixer's signal path](docs/the-mixer.md), [every control of the window](docs/the-window.md),
 [every synth, player and effect, parameter by parameter](docs/library.md),
-[the drum machine](docs/drums.md), [writing your own](docs/writing-content.md), [sample players](docs/sample-players.md),
+[presets](docs/presets.md), [the drum machine](docs/drums.md), [drum effects](docs/drum-fx.md), [writing your own](docs/writing-content.md), [sample players](docs/sample-players.md),
 [the sample editor](docs/sample-editor.md), [tags, bpm and key](docs/sample-tags.md), [sync](docs/sync.md), [sessions](docs/sessions.md),
 [what SuperDirt actually does](docs/superdirt-notes.md) and [how it is tested](docs/testing.md).
 

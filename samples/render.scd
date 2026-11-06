@@ -31,7 +31,8 @@
 // the voices and their presets are read from ~dirt, so SuperDirt and SuperDirtGUI must
 // be running (examples/superdirt-gui-demo.scd, block 1).
 
-// ---- 1. play them: one bank per folder, added to what is loaded
+// ---- 1. play them: one bank per folder, loaded with ~sdg itself (SuperDirtGUI.loadOwnSamples);
+//         after a re-render, read the folder again for what changed
 ~sdg.loadSamples(~sdg.path +/+ "samples");
 //   d1 $ s "sdgbd sdgsd:7 sdgbd sdgsd"
 //   d1 $ s "sdghh*8" # n "0 0 2 0"

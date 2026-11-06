@@ -12,13 +12,14 @@
 //   sdgcolor   0 to 1             0 the 808's sine, 1 the 909's rounded triangle
 //   sdgdrive   0 to 1             saturation, 1 nearly a square
 //
-// presets, by n: 0 808 long boom, 1 909, 2 606 tight, 3 hard techno, 4 deep sub.
-// note tunes it in semitones from its own pitch; legato or sustain shorten it, like a choke.
+// presets, by n: 0 808 long boom, 1 909, 2 606 tight, 3 hard techno, 4 deep sub, 5 linn,
+// 6 gabber, 7 lofi soft, 8 trap 808, 9 minimal click. note tunes it in semitones from its
+// own pitch; legato or sustain shorten it, like a choke.
 //
 //   d1 $ s "sdgkick*4"
 //   d1 $ s "sdgkick:1*4" # pF "sdgdecay" 0.3 # note "-2"
 //
-// examples/tidal/16-drums-classic.tidal plays it.
+// examples/tidal/lessons/16-drums-classic.tidal plays it.
 (
 var name = \sdgkick;
 SynthDef(name, { |out, sustain = 3.1, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -59,11 +60,16 @@ SynthDef(name, { |out, sustain = 3.1, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgfreq: 49.5, sdgdecay: 1.6, sdgpunch: 12, sdgbend: 0.03, sdgclick: 0.25, sdgtone: 0.3, sdgcolor: 0, sdgdrive: 0),	// 0 808 long boom
-	(sdgfreq: 49, sdgdecay: 0.45, sdgpunch: 20, sdgbend: 0.07, sdgclick: 0.6, sdgtone: 0.7, sdgcolor: 1, sdgdrive: 0.1),	// 1 909
-	(sdgfreq: 60, sdgdecay: 0.22, sdgpunch: 16, sdgbend: 0.03, sdgclick: 0.5, sdgtone: 0.6, sdgcolor: 0.3, sdgdrive: 0),	// 2 606 tight
-	(sdgfreq: 50, sdgdecay: 0.5, sdgpunch: 28, sdgbend: 0.08, sdgclick: 0.8, sdgtone: 0.8, sdgcolor: 0.6, sdgdrive: 0.6),	// 3 hard techno
-	(sdgfreq: 41, sdgdecay: 2.2, sdgpunch: 7, sdgbend: 0.08, sdgclick: 0.05, sdgtone: 0.1, sdgcolor: 0, sdgdrive: 0.15)	// 4 deep sub
+	(presetName: "808 long boom", sdgfreq: 49.5, sdgdecay: 1.6, sdgpunch: 12, sdgbend: 0.03, sdgclick: 0.25, sdgtone: 0.3, sdgcolor: 0, sdgdrive: 0),	// 0 808 long boom
+	(presetName: "909", sdgfreq: 49, sdgdecay: 0.45, sdgpunch: 20, sdgbend: 0.07, sdgclick: 0.6, sdgtone: 0.7, sdgcolor: 1, sdgdrive: 0.1),	// 1 909
+	(presetName: "606 tight", sdgfreq: 60, sdgdecay: 0.22, sdgpunch: 16, sdgbend: 0.03, sdgclick: 0.5, sdgtone: 0.6, sdgcolor: 0.3, sdgdrive: 0),	// 2 606 tight
+	(presetName: "hard techno", sdgfreq: 50, sdgdecay: 0.5, sdgpunch: 28, sdgbend: 0.08, sdgclick: 0.8, sdgtone: 0.8, sdgcolor: 0.6, sdgdrive: 0.6),	// 3 hard techno
+	(presetName: "deep sub", sdgfreq: 41, sdgdecay: 2.2, sdgpunch: 7, sdgbend: 0.08, sdgclick: 0.05, sdgtone: 0.1, sdgcolor: 0, sdgdrive: 0.15),	// 4 deep sub
+	(presetName: "linn", sdgfreq: 58, sdgdecay: 0.3, sdgpunch: 14, sdgbend: 0.025, sdgclick: 0.7, sdgtone: 0.65, sdgcolor: 0.5, sdgdrive: 0.15),	// 5 linn
+	(presetName: "gabber", sdgfreq: 52, sdgdecay: 0.6, sdgpunch: 36, sdgbend: 0.06, sdgclick: 0.9, sdgtone: 0.9, sdgcolor: 0.8, sdgdrive: 1),	// 6 gabber
+	(presetName: "lofi soft", sdgfreq: 55, sdgdecay: 0.4, sdgpunch: 6, sdgbend: 0.04, sdgclick: 0.1, sdgtone: 0.15, sdgcolor: 0.2, sdgdrive: 0.05),	// 7 lofi soft
+	(presetName: "trap 808", sdgfreq: 43.65, sdgdecay: 3, sdgpunch: 10, sdgbend: 0.05, sdgclick: 0.15, sdgtone: 0.25, sdgcolor: 0, sdgdrive: 0.35),	// 8 trap 808
+	(presetName: "minimal click", sdgfreq: 65, sdgdecay: 0.15, sdgpunch: 24, sdgbend: 0.015, sdgclick: 0.85, sdgtone: 0.8, sdgcolor: 0.4, sdgdrive: 0.2)	// 9 minimal click
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

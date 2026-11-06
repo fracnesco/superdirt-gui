@@ -41,6 +41,12 @@ use `sdgatk` and `sdgrel`. SuperDirt frees the event's group at the end of `sust
 tail, so a release has to fit inside it; `sdgpad`'s `fit` shortens attack and release together
 when the note is too short for both.
 
+### Presets
+
+A synth's file can register presets after its SynthDef, events in SuperDirt's sound library that
+Tidal's `n` picks (`s "mypad:2"`); `note` then plays the pitch. [presets.md](presets.md) has the
+block to copy, and how the window's preview saves your own.
+
 ### A drum voice
 
 A drum voice is a synth whose file also registers its presets in SuperDirt's sound library, one

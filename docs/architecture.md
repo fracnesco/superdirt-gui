@@ -33,7 +33,10 @@ lives in its synth, and a return track, because it belongs to no orbit. See
 | `SDGBufRate`, `SDGBufPhase` | the players' rate and read pointer, the arithmetic of SuperDirt's `dirt_sample` taken out | nothing |
 | `SDGTrack` | one global effect of one orbit as a track | its two busses, send, return, level, pre and post inserts |
 | `SDGInsert`, `SDGInsertTarget` | an insert, and what its ParaEQ or Compressor drives | the effect or synth, its object, a VST plugin's last state |
-| `SDGReturn` | a return track | five busses, its own synths, a send per orbit, a link to every return |
+| `SDGBusTrack` | what a return, group and the master share | its in and tap busses, its insert chain, sends, out synth |
+| `SDGReturn` | a return track | feedback and line busses, its head, a send per orbit, a link to every return |
+| `SDGGroup` | a group track | the orbits routed into its in bus, a link to every return |
+| `SDGMaster` | the master track | everything not routed direct; writes to the hardware |
 | `SDGSession` | the mixer under a name | what the last load had to leave out, the window's part of the last session |
 | `SDGWindow` | the control window | only what is on screen: the mixer state is `SuperDirtGUI`'s, and it follows. The explorer's model, its sort and which banks are open |
 | `SDGExplorerView` | the explorer's list: header, rows, scroll bar | the rows it was handed, the selected row |
@@ -45,6 +48,10 @@ lives in its synth, and a return track, because it belongs to no orbit. See
 | `SDGSampleEditor`, `SDGWaveView` | the editor window and its waveform | the preview synth, the zoom |
 | `SDGSampleEdit` | the editor's model: the file in the language, the settings on top of it | the file as Signals, the trim, gain, DC, fades, the beat grid, the features |
 | `SDGSampleAnalysis` | the numbers | nothing |
+| `SDGMidi` | controllers on the mixer, through the Modality toolkit, and Tidal's `cF` controls: `~sdg.midi` | the mappings, the controllers they use, what learn is waiting for |
+| `SDGMidiMap`, `SDGMidiTarget` | one element of one controller moving one thing; that thing, by an address that survives rebuilds and sessions | the range, curve, takeover and button mode; nothing |
+| `SDGMidiWindow` | the controllers and the mappings, one at a time in depth | nothing of its own |
+| `SDGTidalLog`, `SDGTidalLogWindow` | every event Tidal sends, as a line of text, and its window: `~sdg.tidalLog` | the last lines, the filter; an `OSCFunc` of its own while listening |
 
 `SuperDirtGUI` knows nothing of the window: all it does is `changed`. Everything
 the window does is a method of `SuperDirtGUI` you could call from code, and the
@@ -100,12 +107,16 @@ orbit it was taken out of, and an offered effect goes into no orbit by itself.
 | `\samples` | banks were added | the bank, for one file |
 | `\reloaded` | a sample was read back into its buffer | the name and index |
 | `\mixer` | a fader, mute, solo or send changed | |
+| `\param` | an effect's parameter was set, by a knob, a controller or code (`setEffectParam`) | the orbit or return, the parameter |
 | `\inserts` | an insert came, went, moved or was bypassed | the orbit |
 | `\tracks` | a track came, went, moved or took another effect | the orbit |
 | `\trackLevel` | a track's fader moved | the orbit |
 | `\returns` | a return came, went or changed | |
 | `\session` | a session was loaded | its name |
 | `\sessions` | a session was saved | its name |
+
+The pieces `SuperDirtGUI` owns notify on their own: `sdg.tags` sends `\tags` and `\analysis`,
+`sdg.sync` `\sync`, `sdg.midi` `\maps`, `\map`, `\learn` and the rest (its help says which).
 
 Stock SuperDirt's sound library says nothing when it changes, so the window compares
 its size once a second, for banks loaded straight through `~dirt.loadSoundFiles`. The
@@ -130,8 +141,8 @@ orbit that has an effect is left alone.
 | **`~sdg.reload`** | Modules, players and content effects out, every file read again. Inserts, returns and the mixer state stay. A track keeps its inserts and fader and waits for its effect's name to come back; one still waiting afterwards goes. A return's effect starts again on its new SynthDef. |
 | **a file saved** | That file only, as above. |
 | **the window closed** | Its meters, listeners and poll stop. Everything on the server stays and goes on playing; `~sdg.gui` shows it again. |
-| **`~sdg.free`** | Returns, inserts, tracks, modules, players, global effects and the fader out, the tap busses freed, the window closed. SynthDefs stay on the server: they do no harm, and Tidal may still be playing them. |
-| **cmd-period** | SuperDirt makes its orbits again on `ServerTree`, with every effect in `globalEffects` and the state it held, so tracks and ordinary inserts come back by themselves. A hook registered after SuperDirt's makes VST inserts' synths again, reopens each plugin with its last state, and restarts the returns. |
+| **`~sdg.free`** | Returns, inserts, tracks, modules, players, global effects and the fader out, the tap busses freed, the window closed, the MIDI mappings and the Tidal log stopped. SynthDefs stay on the server: they do no harm, and Tidal may still be playing them. Modality's MKtls stay too: they are Modality's. |
+| **cmd-period** | SuperDirt makes its orbits again on `ServerTree`, with every effect in `globalEffects` and the state it held, so tracks and ordinary inserts come back by themselves. A hook registered after SuperDirt's makes VST inserts' synths again, reopens each plugin with its last state, and restarts the returns, groups and master. The language side comes back through `CmdPeriod`: `SuperDirtGUI` restarts the background analysis and notifies `\cmdPeriod`, on which the window starts its meter and library routines again and drops any refresh that was on its way; the sample editor, the MIDI, sync and Tidal-log windows register themselves. The meter and playhead `OSCFunc`s are fixed. Nothing of the mixer's state is touched. |
 | **a sample bank** | Stays in SuperDirt's library. `free` does not unload it. |
 
 A session on disk and the files in the four folders are yours; nothing here
@@ -149,6 +160,7 @@ run time, never compiled against, so its absence costs a menu entry and nothing 
 | BusRecorder | **recorder**: a file per orbit and return | the button is disabled |
 | DigitDrag | number boxes drag by the digit under the pointer | ordinary number boxes |
 | ParaEQ, Compressor, Insight, VSTPlugin | the four standard kinds of insert | the kind is greyed out in the menu |
+| Modality-toolkit | MIDI and HID controllers on the mixer (`~sdg.midi`) | no controllers; Tidal `cF` mappings still work |
 | anything subclassing `FxParamUnit` (Growl, Tunnel, Smear, Cloud, Stammer, Sympathy, Spiral) | more kinds of insert, found at class init, named by nothing here | not listed |
 | sc3-plugins | `sdghole`, `sdgecho`, `sdgjverb`, `sdgroom`, `sdgshimmer` | those files are skipped with one line in the post window |
 | mi-UGens | `sdgmiverb`, `sdgclouds`, `sdgrings`, `sdgwarps` | the same |

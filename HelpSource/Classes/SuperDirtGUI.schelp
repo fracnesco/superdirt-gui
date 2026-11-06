@@ -142,8 +142,22 @@ takes everything out first, so there a failing file loses what it had.
 
 CLASSMETHODS::
 
+METHOD:: useMaster
+Whether a new SuperDirtGUI makes a master and sends its orbits through it. true by default.
+ARGUMENT:: bool
+true or false, set before code::SuperDirtGUI(~dirt)::.
+
+
+METHOD:: loadOwnSamples
+Whether a new SuperDirtGUI loads the six banks rendered from its drum voices
+(code::samples/::, see link::#-loadSamples::) into the sound library. true by
+default; a second loader finds them there and says nothing.
+ARGUMENT:: bool
+true or false, set before code::SuperDirtGUI(~dirt)::.
+
 METHOD:: new
-Make the loader and load everything.
+Make the loader and load everything: the four content folders, then the rendered
+banks (link::#*loadOwnSamples::).
 ARGUMENT:: dirt
 the link::Classes/SuperDirt:: to load into, usually code::~dirt::.
 RETURNS:: a SuperDirtGUI.
@@ -321,6 +335,64 @@ the name; a global effect by its name or by its parameter, code::\global_sdgspac
 or code::\sdgspace::.
 RETURNS:: the path, or nil for a name registered from code rather than a file.
 
+METHOD:: presetsOf
+A synth's presets, which Tidal's code::n:: picks: its events in SuperDirt's sound library, as
+its file registered them or as link::Classes/SDGSynthPresets:: replaced them. Each names itself
+in code::presetName::. A synth with none answers an empty Array, and its code::n:: is its pitch.
+ARGUMENT:: synth
+the synth's name.
+RETURNS:: an link::Classes/Array:: of link::Classes/Event::s
+
+METHOD:: presetNames
+The names of link::#-presetsOf::, by n; code::"preset 3":: for one without.
+ARGUMENT:: synth
+the synth's name.
+
+METHOD:: presetValues
+What preset n sets of the synth's controls - not code::out::, code::freq::, code::sustain::,
+code::pan:: or code::accelerate::, which every event sets itself.
+ARGUMENT:: synth
+the synth's name.
+ARGUMENT:: n
+the preset.
+RETURNS:: an link::Classes/Event::
+
+METHOD:: savePreset
+Add a preset at the end of a synth's list, under a name, and play it from now on: the whole list
+is written by link::Classes/SDGSynthPresets:: and put into the sound library. Notifies
+code::\presets:: with the synth's name.
+code::
+n = ~sdg.savePreset(\sdgkick, "short boom", (sdgdecay: 0.4, sdgclick: 0.1));
+// d1 $ s "sdgkick:10"
+::
+ARGUMENT:: synth
+the synth's name.
+ARGUMENT:: name
+what the window's menu calls it.
+ARGUMENT:: values
+an Event of the synth's controls.
+RETURNS:: its n.
+
+METHOD:: removePreset
+Take preset n out of a synth's list; every one after it moves down by one. Kept on this machine
+as link::#-savePreset:: is. Notifies code::\presets::.
+ARGUMENT:: synth
+the synth's name.
+ARGUMENT:: n
+the preset.
+RETURNS:: false when there is no preset n.
+
+METHOD:: restoreFilePresets
+Forget this machine's list of a synth and play the presets its file registers again. Notifies
+code::\presets::.
+ARGUMENT:: synth
+the synth's name.
+
+METHOD:: hasOwnPresets
+Whether a synth plays this machine's list rather than its file's.
+ARGUMENT:: synth
+the synth's name.
+
 METHOD:: entries
 What the window's modules tab lists for a kind: an Event per name,
 code::(name:, path:, failed:)::, with code::path:: nil for a name registered
@@ -443,7 +515,7 @@ true to keep it awake even when no parameter arrives. false by default.
 METHOD:: offerGlobalEffect
 Called from a file in code::effects/::, in place of link::#-addGlobalEffect::, for an
 effect no orbit gets by itself. It waits in the add menu of the window's effects tab
-and costs nothing until link::#-addTrack:: or link::#-setReturnEffect:: puts it
+and costs nothing until link::#-addTrack:: puts it
 somewhere. A reload keeps it where it was added and puts it nowhere else. It always
 runs, since an event need not carry any of its parameters, so its SynthDef's defaults
 should make a sound.
@@ -544,13 +616,37 @@ ARGUMENT:: orbit
 a link::Classes/DirtOrbit::.
 
 METHOD:: setOutBus
-Set an orbit's output bus - code::DirtOrbit:outBus_::, which rebuilds the orbit -
-with its effects released so that sleeping ones are freed and its inserts put
-back in place. The window's out box uses it.
+Send an orbit straight to a hardware bus, past its group and the master: the same as
+code::setOrbitDest(i, \direct, bus)::.
 ARGUMENT:: i
 the orbit's index.
 ARGUMENT:: bus
 a bus index or a Bus.
+
+METHOD:: setOrbitDest
+Where an orbit goes: the master, a group, or straight to a hardware bus. Its monitor's
+output bus changes - code::DirtOrbit:outBus_::, which rebuilds the orbit, with its
+effects released so that sleeping ones are freed and its inserts put back in place -
+only when the bus it comes to changes. The window's output menu uses it.
+ARGUMENT:: i
+the orbit's index.
+ARGUMENT:: dest
+code::\master::, code::\direct::, a group's name or the link::Classes/SDGGroup::.
+ARGUMENT:: bus
+for code::\direct::, the hardware bus; nil keeps the one it had.
+
+METHOD:: orbitDest
+ARGUMENT:: i
+the orbit's index.
+RETURNS:: where it goes: code::\master::, code::\direct:: or a group's name.
+
+METHOD:: directBusOf
+ARGUMENT:: i
+the orbit's index.
+RETURNS:: the hardware bus it writes to when it goes direct.
+
+METHOD:: hardwareOut
+RETURNS:: where orbit 0 wrote when the add-on first saw it: where the master writes, and every direct route starts.
 
 METHOD:: moveInsert
 An insert to another position among its orbit's inserts. The synths are moved,
@@ -732,24 +828,117 @@ its letter, as a Symbol or String.
 RETURNS:: the link::Classes/SDGReturn::, or nil.
 
 METHOD:: addReturn
-A return track with a send from every orbit and to and from every return, all at
-nothing. Nothing that plays restarts.
+A return track with a send from every orbit and group, and to and from every return,
+all at nothing. Nothing that plays restarts. Its effects are inserts: link::#-addBusInsert::.
 ARGUMENT:: letter
 its letter; the next one free by default.
 RETURNS:: the link::Classes/SDGReturn::, or nil with a warning when there are no orbits or the letter is taken.
 
 METHOD:: removeReturn
-A return out, with its effect, inserts and every send to it and from it.
+A return out, with its inserts and every send to it and from it.
 ARGUMENT:: ret
 the link::Classes/SDGReturn::.
 
-METHOD:: setReturnEffect
-A global effect on a return, in the place of the one it has.
-ARGUMENT:: ret
-the link::Classes/SDGReturn::.
+METHOD:: addBusInsert
+An insert at a position in the one chain of a return, a group or the master.
+ARGUMENT:: track
+the link::Classes/SDGBusTrack::.
+ARGUMENT:: kind
+code::\eq::, code::\compressor::, code::\insight::, code::\vst:: or an sc fx kit kind.
+ARGUMENT:: index
+its position; the end by default.
+ARGUMENT:: plugin
+a VST insert's plugin: a name or a file path.
+RETURNS:: the link::Classes/SDGInsert::, or nil.
+
+METHOD:: groups
+RETURNS:: the group tracks (link::Classes/SDGGroup::).
+
+METHOD:: groupAt
 ARGUMENT:: name
-the effect's name; nil takes it out.
-RETURNS:: the new link::Classes/GlobalDirtEffect::, or nil when there is none now.
+its name, e.g. code::\g1::.
+RETURNS:: the link::Classes/SDGGroup::, or nil.
+
+METHOD:: addGroup
+A group track, with orbits in it. Nothing that plays restarts but those orbits.
+ARGUMENT:: orbitIndices
+the orbits that go into it, an Array of indices.
+ARGUMENT:: name
+its name; the next free code::\g1::, code::\g2:: ... by default.
+RETURNS:: the link::Classes/SDGGroup::, or nil.
+
+METHOD:: removeGroup
+A group out, with its inserts and sends; its orbits go to the master.
+ARGUMENT:: group
+the link::Classes/SDGGroup::, or its name.
+
+METHOD:: groupOf
+ARGUMENT:: i
+the orbit's index.
+RETURNS:: the link::Classes/SDGGroup:: it goes into, or nil.
+
+METHOD:: membersOf
+ARGUMENT:: group
+the link::Classes/SDGGroup::, or its name.
+RETURNS:: the indices of the orbits that go into it.
+
+METHOD:: setGroupSend
+A group's send to a return.
+ARGUMENT:: group
+the link::Classes/SDGGroup::, or its name.
+ARGUMENT:: ret
+the link::Classes/SDGReturn::, or its letter.
+ARGUMENT:: amp
+the level, 0 to 1.
+
+METHOD:: master
+RETURNS:: the master track (link::Classes/SDGMaster::), nil when link::#*useMaster:: is false.
+
+METHOD:: addMaster
+The master, if there is none: everything that goes code::\master:: writes to it from now on.
+RETURNS:: the link::Classes/SDGMaster::.
+
+METHOD:: removeMaster
+The master out, with its inserts: what went to it writes to the hardware again.
+
+METHOD:: busTracks
+RETURNS:: every group, return and the master, in the order they run.
+
+METHOD:: copyInserts
+Keep inserts, with every setting - a plugin with its state, read back a moment later -
+to paste on any orbit, effect track, group, return or the master.
+ARGUMENT:: list
+an Array of link::Classes/SDGInsert::s.
+RETURNS:: what was kept, as their sessionData.
+
+METHOD:: pasteInserts
+What link::#-copyInserts:: kept, as new inserts.
+ARGUMENT:: orbitIndex
+an orbit's index, or nil with a track.
+ARGUMENT:: track
+an link::Classes/SDGTrack:: or link::Classes/SDGBusTrack::, or nil.
+ARGUMENT:: place
+on an effect track, code::\pre:: or code::\post::.
+ARGUMENT:: index
+where the first goes; the end by default.
+RETURNS:: the new link::Classes/SDGInsert::s.
+
+METHOD:: insertClipboard
+RETURNS:: what link::#-copyInserts:: kept, nil before.
+
+METHOD:: copyTrack
+Keep an orbit's effect track: its effect, the parameters set on the orbit, its level and inserts.
+ARGUMENT:: track
+the link::Classes/SDGTrack::.
+
+METHOD:: pasteTrack
+What link::#-copyTrack:: kept, as a new track of an orbit.
+ARGUMENT:: orbitIndex
+the orbit's index.
+RETURNS:: the link::Classes/SDGTrack::, or nil when nothing was copied or the orbit has that effect already.
+
+METHOD:: trackClipboard
+RETURNS:: what link::#-copyTrack:: kept, nil before.
 
 METHOD:: setSend
 An orbit's send to a return.
@@ -782,13 +971,22 @@ ARGUMENT:: bool
 true or false.
 
 METHOD:: returnGroup
-RETURNS:: the link::Classes/Group:: the returns run in, right after SuperDirt's; nil before the first.
+RETURNS:: the link::Classes/Group:: every group, return and the master run in, right after SuperDirt's; nil before the first.
+
+METHOD:: groupsGroup
+RETURNS:: the link::Classes/Group:: at its head where the groups run.
 
 METHOD:: returnHeads
-RETURNS:: the link::Classes/Group:: inside it where every return's feedback is read, before anything writes.
+RETURNS:: the link::Classes/Group:: after it where every return's feedback is read, before any return writes.
+
+METHOD:: masterGroup
+RETURNS:: the link::Classes/Group:: at its tail where the master runs.
+
+METHOD:: orderBusses
+Walk the nodes of every group, return and the master into the order of their chains. Nothing restarts.
 
 METHOD:: orderReturns
-Walk the returns' nodes into the order of their chains. Nothing restarts.
+The same as link::#-orderBusses::.
 
 METHOD:: loadSamples
 Append a folder to the sound library: one bank per subfolder, files numbered by
@@ -798,8 +996,10 @@ and a file a bank already holds is not read again, so a folder can be loaded
 again for what is new in it. One level down only.
 ARGUMENT:: folderPath
 a String; code::~:: is expanded.
+ARGUMENT:: warnEmpty
+whether a folder with nothing new is warned about. true by default.
 RETURNS:: the names of the banks that got files, an Array of Symbols; empty when
-there was nothing new, which is also warned.
+there was nothing new.
 
 METHOD:: addSample
 Append one file to a bank as its last index, or make the bank if the name is

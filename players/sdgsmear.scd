@@ -12,7 +12,7 @@
 //   sdghold   0.1 to 16 cycles  makes the event last that long
 //
 //   d1 $ s "numbers:3" # pF "sdgsmear" 0.3
-//   d1 $ s "breaks152/8" # pF "sdgsmear" 0.8 # speed 0.05
+//   d1 $ loopAt 8 $ s "breaks152" # pF "sdgsmear" 0.8
 //   d1 $ s "numbers:3" # pF "sdgsmear" 0.5 # pF "sdghold" 2
 (
 ~sdg.addSamplePlayer(\sdgsmear, { |sampleNumChannels, numChannels|

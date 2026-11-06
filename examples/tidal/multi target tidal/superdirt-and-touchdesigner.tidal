@@ -1,0 +1,51 @@
+-- multi target tidal - SuperDirt plays, TouchDesigner draws
+--
+-- Needs boot-touchdesigner.hs (next to this file) as your Boot Tidal Path,
+-- SuperDirt with SuperDirtGUI loaded, and TouchDesigner listening:
+--
+--   1. an OSC In DAT, Network Port 10000
+--   2. in its callbacks DAT (the oscin1_callbacks it makes), onReceiveOSC:
+--
+--        def onReceiveOSC(dat, rowIndex, message, byteData, timeStamp, address, args, peer):
+--            words = dict(zip(args[0::2], args[1::2]))   # td, size, cycle, delta ...
+--            if address == '/tidal/flash':
+--                op('flash').par.value0 = words.get('size', 1)
+--            elif address == '/tidal/level':
+--                op('level').par.value0 = words['v']
+--            elif address == '/tidal/hat':
+--                op('hat').par.value0 = words['bright']
+--            return
+--
+--      with three Constant CHOPs named flash, level and hat for it to write
+--      into (or anything else the callback can reach).
+--
+-- A message reaches TouchDesigner the moment its sound starts in SuperDirt,
+-- not before: boot-touchdesigner.hs explains how, and tdAhead in it moves the
+-- pictures earlier if your screen lags behind your speakers.
+--
+-- The rule: an event with s goes to SuperDirt, an event with td goes to
+-- TouchDesigner at /tidal/<td>, an event with both goes to both.
+-- Evaluate the blocks one at a time.
+
+setcps (130/60/4)
+
+-- a pattern for SuperDirt: no td, so TouchDesigner hears nothing of it
+d1 $ s "sdgkick*4" # sdgdecay 0.5
+
+-- a pattern for TouchDesigner: no s, so SuperDirt hears nothing of it.
+-- Four messages a cycle at /tidal/flash, each with its size
+d2 $ td "flash*4" # pF "size" "1 0.4 0.7 0.4"
+
+-- a continuous value: a sine read sixteen times a cycle, at /tidal/level
+d3 $ segment 16 $ td "level" # pF "v" (slow 4 $ range 0 1 sine)
+
+-- one pattern, both: each hat sounds, and the same event tells
+-- TouchDesigner how bright it was, at /tidal/hat (rand gives the same
+-- number to both words, since they are read at the same moment)
+d4 $ s "sdghat*8" # sdgtone (range 0.2 1 rand) # td "hat" # pF "bright" (range 0.2 1 rand)
+
+-- the flashes on a rhythm of their own, against the kick, growing
+-- through the cycle
+d2 $ struct "t ~ t t ~ t ~ ~" (td "flash") # pF "size" (range 0.3 1 saw)
+
+hush

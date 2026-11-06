@@ -125,48 +125,62 @@ not send it. That is why saving a session asks every plugin afresh.
 ## Return tracks
 
 ```supercollider
-a = ~sdg.addReturn;                       // return A: a send knob on every orbit
-~sdg.setReturnEffect(a, \dirt_reverb);    // or none, and only inserts
+a = ~sdg.addReturn;                       // return A: a send knob on every orbit and group
+~sdg.addBusInsert(a, \eq);                // its effects are inserts, one chain
 ~sdg.setSend(0, a, 0.5);                  // orbit 0 into it, 0 to 1
 a.level = 0.7;                            // what comes back
 a.preFader = true;                        // sends into it ignore the source's fader
-~sdg.addTrackInsert(a, \post, \eq);       // inserts work as on a track
 ~sdg.removeReturn(a);
 ```
 
+A return's effects are inserts only - eq, compressor, insight, an sc fx kit effect, a VST
+plugin - in one chain (2026-11-06; before, a return held one global effect between pre and
+post inserts). SuperDirt's own reverb and delay stay on the orbits, where Tidal drives them.
+
 An orbit's send is a global effect in the orbit's chain, right before the fader, so it
-hears the effects and inserts and comes back with the orbit from every rebuild. The return
-itself belongs to no orbit. It runs in a group after SuperDirt's, so everything the
-orbits sent in this block is there to read:
+hears the effects and inserts and comes back with the orbit from every rebuild. A group's
+send is a synth of the group. The return itself belongs to no orbit. It runs in a group
+after SuperDirt's and the groups', so everything sent in this block is there to read:
 
 ```
- SuperDirt's group       ... inserts, sends, fader, rms, monitor
- the returns' group
+ SuperDirt's group       ... inserts, sends, fader, rms, monitor (into a group or the master)
+ the add-on's group
+   groups                each group: inserts, sends, out (in place on its inBus)
    heads                 each return: its sends in + last block's feedback, onto lineBus
-   return A              pre inserts, effect, mix, post inserts, links, out
+   return A              inserts, links, out
    return B              ...
+   master                inserts, out to the hardware (in place on its inBus)
 ```
 
 | bus | holds |
 |-----|-------|
-| `inBus` | what the orbits send in this block |
+| `inBus` | what the orbits and groups send in this block |
 | `fbBus` | what returns sent it in the last block |
 | `lineBus` | the return's signal, processed in place all along |
-| `wetBus` | what its effect writes; `sdgreturn_mix` puts it on the line |
 | `tapBus` | its output after the fader, for the recorder |
 
-The effect comes out fully wet. With no effect, or with it off, the line passes as it came.
-An inline effect such as leslie gets the line as well as its wet.
+No event reaches a return, so an insert's `DirtPause` would pause it after 4 s of silence
+with nothing to wake it: a routine resumes them once a second. A return is always on, uses
+CPU when nothing plays, and never cuts a tail. Groups and the master the same.
 
-No event reaches a return, so two things differ from an orbit's effect:
+## Groups and the master
 
-- **Parameters** live in the return's own `defaultParentEvent`, set by the window. They start
-  at values that are heard (`SDGReturn.wetDefaults`), because most effects are silent at their
-  SynthDef's defaults: `dirt_delay` and `dirt_reverb` have their own values, and a content
-  effect's switch is set to 1.
-- **Sleep:** an effect's or insert's `DirtPause` would pause it after 4 s of silence with
-  nothing to wake it, so a routine resumes them once a second. A return is always on, uses CPU
-  when nothing plays, and never cuts a tail.
+```supercollider
+g = ~sdg.addGroup([0, 1]);                // orbits 0 and 1 into a group
+~sdg.addBusInsert(g, \compressor);
+~sdg.setGroupSend(g, \A, 0.3);
+~sdg.setOrbitDest(2, g.name);             // \master, \direct (with a bus) or a group's name
+~sdg.addBusInsert(~sdg.master, \eq);
+```
+
+An orbit's route is the add-on's: `setOrbitDest` sets the orbit's `outBus` to its group's
+or the master's `inBus`, or to a hardware bus for `\direct`, rebuilding the orbit only when
+the bus changes. The master is made once the orbits exist (`SuperDirtGUI.useMaster`,
+true by default) and writes where orbit 0 wrote; an orbit that wrote elsewhere stays direct.
+Solo: an orbit or a group soloed silences the orbits and groups that are not (a group's
+orbits count as soloed with it, and a group stays on while one of its orbits is soloed),
+and cuts their sends; a soloed return also stops the direct sound. `free` routes every orbit
+back to the hardware.
 
 ### Feedback
 

@@ -37,6 +37,7 @@ SDGSyncWindow {
 		this.prBuild;
 		sync.addDependant(this);
 		sync.tags.addDependant(this);
+		CmdPeriod.add(this);
 		this.refresh;
 		window.front;
 	}
@@ -187,6 +188,13 @@ SDGSyncWindow {
 		if (#[\sync, \playing, \tags, \analysis].includes(what)) { this.prScheduleRefresh };
 	}
 
+	// a cmd-period has cleared AppClock, and with it a refresh on its way: the
+	// flag is dropped, or nothing would ever be drawn again
+	cmdPeriod {
+		refreshPending = false;
+		{ if (this.isOpen) { this.refresh } }.defer;
+	}
+
 	prScheduleRefresh {
 		if (refreshPending) { ^this };
 		refreshPending = true;
@@ -237,6 +245,7 @@ SDGSyncWindow {
 	}
 
 	prClosed {
+		CmdPeriod.remove(this);
 		sync.removeDependant(this);
 		sync.tags.removeDependant(this);
 		sync.stop;

@@ -9,7 +9,7 @@
 //   ~dirt = SuperDirt(2, s);
 //   ~dirt.loadSoundFiles;
 //   ~dirt.start(57120, 0 ! 12);
-//   ~sdg = SuperDirtGUI(~dirt);          // reads synths/, modules/, players/, effects/
+//   ~sdg = SuperDirtGUI(~dirt);          // reads synths/, modules/, players/, effects/, samples/
 //   ~sdg.gui;                            // orbit strips, effects, the sound explorer
 //
 //   ~sdg.synthNames;                     // -> [ sdgsine ]         d1 $ s "sdgsine"
@@ -35,11 +35,19 @@
 //   ~sdg.addTrackInsert(t, \pre, \eq);    // an insert before it; \post after it
 //
 //   a = ~sdg.addReturn;                  // return A, a send knob on every orbit (SDGReturn)
-//   ~sdg.setReturnEffect(a, \dirt_reverb);
+//   ~sdg.addBusInsert(a, \vst, plugin: "ValhallaSupermassive");   // its effects: inserts
 //   ~sdg.setSend(0, a, 0.5);             // orbit 0 into it
-//   ~sdg.addTrackInsert(a, \post, \eq);  // inserts and VSTs, as on a track
 //   ~sdg.returnFeedback = true;          // returns may send to returns, and so loop
 //   ~sdg.setReturnSend(a, a, 0.5);       // here, into itself
+//
+//   g = ~sdg.addGroup([0, 1]);           // orbits 0 and 1 into a group (SDGGroup)
+//   ~sdg.addBusInsert(g, \compressor);   // on both
+//   ~sdg.setGroupSend(g, a, 0.3);        // the group into return A
+//   ~sdg.setOrbitDest(2, g.name);        // orbit 2 joins; \master, \direct leave
+//   ~sdg.addBusInsert(~sdg.master, \eq); // the master track: everything (SDGMaster)
+//
+//   ~sdg.copyInserts(~sdg.insertsOf(0)); // orbit 0's inserts, settings and all
+//   ~sdg.pasteInserts(nil, g);           // onto the group
 //
 //   ~sdg.saveSession("gig");             // the whole mixer, VST states and all (SDGSession)
 //   ~sdg.loadSession("gig");             // and back
@@ -90,8 +98,11 @@
 //     Compressor or Insight extension (SDGInsert), as many as you like.
 //   - every global effect of an orbit as a track (SDGTrack): inserts before
 //     and after the effect, a fader on what it adds, another effect loaded in.
-//   - return tracks with a send from every orbit, as in Ableton (SDGReturn):
-//     their own group after SuperDirt's, inserts, an effect, sends to each other.
+//   - return tracks with a send from every orbit and group, as in Ableton
+//     (SDGReturn): a chain of inserts, sends to each other.
+//   - group tracks that orbits write to instead of the master (SDGGroup), and the
+//     master every orbit, group and return writes to (SDGMaster): a chain of
+//     inserts each, a fader; all of them after SuperDirt's group (SDGBusTrack).
 //   - reloadSample / addSample, what the sample editor calls after a save so
 //     tidal plays the new file under the same name and number.
 //   - sessions: the whole mixer saved under a name and brought back (SDGSession).
@@ -110,6 +121,8 @@ SuperDirtGUI {
 	classvar <>playerModuleName = \sdgplayer;
 	classvar <>anySoundName = \sdgany;	// the sound that means the whole library to the tag picker
 	classvar tapBusses;		// DirtOrbit -> Bus: per orbit, not per loader, as the fader outlives a second loader
+	classvar <>useMaster = true;	// a master track (SDGMaster) every orbit goes through, made with the orbits
+	classvar <>loadOwnSamples = true;	// the rendered banks in samples/ go into the library when the loader is made
 
 	var <dirt, <path;
 	var <globalEffectSpecs, <samplePlayers;
@@ -118,6 +131,7 @@ SuperDirtGUI {
 	var controlWindow, appliedAmps, warnedInstruments;
 	var fileRecords;		// path -> (kind:, names:, hash:, failed:), one per file read
 	var loadingNames;		// while a file runs: the players and effects it registers
+	var filePresets;		// synth name -> the presets its file registered (SDGSynthPresets may replace them)
 	var inserts;			// orbit index -> [SDGInsert], in chain order
 	var treeFunc;			// the ServerTree function that brings VST inserts back after a cmd-period
 	var insertDefs;			// the insert kinds whose SynthDef has been added
@@ -126,10 +140,18 @@ SuperDirtGUI {
 	var session;			// the SDGSession, made when first asked for
 	var <returns;			// the return tracks (SDGReturn), by letter
 	var <returnFeedback = false;	// whether returns may send to returns
-	var returnGroupID, returnHeadsID;	// their nodes, made when the first return is
+	var <groups;			// the group tracks (SDGGroup), by name
+	var <master;			// the master track (SDGMaster), nil without one
+	var <hardwareOut;		// where orbit 0 wrote before there was a master: where the master writes
+	var orbitDests, directBusses;	// per orbit: \master, \direct or a group's name, and its hardware bus
+	var <>insertClipboard;	// copied inserts, as their sessionData: pasteInserts puts them back
+	var <>trackClipboard;	// a copied effect track of an orbit: pasteTrack
+	var returnGroupID, returnHeadsID, groupsID, masterID;	// the nodes of the bus tracks, made with the first
 	var keepAwake;			// the routine that keeps what is on a return from sleeping
 	var tags;				// the SDGSampleTags, made when first asked for
 	var sync;				// the SDGSync, made when first asked for
+	var tidalLog;			// the SDGTidalLog, made when first asked for
+	var midi;				// the SDGMidi, made when first asked for
 	var pickers;			// DirtOrbit -> [our diversion, the one it replaced]
 	var warnedPicker = false;
 
@@ -146,16 +168,32 @@ SuperDirtGUI {
 		globalEffectSpecs = [];
 		samplePlayers = [];
 		fileRecords = Dictionary.new;
+		filePresets = filePresets ?? { IdentityDictionary.new };
 		inserts = IdentityDictionary.new;
 		tracks = IdentityDictionary.new;
 		returns = [];
+		groups = [];
 		insertDefs = IdentitySet.new;
 		warnedInstruments = IdentitySet.new;
 		current = this;
 		this.prCheckSuperDirtVersion;
 		this.load;
+		this.prLoadOwnSamples;
 		pickers = IdentityDictionary.new;
-		this.prWhenOrbitsExist { this.prInstallTagPicker };
+		CmdPeriod.add(this);
+		this.prWhenOrbitsExist { this.prInstallTagPicker; this.prWatchTree };
+	}
+
+	// A cmd-period: CmdPeriod.run has just cleared both clocks and freed every
+	// OSCFunc that is not fixed, and is about to free every node. SuperDirt
+	// comes back by itself (its orbits are made again on ServerTree, every
+	// effect with its state), and so does this: the node tree in treeFunc, the
+	// background analysis here, and the windows' own routines through the
+	// \cmdPeriod notification. Nothing else is touched, so the mixer's state,
+	// the picker and the modules are as they were.
+	cmdPeriod {
+		tags !? (_.prResume);
+		this.changed(\cmdPeriod);
 	}
 
 	// SuperDirt's own orbit plumbing: never listed as effects, never moved
@@ -207,7 +245,6 @@ SuperDirtGUI {
 		this.prRemoveGlobalEffects(true);
 		fileRecords = Dictionary.new;
 		this.load;
-		fork { dirt.server.sync; this.prRestartReturnEffects };
 	}
 
 	loadSynths { this.prLoadFolder(\synths) }
@@ -220,7 +257,7 @@ SuperDirtGUI {
 		globalEffectSpecs = [];
 		this.prDefineFaderDef;
 		SDGTrack.makeDefs(dirt.numChannels);
-		SDGReturn.makeDefs(dirt.numChannels);
+		SDGBusTrack.makeDefs(dirt.numChannels);
 		this.prLoadFolder(\effects); // the files call addGlobalEffect
 		this.prWhenOrbitsExist { this.applyGlobalEffects };
 	}
@@ -359,6 +396,100 @@ SuperDirtGUI {
 		var notes = this.class.fileNotes(this.sourceFile(kind, name));
 		if(notes[\listed].not) { notes[\params] = this.prControlsOf(kind.asSymbol, name) };
 		^notes
+	}
+
+	// ----- synth presets
+	//
+	// A synth's presets are its events in SuperDirt's sound library, which n picks:
+	// what its file registers, or - once one was saved or deleted in the window -
+	// the list SDGSynthPresets keeps on this machine. Each says its presetName.
+	// Changes notify \presets with the synth's name.
+
+	presetsOf { |synth|
+		^(dirt.soundLibrary.at(synth.asSymbol) ? []).select { |e| e.isKindOf(Dictionary) }
+	}
+
+	presetNames { |synth|
+		^this.presetsOf(synth).collect { |e, i| (e[\presetName] ? "preset %".format(i)).asString }
+	}
+
+	// what preset n sets of the synth's controls, as an Event
+	presetValues { |synth, n|
+		var event = this.presetsOf(synth)[n ? 0], out = ();
+		event !? { this.prPresetControls(synth).do { |key| event[key] !? { |v| if(v.isNumber) { out[key] = v } } } };
+		^out
+	}
+
+	// true while the synth plays this machine's list, not its file's
+	hasOwnPresets { |synth| ^SDGSynthPresets.exists(synth.asSymbol) }
+
+	// values (an Event of controls) as a new preset at the end, under a name; answers its n
+	savePreset { |synth, name, values|
+		var list = this.prPresetList(synth);
+		var preset = (presetName: name.asString);
+		values.keysValuesDo { |key, v| if(v.isNumber) { preset[key] = v } };
+		list = list.add(preset);
+		this.prSetPresets(synth, list);
+		^list.size - 1
+	}
+
+	// take preset n out: every one after it moves down by one
+	removePreset { |synth, n|
+		var list = this.prPresetList(synth);
+		if(n.isNil or: { n < 0 } or: { n >= list.size }) { ^false };
+		list.removeAt(n);
+		this.prSetPresets(synth, list);
+		^true
+	}
+
+	// back to the presets the synth's file registers
+	restoreFilePresets { |synth|
+		synth = synth.asSymbol;
+		SDGSynthPresets.forget(synth);
+		filePresets[synth] !? { |list| this.prRegisterPresets(synth, list) };
+		this.changed(\presets, synth);
+	}
+
+	prPresetList { |synth|
+		^this.presetsOf(synth).collect { |e, i|
+			this.presetValues(synth, i).put(\presetName, (e[\presetName] ? "preset %".format(i)).asString)
+		}.asArray
+	}
+
+	prSetPresets { |synth, list|
+		synth = synth.asSymbol;
+		SDGSynthPresets.write(synth, list);
+		this.prApplyOwnPresets(synth);
+		this.changed(\presets, synth);
+	}
+
+	// the controls a preset may set: not the ones every event sets itself
+	prPresetControls { |synth|
+		var desc = SynthDescLib.global.at(synth.asSymbol);
+		if(desc.isNil) { ^[] };
+		^desc.controls.collect { |c| c.name.asSymbol }
+			.reject { |key| #[\out, \sustain, \pan, \freq, \accelerate, '?'].includes(key) }
+	}
+
+	// this machine's list into the sound library, if there is one: each preset on
+	// top of what the file's first one holds besides controls (instrument, note,
+	// a drum voice's unitDuration)
+	prApplyOwnPresets { |synth|
+		var list = SDGSynthPresets.read(synth), base, controls;
+		if(list.isNil) { ^this };
+		base = (filePresets[synth] ? [])[0] ?? { (instrument: synth, note: 0) };
+		controls = this.prPresetControls(synth);
+		this.prRegisterPresets(synth, list.collect { |p|
+			var event = base.copy;
+			controls.do { |key| event.removeAt(key) };
+			event.removeAt(\presetName);
+			event.putAll(p)
+		});
+	}
+
+	prRegisterPresets { |synth, events|
+		dirt.soundLibrary.freeSynths(synth);
+		events.do { |event| dirt.soundLibrary.addSynth(synth, event.copy, appendToExisting: true) };
 	}
 
 	// the controls of what a kind's name plays, without those every synth of that
@@ -569,7 +700,7 @@ SuperDirtGUI {
 	}
 
 	// the same for an effect no orbit gets by itself: it waits in the add menu of the
-	// window's effects tab (or addTrack, setReturnEffect) and costs nothing until
+	// window's effects tab (or addTrack) and costs nothing until
 	// then. It always runs, because an event need not carry any of its parameters:
 	// having been added is what switches it on. specs: param -> what asSpec takes,
 	// the range of its knob.
@@ -594,6 +725,42 @@ SuperDirtGUI {
 		^this.prSpecFor(name.asSymbol) !? { |spec|
 			spec[\specs] !? { |specs| specs[param.asSymbol] !? (_.asSpec) }
 		}
+	}
+
+	// the knob range of a parameter of a running effect: the window's own table,
+	// then what the effect's file gave, then twice its SynthDef default
+	effectParamSpecOf { |fx, param|
+		^SDGWindow.paramSpecs[param] ?? { this.effectParamSpec(fx.name, param) } ?? {
+			var default = this.effectParamDefault(fx, param) ? 0;
+			ControlSpec(0, max(default * 2, 1), \lin, 0, default)
+		}
+	}
+
+	effectParamDefault { |fx, param|
+		var desc = SynthDescLib.at((fx.name.asString ++ dirt.numChannels).asSymbol);
+		var ctl = desc !? { desc.controlDict[param] };
+		var default = ctl !? { ctl.defaultValue };
+		^if(default.isNumber) { default } { nil }
+	}
+
+	// what the knob shows: the default event's, else what the effect last got
+	effectParamValue { |orbit, fx, param|
+		var v = orbit.defaultParentEvent[param];
+		if(v.isNumber.not) { v = fx.state[param] };
+		if(v.isNumber.not) { v = this.effectParamDefault(fx, param) };
+		if(v.isNumber.not) { v = this.effectParamSpecOf(fx, param).default };
+		^v
+	}
+
+	// a parameter of an effect of an orbit, or of a return (which answers enough of
+	// an orbit): into the default event, so every event carries it, and onto the synth.
+	// Notifies \param, orbit, param
+	setEffectParam { |orbit, fx, param, value|
+		orbit.set(param, value);
+		fx.set(orbit.defaultParentEvent);
+		// its track's send and return may be asleep: an effect started by a knob is heard too
+		this.wakeOrbit(orbit);
+		this.changed(\param, orbit, param);
 	}
 
 	// every orbit gets its own instance of each registered effect, first in the
@@ -637,6 +804,7 @@ SuperDirtGUI {
 		};
 		// the fresh fader synths start at 1: push the mixer's state onto them
 		this.prInitMixer;
+		this.prEnsureMaster;
 		this.applyAmps;
 	}
 
@@ -696,16 +864,29 @@ SuperDirtGUI {
 		this.applyAmps;
 	}
 
-	// what the fader effect of orbit i is told: 0 when muted or another orbit is soloed
+	// what the fader effect of orbit i is told: 0 when muted or something else is soloed
 	effectiveAmp { |i|
 		if(faderValues.isNil) { ^1.0 };
 		if(muteStates[i]) { ^0.0 };
-		if(this.prAnySolo and: { soloStates[i].not }) { ^0.0 };
+		if(this.prAnySolo and: { this.prOrbitSoloed(i).not }) { ^0.0 };
 		^faderValues[i]
 	}
 
-	// a soloed return silences the orbits' direct sound too, not what they send it
-	prAnySolo { ^soloStates.includes(true) or: { returns.any(_.soloed) } }
+	// a soloed return silences the orbits' and groups' direct sound too, not what they send it
+	prAnySolo { ^this.prAnyTrackSolo or: { returns.any(_.soloed) } }
+
+	// an orbit or a group soloed: these cut the sends of the others
+	prAnyTrackSolo { ^(soloStates ? []).includes(true) or: { groups.any(_.soloed) } }
+
+	// soloed itself, or in a soloed group
+	prOrbitSoloed { |i|
+		^(soloStates !? { soloStates[i] } ? false) or: { this.groupOf(i) !? (_.soloed) ? false }
+	}
+
+	// soloed itself, or one of its orbits is
+	prGroupSoloed { |group|
+		^group.soloed or: { soloStates.notNil and: { group.members.any { |i| soloStates[i] } } }
+	}
 
 	// written into the orbit's defaultParentEvent first, then pushed through the
 	// effect's change tracking - so the value the synth holds and the value every
@@ -770,9 +951,12 @@ SuperDirtGUI {
 		this.orderInserts(orbit);
 	}
 
+	// orbit i straight to a hardware bus, past its group and the master
+	setOutBus { |i, bus| this.setOrbitDest(i, \direct, bus) }
+
 	// DirtOrbit:outBus_ for orbit i: it rebuilds the orbit, so the effects are
 	// released the way that frees sleeping ones and the inserts put back in place
-	setOutBus { |i, bus|
+	prSetOrbitBus { |i, bus|
 		var orbit = dirt.orbits[i];
 		orbit.globalEffects.do { |fx| this.releaseEffect(fx) };
 		orbit.outBus = bus;
@@ -821,6 +1005,7 @@ SuperDirtGUI {
 	// The same on a track: place is \pre, before its effect, or \post, after it;
 	// index is among the inserts of that place.
 	addTrackInsert { |track, place, kind, index, plugin|
+		if(track.isKindOf(SDGBusTrack)) { ^this.addBusInsert(track, kind, index, plugin) };
 		place = place.asSymbol;
 		if(#[\pre, \post].includes(place).not) {
 			"SuperDirtGUI: a track's insert goes \\pre or \\post its effect, not %".format(place).warn;
@@ -829,8 +1014,14 @@ SuperDirtGUI {
 		^this.prAddInsert(track.orbitIndex, kind, index, plugin, track, place)
 	}
 
+	// An insert on a return, a group or the master (SDGBusTrack): one chain, index
+	// among its inserts, the end by default
+	addBusInsert { |track, kind, index, plugin|
+		^this.prAddInsert(nil, kind, index, plugin, track, \chain)
+	}
+
 	prAddInsert { |orbitIndex, kind, index, plugin, track, place|
-		var orbit, list, insert, count, onReturn = track.isKindOf(SDGReturn);
+		var orbit, list, insert, count, onReturn = track.isKindOf(SDGBusTrack);
 		kind = kind.asSymbol;
 		orbit = if(onReturn.not) { dirt.orbits !? { dirt.orbits[orbitIndex] } };
 		if(orbit.isNil and: { onReturn.not }) {
@@ -850,7 +1041,7 @@ SuperDirtGUI {
 		count = list.count { |x| x.kind == kind } + 1;
 		insert = SDGInsert(this, orbitIndex, kind,
 			if(onReturn) {
-				"% · %%".format(track.where, place, if(count > 1) { " · " ++ count } { "" })
+				"%%".format(track.where, if(count > 1) { " · " ++ count } { "" })
 			} {
 				"orbit %%%".format(orbitIndex,
 					track !? { " · % %".format(track.shortName, place) } ? "",
@@ -866,12 +1057,12 @@ SuperDirtGUI {
 			dirt.server.sync; // its def first
 			if(this.insertListOf(insert).includes(insert)) {
 				case
-				{ onReturn and: { insert.isVST } } { insert.prStart(this.returnHeads, \addAfter) }
+				{ onReturn and: { insert.isVST } } { insert.prStart(*track.startTarget) }
 				{ onReturn } { track.prPlay(insert.fx) }
 				{ insert.isVST } { insert.prStart(Group.basicNew(dirt.server, orbit.group), \addAfter) }
 				{ insert.fx.play(*this.prPlayArgs(orbit)) };
 				if(onReturn) {
-					this.orderReturns
+					this.orderBusses
 				} {
 					this.orderInserts(orbit);
 					this.wakeOrbit(orbit);
@@ -914,11 +1105,13 @@ SuperDirtGUI {
 
 	// a cmd-period frees every node, a VST insert's synth with its plugin.
 	// SuperDirt rebuilds the orbits on the same ServerTree, registered before
-	// this, so by now the chain is back and the VST inserts go into it again,
-	// each plugin with the state it last read back
+	// this (the orbits add themselves when they are made, and this is only
+	// registered once they exist), so by now the chain is back and the VST
+	// inserts go into it again, each plugin with the state it last read back,
+	// and the returns, groups and master are made again. Then \tree is notified.
 	prWatchTree {
 		treeFunc ?? {
-			treeFunc = { this.prRestartVSTInserts; this.prRestartReturns };
+			treeFunc = { this.prRestartVSTInserts; this.prRestartBusses; this.changed(\tree) };
 			ServerTree.add(treeFunc, dirt.server);
 		}
 	}
@@ -965,8 +1158,8 @@ SuperDirtGUI {
 		list = list.copy;
 		list.removeAt(from);
 		this.prStoreInserts(insert, list.insert(toIndex, insert));
-		if(insert.isOnReturn) {
-			this.orderReturns
+		if(insert.isOnBus) {
+			this.orderBusses
 		} {
 			this.prChainOrbit(insert.orbit);
 			this.orderInserts(insert.orbit);
@@ -1180,23 +1373,33 @@ SuperDirtGUI {
 		}
 	}
 
-	// ----- return tracks (see SDGReturn)
+	// ----- bus tracks: returns (SDGReturn), groups (SDGGroup), the master (SDGMaster)
 
-	// the group the returns run in, right after SuperDirt's, and the one in it where
-	// the heads run, before anything of any return
+	// The group they all run in, right after SuperDirt's, and in it, in order: the
+	// groups' synths, the returns' heads (before anything of any return), the
+	// returns' synths, the master's group
 	returnGroup { ^returnGroupID !? { Group.basicNew(dirt.server, returnGroupID) } }
 	returnHeads { ^returnHeadsID !? { Group.basicNew(dirt.server, returnHeadsID) } }
+	groupsGroup { ^groupsID !? { Group.basicNew(dirt.server, groupsID) } }
+	masterGroup { ^masterID !? { Group.basicNew(dirt.server, masterID) } }
 
 	prMakeReturnGroups {
 		returnGroupID = returnGroupID ?? { dirt.server.nextPermNodeID };
+		groupsID = groupsID ?? { dirt.server.nextPermNodeID };
 		returnHeadsID = returnHeadsID ?? { dirt.server.nextPermNodeID };
+		masterID = masterID ?? { dirt.server.nextPermNodeID };
 		dirt.server.sendBundle(nil,
 			['/error', -1], // they may be there already
 			['/g_new', returnGroupID, 3, dirt.group], // 3: after
-			['/g_new', returnHeadsID, 0, returnGroupID],
+			['/g_new', groupsID, 0, returnGroupID], // 0: at the head
+			['/g_new', returnHeadsID, 3, groupsID],
+			['/g_new', masterID, 1, returnGroupID], // 1: at the tail
 			['/error', -2]
 		);
 	}
+
+	// every bus track, in the order they run
+	busTracks { ^groups ++ returns ++ (master !? { [master] } ? []) }
 
 	returnAt { |letter|
 		letter = letter.asSymbol;
@@ -1204,8 +1407,8 @@ SuperDirtGUI {
 	}
 
 	// A return track, the next letter free unless one is asked for, with a send
-	// from every orbit and to and from every return, all at nothing. Nothing that
-	// plays restarts. Answers the SDGReturn, or nil.
+	// from every orbit and group, and to and from every return, all at nothing.
+	// Nothing that plays restarts. Answers the SDGReturn, or nil.
 	addReturn { |letter|
 		var ret;
 		if(dirt.orbits.isNil) {
@@ -1221,12 +1424,14 @@ SuperDirtGUI {
 		};
 		this.prWatchTree;
 		this.prMakeReturnGroups;
+		this.prEnsureRouting;
 		ret = SDGReturn(this, letter);
 		returns = returns.add(ret).sort { |a, b| a.letter.asString < b.letter.asString };
 		returns.do { |other|
 			ret.prAddTarget(other);
 			other.prAddTarget(ret);
 		};
+		groups.do { |group| group.prAddTarget(ret) };
 		ret.prStart;
 		dirt.orbits.do { |orbit|
 			var send = ret.sendFxs[orbit.orbitIndex];
@@ -1235,49 +1440,28 @@ SuperDirtGUI {
 			this.orderInserts(orbit);
 			send.resume;
 		};
-		this.orderReturns;
+		this.orderBusses;
 		this.prStartKeepAwake;
 		this.applyAmps;
 		this.changed(\returns);
 		^ret
 	}
 
-	// A return out, with its inserts, its effect, every send to it and from it.
+	// A return out, with its inserts, every send to it and from it.
 	removeReturn { |ret|
 		if(returns.includes(ret).not) { ^this };
 		ret.inserts.do { |insert| this.removeInsert(insert) };
-		ret.fx !? { |fx| this.releaseEffect(fx) };
 		returns = returns.reject { |x| x === ret };
-		returns.do { |other| other.prRemoveTarget(ret) };
+		(returns ++ groups).do { |other| other.prRemoveTarget(ret) };
 		(dirt.orbits ? []).do { |orbit|
 			var send = ret.sendFxs[orbit.orbitIndex];
 			this.releaseEffect(send);
 			orbit.globalEffects = orbit.globalEffects.reject { |fx| fx === send };
 		};
 		ret.prFree;
-		if(returns.isEmpty) { this.prStopKeepAwake };
+		this.prStopKeepAwakeIfIdle;
 		this.applyAmps;
 		this.changed(\returns);
-	}
-
-	// A global effect on a return, in the place of the one it has, or none with a
-	// nil name; the tail of the old one rings on the bus as it fades. Starts at
-	// values that are heard (SDGReturn.wetDefaults). Answers the GlobalDirtEffect,
-	// or nil when there is none now.
-	setReturnEffect { |ret, name|
-		var fx, old = ret.fx;
-		name = name !? (_.asSymbol);
-		if(name.notNil and: { old.notNil } and: { old.name == name }) { ^old };
-		if(name.notNil) {
-			fx = this.prNewEffect(ret, name);
-			if(fx.isNil) { ^nil };
-		};
-		old !? { this.releaseEffect(old) };
-		ret.prAttach(fx);
-		fx !? { ret.prPlay(fx) };
-		this.orderReturns;
-		this.changed(\returns);
-		^fx
 	}
 
 	// orbit i's send to a return, 0 to 1. ret may be its letter.
@@ -1304,6 +1488,16 @@ SuperDirtGUI {
 		}
 	}
 
+	// a group's send to a return, 0 to 1. group may be its name, ret its letter
+	setGroupSend { |group, ret, amp|
+		group = this.prGroupFrom(group);
+		ret = this.prReturnFrom(ret);
+		if(group.notNil and: { ret.notNil }) {
+			group.prReturnLevel_(ret, amp);
+			this.applyAmps;
+		}
+	}
+
 	returnFeedback_ { |bool|
 		returnFeedback = bool.asBoolean;
 		this.applyAmps;
@@ -1319,13 +1513,13 @@ SuperDirtGUI {
 
 	// Ableton's rules: a return's Pre/Post says whether the source's fader counts for
 	// what goes into it; a mute silences a source's sends too; solo keeps what a
-	// soloed orbit sends audible on the returns, and a soloed return hears what
-	// every orbit sends it. Only orbit solos cut other orbits' sends.
+	// soloed orbit or group sends audible on the returns, and a soloed return hears
+	// what every orbit sends it. Only orbit and group solos cut the others' sends.
 	prSendAmp { |i, ret|
 		var level = ret.orbitLevel(i), fader = (faderValues !? { faderValues[i] }) ? 1.0;
 		if(level <= 0) { ^0.0 };
 		if(muteStates.notNil and: { muteStates[i] }) { ^0.0 };
-		if(soloStates.notNil and: { soloStates.includes(true) } and: { soloStates[i].not }) { ^0.0 };
+		if(this.prAnyTrackSolo and: { this.prOrbitSoloed(i).not }) { ^0.0 };
 		^level * if(ret.preFader) { 1.0 } { fader }
 	}
 
@@ -1340,45 +1534,70 @@ SuperDirtGUI {
 		^from.returnLevel(to) * if(to.preFader) { 1.0 } { from.level }
 	}
 
+	prGroupAmp { |group|
+		if(group.muted) { ^0.0 };
+		if(this.prAnySolo and: { this.prGroupSoloed(group).not }) { ^0.0 };
+		^group.level
+	}
+
+	prGroupLinkAmp { |group, ret|
+		var level = group.returnLevel(ret);
+		if(level <= 0 or: { group.muted }) { ^0.0 };
+		if(this.prAnyTrackSolo and: { this.prGroupSoloed(group).not }) { ^0.0 };
+		^level * if(ret.preFader) { 1.0 } { group.level }
+	}
+
 	prApplyReturnLevels {
 		returns.do { |ret|
 			ret.prAmp_(this.prReturnAmp(ret));
 			dirt.orbits.size.do { |i| ret.prSendAmp_(i, this.prSendAmp(i, ret)) };
 			ret.targets.do { |to| ret.prLinkAmp_(to, this.prLinkAmp(ret, to)) };
-		}
+		};
+		groups.do { |group|
+			group.prAmp_(this.prGroupAmp(group));
+			group.targets.do { |to| group.prLinkAmp_(to, this.prGroupLinkAmp(group, to)) };
+		};
+		master !? { master.prAmp_(master.level) };
 	}
 
-	// every node of the returns walked into the order of their chains, after the heads
-	orderReturns {
-		var prev = this.returnHeads;
-		prev !? {
-			returns.collect(_.nodes).flatten(1).do { |node|
-				node.moveAfter(prev);
+	// every node of the bus tracks walked into the order of their chains: the groups'
+	// in their group, the returns' after the heads, the master's in its group
+	orderBusses {
+		var walk = { |nodes, first|
+			var prev;
+			nodes.do { |node|
+				if(prev.isNil) { first.value(node) } { node.moveAfter(prev) };
 				prev = node;
 			}
-		}
+		};
+		if(returnGroupID.isNil) { ^this };
+		walk.(groups.collect(_.nodes).flatten(1), { |node| node.moveToHead(this.groupsGroup) });
+		walk.(returns.collect(_.nodes).flatten(1), { |node| node.moveAfter(this.returnHeads) });
+		master !? { walk.(master.nodes, { |node| node.moveToHead(this.masterGroup) }) };
 	}
 
+	orderReturns { this.orderBusses }
+
 	// after a cmd-period: SuperDirt has made its orbits again, sends in them
-	prRestartReturns {
-		if(returns.notEmpty) {
+	prRestartBusses {
+		if(this.busTracks.notEmpty) {
 			this.prMakeReturnGroups;
-			returns.do(_.prStart);
-			this.orderReturns;
+			this.busTracks.do(_.prStart);
+			this.orderBusses;
 			this.prStopKeepAwake;
 			this.prStartKeepAwake;
 			this.prApplyReturnLevels;
 		}
 	}
 
-	// what no event wakes: see SDGReturn. A cmd-period clears the clock, and
-	// prRestartReturns starts this again
+	// what no event wakes: see SDGBusTrack. A cmd-period clears the clock, and
+	// prRestartBusses starts this again
 	prStartKeepAwake {
 		keepAwake ?? {
 			keepAwake = Routine {
 				loop {
 					1.wait;
-					if(dirt.server.serverRunning) { returns.do(_.prWake) };
+					if(dirt.server.serverRunning) { this.busTracks.do(_.prWake) };
 				}
 			}.play(SystemClock)
 		}
@@ -1389,22 +1608,263 @@ SuperDirtGUI {
 		keepAwake = nil;
 	}
 
-	// after an effect file was read again: on a return it starts again on its new
-	// SynthDef and parameters too
-	prRestartReturnEffects { |names|
-		returns.do { |ret|
-			ret.fx !? { |fx|
-				if(names.isNil or: { names.includes(fx.name) }) {
-					this.prSpecFor(fx.name) !? { |spec|
-						fx.paramNames = spec[\paramNames];
-						fx.alwaysRun = spec[\alwaysRun];
-					};
-					this.releaseEffect(fx);
-					ret.prPlay(fx);
-				}
+	prStopKeepAwakeIfIdle { if(this.busTracks.isEmpty) { this.prStopKeepAwake } }
+
+	// ----- routing: where an orbit's monitor writes
+
+	// \master, \direct (to its hardware bus) or a group's name
+	orbitDest { |i| ^orbitDests !? { orbitDests[i] } ? \master }
+
+	// the hardware bus orbit i writes to when it goes \direct
+	directBusOf { |i| ^directBusses !? { directBusses[i] } ? hardwareOut ? 0 }
+
+	// Orbit i into the master, a group (its name, or the SDGGroup) or straight to a
+	// hardware bus (\direct, and bus its index; without one, the one it had). The
+	// orbit is rebuilt when its bus changes: SuperDirt plays its effects again.
+	setOrbitDest { |i, dest, bus|
+		if(dirt.orbits.isNil or: { i.isNil } or: { i >= dirt.orbits.size }) { ^this };
+		this.prEnsureRouting;
+		dest = if(dest.isKindOf(SDGGroup)) { dest.name } { (dest ? \master).asSymbol };
+		if(#[\master, \direct].includes(dest).not and: { this.groupAt(dest).isNil }) {
+			"SuperDirtGUI: no group % for orbit %".format(dest, i).warn;
+			^this
+		};
+		orbitDests[i] = dest;
+		bus !? { directBusses[i] = (bus.tryPerform(\index) ? bus).asInteger.max(0) };
+		this.prRouteOrbit(i);
+		this.applyAmps;
+		this.changed(\returns);
+	}
+
+	// the bus a route comes to now: a group's or the master's in bus, or the hardware
+	prDestIndex { |dest, bus|
+		var group;
+		bus = bus ? hardwareOut ? 0;
+		if(dest == \direct) { ^bus };
+		group = if(dest != \master) { this.groupAt(dest) };
+		if(group.notNil) { ^group.inBus.index };
+		^master !? { master.inBus.index } ? bus
+	}
+
+	prRouteOrbit { |i|
+		var orbit = dirt.orbits[i];
+		var index = this.prDestIndex(this.orbitDest(i), this.directBusOf(i));
+		var now = (orbit.outBus.tryPerform(\index) ? orbit.outBus ? 0).asInteger;
+		if(index != now) { this.prSetOrbitBus(i, index) };
+	}
+
+	// what each orbit wrote to when the add-on first saw it: one that wrote where
+	// orbit 0 did goes to the master, any other keeps its hardware bus
+	prEnsureRouting {
+		var outs;
+		if(dirt.orbits.isNil) { ^this };
+		if(orbitDests.notNil and: { orbitDests.size == dirt.orbits.size }) { ^this };
+		outs = dirt.orbits.collect { |orbit| (orbit.outBus.tryPerform(\index) ? orbit.outBus ? 0).asInteger };
+		hardwareOut = hardwareOut ? outs[0];
+		orbitDests = outs.collect { |index| if(index == hardwareOut) { \master } { \direct } };
+		directBusses = outs;
+	}
+
+	// the master made once the orbits exist, and every orbit routed
+	prEnsureMaster {
+		this.prEnsureRouting;
+		if(useMaster and: { master.isNil }) { this.addMaster } {
+			dirt.orbits.size.do { |i| this.prRouteOrbit(i) }
+		};
+	}
+
+	// The master track, if there is none: everything that goes \master writes to it
+	// from now on, and it writes where they wrote. Answers the SDGMaster.
+	addMaster {
+		if(master.notNil) { ^master };
+		if(dirt.orbits.isNil) {
+			"SuperDirtGUI: no orbits yet - call ~dirt.start first, then addMaster".warn;
+			^nil
+		};
+		this.prWatchTree;
+		this.prMakeReturnGroups;
+		this.prEnsureRouting;
+		master = SDGMaster(this);
+		master.prStart;
+		this.orderBusses;
+		this.prStartKeepAwake;
+		this.prRerouteAll;
+		this.applyAmps;
+		this.changed(\returns);
+		^master
+	}
+
+	// The master out, with its inserts: everything that went to it writes to the
+	// hardware bus it wrote to.
+	removeMaster {
+		var old = master;
+		if(old.isNil) { ^this };
+		old.inserts.do { |insert| this.removeInsert(insert) };
+		master = nil;
+		this.prRerouteAll;
+		old.prFree;
+		this.prStopKeepAwakeIfIdle;
+		this.changed(\returns);
+	}
+
+	// every orbit and bus track to the bus its route comes to now
+	prRerouteAll {
+		(dirt.orbits ? []).size.do { |i| this.prRouteOrbit(i) };
+		(groups ++ returns).do(_.prUpdateOut);
+	}
+
+	groupAt { |name|
+		name = name.asSymbol;
+		^groups.detect { |group| group.name == name }
+	}
+
+	prGroupFrom { |group|
+		^if(group.isKindOf(SDGGroup)) { group } { group !? { this.groupAt(group) } }
+	}
+
+	// the group orbit i writes to, or nil
+	groupOf { |i|
+		var dest = this.orbitDest(i);
+		^if(#[\master, \direct].includes(dest)) { nil } { this.groupAt(dest) }
+	}
+
+	// the orbits that write to a group, by index
+	membersOf { |group|
+		var name = this.prGroupFrom(group) !? (_.name);
+		^(dirt.orbits ? []).size.collect { |i| i }.select { |i| this.orbitDest(i) == name }
+	}
+
+	// A group track, \g1, \g2 ... unless a name is asked for, with orbits in it (their
+	// indices). Answers the SDGGroup, or nil.
+	addGroup { |orbitIndices, name|
+		var group;
+		if(dirt.orbits.isNil) {
+			"SuperDirtGUI: no orbits yet - call ~dirt.start first, then addGroup".warn;
+			^nil
+		};
+		name = name !? (_.asSymbol) ?? {
+			(1..99).detect { |k| this.groupAt("g" ++ k).isNil } !? { |k| ("g" ++ k).asSymbol }
+		};
+		if(name.isNil or: { this.groupAt(name).notNil } or: { #[\master, \direct].includes(name) }) {
+			"SuperDirtGUI: no group % - there is one".format(name).warn;
+			^nil
+		};
+		this.prWatchTree;
+		this.prMakeReturnGroups;
+		this.prEnsureRouting;
+		group = SDGGroup(this, name);
+		groups = groups.add(group).sort { |a, b| a.name.asString.size < b.name.asString.size
+			or: { a.name.asString.size == b.name.asString.size and: { a.name.asString < b.name.asString } } };
+		returns.do { |ret| group.prAddTarget(ret) };
+		group.prStart;
+		this.orderBusses;
+		this.prStartKeepAwake;
+		orbitIndices.asArray.do { |i| if(i < dirt.orbits.size) { orbitDests[i] = name; this.prRouteOrbit(i) } };
+		this.applyAmps;
+		this.changed(\returns);
+		^group
+	}
+
+	// A group out, with its inserts and sends: its orbits go to the master.
+	removeGroup { |group|
+		group = this.prGroupFrom(group);
+		if(group.isNil or: { groups.includes(group).not }) { ^this };
+		group.inserts.do { |insert| this.removeInsert(insert) };
+		groups = groups.reject { |x| x === group };
+		dirt.orbits.size.do { |i|
+			if(orbitDests[i] == group.name) {
+				orbitDests[i] = \master;
+				this.prRouteOrbit(i);
 			}
 		};
-		this.orderReturns;
+		group.prFree;
+		this.prStopKeepAwakeIfIdle;
+		this.applyAmps;
+		this.changed(\returns);
+	}
+
+	// ----- copy and paste
+
+	// Inserts kept, settings and all, to paste on any orbit, track, return, group or
+	// the master. A plugin's state is read back now, and lands a moment later.
+	copyInserts { |list|
+		insertClipboard = this.prInsertData(list);
+		this.changed(\clipboard);
+		^insertClipboard
+	}
+
+	prInsertData { |list|
+		^list.asArray.collect { |insert|
+			var data = insert.sessionData;
+			if(insert.isVST) { insert.rememberState({ |bytes| bytes !? { data[\state] = bytes } }) };
+			data
+		}
+	}
+
+	// What copyInserts kept, as new inserts: on orbit i, or on a track and place
+	// (\pre, \post; any for a bus track), from index on, the end by default.
+	// Answers the new SDGInserts.
+	pasteInserts { |orbitIndex, track, place, index|
+		^this.prPasteInsertData(insertClipboard ? [], orbitIndex, track, place, index)
+	}
+
+	prPasteInsertData { |list, orbitIndex, track, place, index|
+		^list.collect { |data, k|
+			var plugin, insert, at = index !? { index + k };
+			data = data.deepCopy;
+			if(data[\kind] == \vst) {
+				plugin = data[\path] !? { |path| if(File.exists(path)) { path } } ?? { data[\plugin] }
+			};
+			insert = if(track.notNil) {
+				this.addTrackInsert(track, place ? \post, data[\kind], at, plugin)
+			} {
+				this.addInsert(orbitIndex, data[\kind], at, plugin)
+			};
+			insert !? { insert.prRestore(data, data[\state]) };
+			insert
+		}.reject(_.isNil)
+	}
+
+	// An effect track of an orbit kept: its effect, the parameters the window set,
+	// its level, its inserts.
+	copyTrack { |track|
+		var orbit = track.orbit, params = ();
+		track.fx !? { |fx|
+			fx.paramNames.asArray.do { |param|
+				var value = orbit.defaultParentEvent[param];
+				if(value.isNumber) { params[param] = value }
+			}
+		};
+		trackClipboard = (
+			name: track.name,
+			level: track.level,
+			active: track.fx !? (_.active) ? true,
+			params: params,
+			pre: this.prInsertData(track.pre),
+			post: this.prInsertData(track.post)
+		);
+		this.changed(\clipboard);
+		^trackClipboard
+	}
+
+	// what copyTrack kept, as a new track of orbit i. Answers the SDGTrack, or nil
+	// when there is none, or the orbit has that effect already.
+	pasteTrack { |orbitIndex|
+		var data = trackClipboard, track, orbit;
+		if(data.isNil) { ^nil };
+		track = this.addTrack(orbitIndex, data[\name]);
+		if(track.isNil) { ^nil };
+		orbit = track.orbit;
+		track.level = data[\level] ? 1;
+		data[\params].keysValuesDo { |key, value| orbit.set(key, value) };
+		track.fx !? { |fx|
+			fx.set(orbit.defaultParentEvent);
+			if(data[\active] == false) { fx.active_(false) };
+		};
+		this.prPasteInsertData(data[\pre] ? [], orbitIndex, track, \pre);
+		this.prPasteInsertData(data[\post] ? [], orbitIndex, track, \post);
+		this.wakeOrbit(orbit);
+		^track
 	}
 
 	prEnsureInsertDef { |kind|
@@ -1426,7 +1886,16 @@ SuperDirtGUI {
 	// a folder can be loaded again for what is new in it. goes to the library's
 	// loadSoundFilePaths because its loadSoundFiles only looks at subfolders.
 	// Answers the names of the banks that got files, in order.
-	loadSamples { |folderPath|
+	// the banks rendered from the drum voices (samples/, see samples/render.scd), so
+	// s "sdgbd:1" works as soon as the loader is made. A second loader finds them loaded
+	// and says nothing. SuperDirtGUI.loadOwnSamples = false before SuperDirtGUI(~dirt) skips it
+	prLoadOwnSamples {
+		var folder = path +/+ "samples";
+		if(loadOwnSamples.not or: { File.exists(folder).not }) { ^this };
+		this.loadSamples(folder, false)
+	}
+
+	loadSamples { |folderPath, warnEmpty = true|
 		var lib = dirt.soundLibrary, root = folderPath.standardizePath.withoutTrailingSlash;
 		var entries = this.class.prFolderEntries(root);
 		var isFolder = { |p| p.endsWith(Platform.pathSeparator.asString) };
@@ -1441,7 +1910,7 @@ SuperDirtGUI {
 			if(before > 0) { added = added + before; names = names.add(name) };
 		};
 		if(names.isEmpty) {
-			"SuperDirtGUI: no new sound files in % or its subfolders".format(root).warn;
+			if(warnEmpty) { "SuperDirtGUI: no new sound files in % or its subfolders".format(root).warn };
 			^names
 		};
 		"SuperDirtGUI: % new samples in %\n".postf(added, names.join(" "));
@@ -1640,6 +2109,14 @@ SuperDirtGUI {
 
 	sync { ^sync ?? { sync = SDGSync(this) } }
 
+	// ----- what Tidal sends (see SDGTidalLog): every /dirt/play as a line of text
+
+	tidalLog { ^tidalLog ?? { tidalLog = SDGTidalLog(this) } }
+
+	// ----- controllers (see SDGMidi): Modality's MKtls mapped onto the mixer, and Tidal's cF
+
+	midi { ^midi ?? { midi = SDGMidi(this) } }
+
 	// "percussive.short" or [\percussive, \short] -> [\percussive, \short]: tidal's
 	// strings take letters, digits and . - _ : and a space would make two events
 	*splitTags { |value|
@@ -1733,13 +2210,20 @@ SuperDirtGUI {
 	// window. synthdefs stay on the server; they do no harm and tidal may still
 	// be using them
 	free {
+		// the groups' orbits go to the master, and the master's back to the hardware
+		groups.copy.do { |group| this.removeGroup(group) };
 		returns.copy.do { |ret| this.removeReturn(ret) };
-		// after the last of the returns' own frees
+		this.removeMaster;
+		orbitDests = nil;
+		// after the last of the bus tracks' own frees
 		returnGroupID !? { |id| SystemClock.sched(0.5, { dirt.server.sendMsg('/n_free', id); nil }) };
 		returnGroupID = nil;
 		returnHeadsID = nil;
+		groupsID = nil;
+		masterID = nil;
 		inserts.keys.asArray.do { |i| this.removeInserts(i) };
 		treeFunc !? { ServerTree.remove(treeFunc, dirt.server); treeFunc = nil };
+		CmdPeriod.remove(this);
 		this.prRemoveModules;
 		this.prRemoveSamplePlayers;
 		this.prRemoveGlobalEffects;
@@ -1747,6 +2231,10 @@ SuperDirtGUI {
 		tags !? (_.stop);
 		sync !? (_.free);
 		sync = nil;
+		tidalLog !? (_.free);
+		tidalLog = nil;
+		midi !? (_.free);
+		midi = nil;
 		silentBus !? { silentBus.free; silentBus = nil };
 		this.prFreeTapBusses;
 		(dirt.orbits ? []).do { |orbit|
@@ -1802,6 +2290,11 @@ SuperDirtGUI {
 			fileRecords[file] = (kind: kind, names: before, hash: text.hash, failed: true);
 			^false
 		};
+		// a synth playing this machine's presets plays its file's again while the file
+		// runs, so a file that registers none is not taken to have registered those
+		if(kind == \synths) {
+			before.do { |name| if(SDGSynthPresets.exists(name)) { filePresets[name] !? { |list| this.prRegisterPresets(name, list) } } }
+		};
 		snapshot = this.prSnapshot(kind);
 		outer = loadingNames;
 		loadingNames = [];
@@ -1810,10 +2303,17 @@ SuperDirtGUI {
 		loadingNames = outer;
 		if(error.notNil) {
 			"SuperDirtGUI: % failed to load - %%".format(file.basename, error.errorString, keep).warn;
+			if(kind == \synths) { before.do { |name| this.prApplyOwnPresets(name) } };
 			fileRecords[file] = (kind: kind, names: this.prUnion(before, names), hash: text.hash, failed: true);
 			^false
 		};
 		fileRecords[file] = (kind: kind, names: names, hash: text.hash, failed: false);
+		if(kind == \synths) {
+			names.do { |name|
+				filePresets[name] = this.presetsOf(name).collect(_.copy);
+				this.prApplyOwnPresets(name);
+			}
+		};
 		gone = before.reject { |name| names.includes(name) or: { this.prClaimedElsewhere(kind, name, file) } };
 		this.prTakeOut(kind, gone);
 		if(verbose) { "SuperDirtGUI: loaded %".format(file.basename).postln };
@@ -1915,7 +2415,6 @@ SuperDirtGUI {
 
 	prTakeOutGlobalEffects { |names|
 		globalEffectSpecs = globalEffectSpecs.reject { |spec| names.includes(spec[\name]) };
-		returns.do { |ret| if(names.includes(ret.name)) { this.setReturnEffect(ret, nil) } };
 		(dirt.orbits ? []).do { |orbit|
 			this.tracksOf(orbit.orbitIndex).select { |track| names.includes(track.name) }.do { |track|
 				this.removeTrack(track)
@@ -1960,7 +2459,6 @@ SuperDirtGUI {
 				this.orderInserts(orbit);
 				this.changed(\tracks, orbit.orbitIndex);
 			};
-			this.prRestartReturnEffects(names.select { |name| before.includes(name) });
 		}
 	}
 

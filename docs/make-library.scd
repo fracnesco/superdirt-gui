@@ -60,7 +60,7 @@ var readHeader = { |file|
 		{ para.any(isExampleLine) } { tidal = tidal ++ para.select(isExampleLine) }
 		{ text.beginsWith("not in any orbit") or: { text.beginsWith("new... in the window") } } { }
 		{ text.find("examples/tidal/").notNil } {
-			played = text.findRegexp("examples/tidal/[-a-z0-9]+\\.tidal")[0][1]
+			played = text.findRegexp("examples/tidal/(lessons/)?[-a-z0-9]+\\.tidal")[0][1]
 		}
 		{
 			if(i == 0) { text = text.drop((text.find(".scd - ") ? -7) + 7) };
@@ -205,7 +205,9 @@ s.waitForBoot {
 	section.(\modules, "Modules",
 		"An effect on one event: it runs behind the sound, in the event's own group, on every event whose parameter is set.",
 		{ |name| name.asString },
-		{ |name| name.asString ++ numChannels }
+		// a module with variants builds <name>_<variant>_<channels> (sdgbody: one per object): show the first
+		{ |name| var plain = name.asString ++ numChannels;
+			if(SynthDescLib.global.at(plain.asSymbol).notNil) { plain } { "%_0_%".format(name, numChannels) } }
 	);
 	section.(\players, "Sample players",
 		"Each builds one SynthDef per sample width, `<name>_1_%` and `<name>_2_%`, so a mono or a stereo file both work; the channels shown are the stereo one's. An event's own `begin`, `end`, `speed`, `pan` and `n` keep their meaning unless a file says otherwise. How one gets chosen is in [sample-players.md](sample-players.md).".format(numChannels, numChannels),

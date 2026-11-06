@@ -13,14 +13,24 @@
 //              (via SuperDirt's dirt_rms global effect, 20 replies a
 //              second), an output fader with mute and solo (via the orbitAmp
 //              control of the add-on's global_sdgfader effect), the limiter
-//              mode of the monitor, and the orbit's output bus - as a number
-//              box, and as a dropdown of BusManager names when that quark is
-//              installed. A send knob per return track, over the meters.
-//   returns    after the orbits, a strip per return track (SDGReturn): its effect,
-//              its inserts, sends to the returns, fader, mute, solo, pre/post of
-//              what is sent into it, limiter and output. + return adds one, feedback
-//              lets returns send to each other. Its name shows its parameters on
-//              the effects tab.
+//              mode of the monitor, and where the orbit goes: the master, a
+//              group, or direct to the hardware bus in the box beside it (and a
+//              dropdown of BusManager names when that quark is installed). A send
+//              knob per return track, over the meters. A right click on its name:
+//              fold it, put it in a group, copy and paste inserts.
+//   groups     after the orbits, a strip per group track (SDGGroup): the orbits
+//              that go into it summed, its effects (inserts), sends to the
+//              returns, fader, mute, solo, limiter and output. + group makes one
+//              with the selected orbit in it.
+//   returns    on the right, as in Ableton, a strip per return track (SDGReturn):
+//              its effects (inserts), sends to the returns, fader, mute, solo,
+//              pre/post of what is sent into it, limiter and output. + return adds
+//              one, feedback lets returns send to each other. Then the master
+//              (SDGMaster): everything that is not sent direct, its effects - a
+//              mastering chain - its fader and the hardware bus it writes to.
+//              Every strip folds thin with the arrow beside its name; an insert's
+//              right click copies it, or its whole chain, and + insert, + effect
+//              and the right click paste it onto any strip.
 //   effects    the global effects of the selected orbit as tracks, a strip
 //              each (SDGTrack): load another effect from its menu, switch it
 //              on and off, move it, take it out, inserts before and after the
@@ -39,11 +49,23 @@
 //              copy of the example, or of the one selected, under a name you
 //              give) and edit... (the file a name came from, as a document in
 //              the IDE); then reload, free and a bank loader, and at the bottom
-//              what the selected one does: its description and parameters
+//              what the selected one does: its description and parameters;
+//              for a synth, a preview under it - knobs, note, preset, play,
+//              and copy, which puts the settings on the clipboard as Tidal
 //
 // Along the top, sessions (SDGSession): a menu of the saved ones, load session
 // for the one it shows, save session... to keep the whole mixer under a name.
 // Choosing in the menu changes nothing until load session is pressed.
+//
+// midi learn (with the Modality toolkit): while it is on, a click on a fader,
+// mute, solo, send, track fader, effect knob or the explorer's play waits for
+// the next control moved on a controller, and maps it (SDGMidi). A blue ground
+// marks what can be mapped, an orange one what is waiting; a mapped control
+// shows blue (a knob's arc, a fader's handle, a button's letter). A right click
+// on any of them learns, edits, removes or posts its mapping. Knobs follow a
+// controller. The midi button opens SDGMidiWindow: controllers found and
+// connected, learn mode on and off, every mapping in depth; it is lit while
+// learn mode is on.
 //
 // The three panels on the right are tabs. A hint bar along the bottom says
 // what the pointer is over.
@@ -94,15 +116,17 @@ SDGWindow {
 
 	var <sdg, <dirt, <window, <hints;		// dirt is sdg.dirt, the SuperDirt
 	var <selectedOrbitIndex = 0, selectedEffectName;
-	var <selectedReturn;			// a return on show on the effects tab, in the orbit's place
-	var returnHolder, returnContent, <returnViews;	// the return strips: one Event of views per return
+	var <selectedBus;				// a return, group or the master on show on the effects tab, in the orbit's place
+	var groupHolder, groupContent, busScroll, busHolder, busContent;	// where the group strips and the returns and master go
+	var <busViews;					// the group, return and master strips: one Event of views each
+	var <collapsed;					// the names of the strips folded thin: "orbit 2", "return A", "group 1", "master"
 	var busManager;					// the BusManager class if installed, else nil
 	var <strips;					// one Event of views per orbit
 	var parentSnapshots;			// pristine defaultParentEvent values, for clearing parameters
 	var meterData, <meterStamps, rmsFunc, meterRoutine;
 	var <peakHolds;					// per orbit, the highest peak since a click on its readout
 	var <tab = 0, tabButtons, pages;
-	var effectHeader, trackScroll, trackCanvas, addMenu, addCandidates;
+	var effectHeader, trackScroll, trackCanvas, addMenu, addCandidates, addRow;
 	var <trackViews;				// one Event of views per track of the selected orbit
 	var trackMeterData, trackFunc;	// track id -> [stamp, numbers], and what fills it
 	var insertListHolder, insertRowsView, insertAddMenu, vstWindow;
@@ -112,6 +136,7 @@ SDGWindow {
 	var trigOrbitMenu, <trigNBox, <trigParams, trigSpecs, editBtn, revealBtn, menu;
 	var loadedLists, <loadedEntries, loadedKind, fileText, pathText, newDialog;
 	var notesView, <notesString;	// the description at the bottom of the modules tab, and what it says
+	var previewHolder, previewContent, <preview;	// the selected synth's preview under the notes, and its model
 	var watching = true;			// false once watching the folders failed
 	var refreshPending = false;
 	var librarySignature, libraryPoll;	// what the library looked like at the last refresh, and the routine that compares
@@ -122,6 +147,8 @@ SDGWindow {
 	var explorerColumns, sortKey = \name, sortAscending = true;
 	var tagBar, tagDialog, tagsRefreshPending = false;
 	var font, smallFont, boldFont;
+	var <midiViews, <midiLearning = false, learnBtn, midiPaintPending = false;	// what a controller can move, and learn mode
+	var <paramCells, paramRefreshPending = false;	// the knobs on show, to follow a controller
 
 	*initClass {
 		colBg = Color.grey(0.13);
@@ -229,7 +256,10 @@ SDGWindow {
 		peakHolds = 0.0 ! numOrbits;
 		trackMeterData = IdentityDictionary.new;
 		trackViews = [];
-		returnViews = [];
+		busViews = [];
+		collapsed = Set.new;
+		midiViews = [];
+		paramCells = List.new;
 		font = Font(Font.defaultSansFace, 11);
 		smallFont = Font(Font.defaultSansFace, 9);
 		boldFont = Font(Font.defaultSansFace, 12, true);
@@ -239,6 +269,7 @@ SDGWindow {
 			busManager.addDependant(this);
 		};
 		sdg.addDependant(this);
+		sdg.midi.addDependant(this);
 
 		this.makeWindow;
 		this.selectOrbit(0);
@@ -280,11 +311,29 @@ SDGWindow {
 				\loaded, { { this.prLoadedChanged(args) }.defer },
 				\inserts, { { this.prInsertsChanged(args[0]) }.defer },
 				\tracks, { { this.prTracksChanged(args[0]) }.defer },
-				\returns, { { this.prReturnsChanged }.defer },
+				\returns, { { this.prBussesChanged }.defer },
 				\trackLevel, { { if(this.isOpen) { this.refreshTrackLevels } }.defer },
+				\param, { this.prParamChanged },
 				\session, { { this.prSessionLoaded(args[0]) }.defer },
-				\sessions, { { if(this.isOpen) { this.prRefreshSessions(args[0]) } }.defer }
+				\sessions, { { if(this.isOpen) { this.prRefreshSessions(args[0]) } }.defer },
+				\presets, { { this.prPresetsChanged(args[0]) }.defer },
+				\cmdPeriod, {
+					// the flags now, the rest on the (cleared) AppClock
+					refreshPending = false; tagsRefreshPending = false;
+					paramRefreshPending = false; midiPaintPending = false;
+					{ this.prCmdPeriod }.defer
+				}
 			);
+		};
+		if(object === sdg.midi) {
+			switch(what,
+				\maps, { this.prMidiChanged },
+				\map, { this.prMidiChanged },
+				\learn, {
+					this.prMidiChanged;
+					args[0] !? { |m| { if(this.isOpen) { hints.note("% %  ->  %".format(m.ktl, m.element, m.target.label)) } }.defer }
+				}
+			)
 		};
 	}
 
@@ -384,7 +433,7 @@ SDGWindow {
 
 	makeWindow {
 		var visibleStrips = dirt.orbits.size.min(8);
-		var width = (visibleStrips * 96) + panelWidth.max(minPanelWidth) + 20;
+		var width = (visibleStrips * 96) + 190 + panelWidth.max(minPanelWidth) + 20;
 		window = Window("SuperDirtGUI", Rect(80, 60, width, 760)).background_(colBg);
 		if(GUI.id == \qt) { window.view.palette = QPalette.dark };
 		hints = SDGHintBar("hover over a control and this bar says what it does"
@@ -408,7 +457,7 @@ SDGWindow {
 		var info = StaticText().stringColor_(colDim).string_(
 			"% orbits · % channels · port %".format(
 				dirt.orbits.size, dirt.numChannels, dirt.port ? "-"));
-		var recBtn, saveBtn;
+		var recBtn, saveBtn, tidalBtn;
 		var busBtn = Button().fixedWidth_(110)
 			.states_([["bus manager", colText, colPanel]]);
 		busBtn.action = { busManager !? { busManager.gui } };
@@ -419,6 +468,20 @@ SDGWindow {
 		recBtn.action = { sdg.recorder };
 		recBtn.enabled = \BusRecorder.asClass.notNil;
 		hints.attach(recBtn, "the BusRecorder window - ready to write each orbit to a stereo file of its name, after its effects and fader");
+		tidalBtn = Button().fixedWidth_(90)
+			.states_([["from tidal", colText, colPanel]]);
+		tidalBtn.action = { sdg.tidalLog.gui };
+		hints.attach(tidalBtn, "a window with every event Tidal sends, as text: pattern, orbit, cycle, sound and parameters");
+		// one button for all of MIDI: it opens SDGMidiWindow (controllers, learn,
+		// mappings) and lights while learn mode is on
+		learnBtn = Button().fixedWidth_(64).states_([
+			["midi", colText, colPanel],
+			["midi", Color.black, colSel]
+		]);
+		learnBtn.action = { |b| b.value = midiLearning.binaryValue; sdg.midi.gui };
+		hints.attach(learnBtn, if(SDGMidi.isAvailable) {
+			"MIDI: find and connect a controller, midi learn, every mapping - lit while midi learn is on"
+		} { "MIDI: Tidal controls only - controllers need the Modality-toolkit quark" });
 		sessionMenu = PopUpMenu().fixedWidth_(150);
 		sessionLoadBtn = Button().fixedWidth_(86);
 		sessionLoadBtn.action = { this.loadSelectedSession };
@@ -428,7 +491,7 @@ SDGWindow {
 		hints.attach(sessionLoadBtn, "replace the mixer with the session in the menu: faders, tracks, parameters, inserts, VST states");
 		hints.attach(saveBtn, "keep the whole mixer under a name, every fader, parameter, insert and VST state");
 		this.prRefreshSessions;
-		^HLayout(title, info, nil, sessionMenu, sessionLoadBtn, saveBtn, busBtn, recBtn)
+		^HLayout(title, info, nil, sessionMenu, sessionLoadBtn, saveBtn, learnBtn, tidalBtn, busBtn, recBtn)
 	}
 
 	// ------------------------------------------------------------------ sessions
@@ -555,7 +618,8 @@ SDGWindow {
 	// plays, and its speed, amp and pan
 	sessionState {
 		^(tab: tab, orbit: selectedOrbitIndex, playOrbit: trigOrbitMenu.value ? 0, trig: trigParams.copy,
-			sortKey: sortKey, sortAscending: sortAscending, columns: explorerColumns.copy, panelWidth: this.panelWidth)
+			sortKey: sortKey, sortAscending: sortAscending, columns: explorerColumns.copy, panelWidth: this.panelWidth,
+			collapsed: collapsed.asArray.sort)
 	}
 
 	applySessionState { |state|
@@ -564,6 +628,9 @@ SDGWindow {
 		state[\playOrbit] !? { |v| trigOrbitMenu.value = v.clip(0, dirt.orbits.size - 1) };
 		state[\columns] !? { |v| this.explorerColumns = v };
 		state[\panelWidth] !? { |v| this.setPanelWidth(v) };
+		// a session from before folding had none folded
+		collapsed.copy.do { |key| this.setCollapsed(key, false) };
+		(state[\collapsed] ? []).do { |key| this.setCollapsed(key, true) };
 		state[\sortKey] !? { |v| this.sortBy(v, state[\sortAscending] ? true) };
 		state[\trig] !? { |values|
 			values.keysValuesDo { |key, value|
@@ -578,30 +645,40 @@ SDGWindow {
 
 	// -------------------------------------------------------------- orbit strips
 
+	// The orbits and their groups scroll, on the left; the returns and the master
+	// stay on the right, as in Ableton
 	makeStripArea {
 		// vertical as well: a strip with many inserts grows taller than the window
 		var scroll = ScrollView().autohidesScrollers_(true).hasBorder_(false).background_(colBg);
 		var canvas = View().background_(colBg);
 		strips = dirt.orbits.collect { |orbit, i| this.makeStrip(orbit, i) };
-		returnHolder = View().background_(colBg);
-		returnHolder.layout = HLayout().margins_(0).spacing_(0);
-		canvas.layout = HLayout(*(strips.collect(_[\view]) ++ [returnHolder, nil]))
+		groupHolder = View().background_(colBg);
+		groupHolder.layout = HLayout().margins_(0).spacing_(0);
+		canvas.layout = HLayout(*(strips.collect(_[\view]) ++ [groupHolder, nil]))
 			.margins_(0).spacing_(5);
 		scroll.canvas = canvas;
 		// one strip at least: the right panel may take the rest, and the strips scroll
 		scroll.minWidth_(96).minHeight_(400);
+		busScroll = ScrollView().autohidesScrollers_(true).hasBorder_(false).hasHorizontalScroller_(false)
+			.background_(colBg);
+		busHolder = View().background_(colBg);
+		busHolder.layout = HLayout().margins_(0).spacing_(0);
+		busScroll.canvas = busHolder;
 		strips.size.do { |i| this.rebuildStripInserts(i) };
-		this.prReturnsChanged;
-		^scroll
+		strips.do { |strip| this.prApplyCollapse(strip) };
+		this.prBussesChanged;
+		^View().layout_(HLayout([scroll, stretch: 1], busScroll).margins_(0).spacing_(5))
 	}
 
 	makeStrip { |orbit, i|
 		var ampSpec = paramSpecs[\orbitAmp];
+		var key = "orbit " ++ i;
 		var view = View().fixedWidth_(90).background_(colPanel);
 		var label = Button().fixedHeight_(22).states_([
 			["orbit " ++ i, colText, Color.grey(0.26)],
 			["orbit " ++ i, Color.black, colAccent]
 		]);
+		var fold = this.prFoldButton(key);
 		var insertHolder = View().layout_(VLayout().margins_(0).spacing_(0));
 		var sendHolder = View().layout_(VLayout().margins_(0).spacing_(0));
 		var addInsert = Button().fixedHeight_(18).font_(smallFont)
@@ -625,11 +702,15 @@ SDGWindow {
 			["S", Color.black, colAccent]
 		]);
 		var lim = PopUpMenu().fixedHeight_(20).items_(["raw", "limit", "clip"]);
-		var outBox = NumberBox().fixedHeight_(20).clipLo_(0).step_(1).decimals_(0);
-		var outLabel = StaticText().string_("out").stringColor_(colDim).fixedWidth_(24);
-		var outMenu, head;
+		var destMenu = PopUpMenu().fixedHeight_(20).font_(smallFont);
+		var outBox = NumberBox().fixedHeight_(20).fixedWidth_(28).clipLo_(0).step_(1).decimals_(0);
+		var outMenu, head, thin, strip;
 
 		label.action = { this.selectOrbit(i) };
+		label.mouseDownAction = { |v, x, y, mods, button|
+			if((button ? 0) == 1) { { this.prShowOrbitMenu(i) }.defer(0.05) };
+			nil
+		};
 		addInsert.action = { this.prShowAddInsertMenu(i) };
 		peak.action = { peakHolds[i] = 0.0; this.prShowPeak(i) };
 
@@ -638,14 +719,20 @@ SDGWindow {
 		fader.action = { |sl| sdg.setFader(i, ampSpec.map(sl.value)) };
 		mute.action = { |b| sdg.setMute(i, b.value == 1) };
 		solo.action = { |b| sdg.setSolo(i, b.value == 1) };
+		this.prMidiAttach(fader, [\fader, i]);
+		this.prMidiAttach(mute, [\mute, i]);
+		this.prMidiAttach(solo, [\solo, i]);
 
 		lim.value = (orbit.get(\limitertype) ? 1).asInteger.clip(0, 2);
 		lim.action = { |m| sdg.setOrbitParam(i, \limitertype, m.value) };
 
-		outBox.value = this.prOutIndex(orbit);
+		destMenu.action = { |m|
+			var dest = (strips[i][\destItems] ? [])[m.value];
+			// it rebuilds the strips' menus, this one too: not from inside its own action
+			dest !? { { sdg.setOrbitDest(i, dest) }.defer };
+		};
 		outBox.action = { |b|
-			this.prSetOutBus(orbit, b.value.asInteger.max(0));
-			this.refreshBusMenus;
+			{ sdg.setOrbitDest(i, \direct, b.value.asInteger.max(0)) }.defer;
 		};
 
 		if(busManager.notNil) {
@@ -655,15 +742,12 @@ SDGWindow {
 				var index;
 				if(m.value > 0 and: { names.size >= m.value }) {
 					index = busManager.index(names[m.value - 1]);
-					index !? {
-						this.prSetOutBus(orbit, index);
-						outBox.value = index;
-					};
+					index !? { { sdg.setOrbitDest(i, \direct, index) }.defer };
 				};
 			};
 		};
 
-		hints.attach(label, "orbit % - where d% plays; selects it for the effects tab, and the explorer plays into it".format(i, i + 1));
+		hints.attach(label, "orbit % - where d% plays; selects it for the effects tab, and the explorer plays into it - right click: group, copy, paste, fold".format(i, i + 1));
 		hints.attach(addInsert, "add an insert to orbit % - an eq, a compressor or an insight, after the ones above, before the fader".format(i));
 		hints.attach(meters, "peak and rms of each channel leaving the orbit, after its inserts and fader - a tick every 5 dB");
 		hints.attach(peak, "the highest peak since you last clicked here, in dB - red once it reached 0");
@@ -671,10 +755,11 @@ SDGWindow {
 		hints.attach(mute, "silence this orbit");
 		hints.attach(solo, "silence every other orbit");
 		hints.attach(lim, "how the monitor guards the output: nothing, a limiter, or a hard clip");
-		hints.attach([outLabel, outBox], "the hardware bus this orbit's monitor writes to");
-		outMenu !? { hints.attach(outMenu, "the same, by BusManager name") };
+		hints.attach(destMenu, "where this orbit goes: the master, a group, or direct to the hardware bus beside it");
+		hints.attach(outBox, "the hardware bus this orbit writes to when it goes direct - typing one sends it there");
+		outMenu !? { hints.attach(outMenu, "direct to a bus, by BusManager name") };
 
-		head = View().layout_(VLayout(label, insertHolder, addInsert, nil).margins_(0).spacing_(4));
+		head = View().layout_(VLayout(HLayout(label, fold).spacing_(1), insertHolder, addInsert, nil).margins_(0).spacing_(4));
 		view.layout = VLayout(
 			head,
 			sendHolder,
@@ -684,18 +769,173 @@ SDGWindow {
 				peak,
 				HLayout(mute, solo).spacing_(2),
 				lim,
-				HLayout(outLabel, outBox).spacing_(2),
+				HLayout(destMenu, outBox).spacing_(2),
 				outMenu,   // nil is fine here: layouts skip it
 				nil
 			).margins_(0).spacing_(4))
 		).margins_(4).spacing_(4);
 
-		^(view: view, head: head, label: label, insertHolder: insertHolder, addInsert: addInsert, sendHolder: sendHolder,
+		thin = this.prThinStrip(key, "orbit " ++ i, colPanel,
+			{ this.selectOrbit(i) }, { |b| sdg.setMute(i, b.value == 1) }, { |b| sdg.setSolo(i, b.value == 1) });
+		strip = (head: head, label: label, insertHolder: insertHolder, addInsert: addInsert, sendHolder: sendHolder,
 			meters: meters, peak: peak, peakShown: "-inf", fader: fader, faderText: faderText,
-			mute: mute, solo: solo, lim: lim, outBox: outBox, outMenu: outMenu)
+			mute: mute, solo: solo, lim: lim, destMenu: destMenu, outBox: outBox, outMenu: outMenu);
+		^this.prWrapStrip(strip, view, thin, key, 90)
 	}
 
-	// ---------------------------------------------------------------- returns
+	// --------------------------------------------------------------- folding
+
+	// A strip as two views side by side, one of them shown: the whole strip, or a
+	// thin one with its name upright, a meter, mute and solo. strip is its Event
+	// of views, which gets the outer view as its view
+	prWrapStrip { |strip, full, thin, key, width|
+		var outer = View().layout_(HLayout(full, thin[\view]).margins_(0).spacing_(0));
+		^strip.putAll((view: outer, full: full, thin: thin[\view], thinMeter: thin[\meter],
+			thinMute: thin[\mute], thinSolo: thin[\solo], thinLabel: thin[\label], key: key, width: width))
+	}
+
+	// the button beside a strip's name that folds it
+	prFoldButton { |key|
+		var b = Button().fixedWidth_(14).fixedHeight_(22).font_(smallFont)
+			.states_([["‹", colDim, Color.grey(0.26)]]);
+		b.action = { { this.setCollapsed(key, true) }.defer };
+		hints.attach(b, "fold this strip thin - its name, a meter, mute and solo; click the arrow on it to unfold");
+		^b
+	}
+
+	// The thin strip: unfold, the name upright (a click selects), one meter of all
+	// channels, mute and solo when muteAction and soloAction are given
+	prThinStrip { |key, name, colour, selectAction, muteAction, soloAction|
+		var view = View().fixedWidth_(this.class.thinWidth).background_(colour);
+		var unfold = Button().fixedHeight_(22).font_(smallFont).states_([["›", colText, Color.grey(0.3)]]);
+		var label = UserView().minHeight_(60);
+		var meter = LevelIndicator().fixedWidth_(10).minHeight_(150).drawsPeak_(true)
+			.warning_(0.85).critical_(0.95);
+		var mute = muteAction !? { Button().fixedHeight_(18).font_(smallFont)
+			.states_([["M", colDim, Color.grey(0.26)], ["M", Color.black, colWarn]]).action_(muteAction) };
+		var solo = soloAction !? { Button().fixedHeight_(18).font_(smallFont)
+			.states_([["S", colDim, Color.grey(0.26)], ["S", Color.black, colAccent]]).action_(soloAction) };
+		label.drawFunc = { |v|
+			var b = v.bounds;
+			Pen.translate((b.width / 2) - 6, b.height - 4);
+			Pen.rotate(-0.5pi);
+			Pen.stringAtPoint(name, 0@0, boldFont, colText);
+		};
+		label.mouseUpAction = { selectAction.value };
+		unfold.action = { { this.setCollapsed(key, false) }.defer };
+		hints.attach(unfold, "unfold %".format(name));
+		hints.attach(label, "% - click to select it".format(name));
+		hints.attach(meter, "the loudest channel of %".format(name));
+		view.layout = VLayout(*([unfold, [label, stretch: 1], [meter, align: \center], mute, solo].reject(_.isNil)))
+			.margins_(2).spacing_(3);
+		^(view: view, meter: meter, mute: mute, solo: solo, label: label)
+	}
+
+	*thinWidth { ^24 }
+
+	isCollapsed { |key| ^collapsed.includes(key.asString) }
+
+	// fold a strip thin, or unfold it, by its name: "orbit 2", "return A", "group 1", "master"
+	setCollapsed { |key, bool = true|
+		key = key.asString;
+		if(bool) { collapsed.add(key) } { collapsed.remove(key) };
+		if(this.isOpen.not) { ^this };
+		(strips ++ busViews).do { |views| if(views[\key] == key) { this.prApplyCollapse(views) } };
+		this.prFitBusArea;
+	}
+
+	prApplyCollapse { |views|
+		var thin = this.isCollapsed(views[\key]);
+		views[\full].visible = thin.not;
+		views[\thin].visible = thin;
+		views[\view].fixedWidth = if(thin) { this.class.thinWidth } { views[\width] };
+	}
+
+	// ---------------------------------------------------------------- routing
+
+	// what an orbit's output menu offers, and the routes they stand for
+	prDestItems { ^[\master] ++ sdg.groups.collect(_.name) ++ [\direct] }
+
+	prDestLabel { |dest|
+		^case
+		{ dest == \master } { "master" }
+		{ dest == \direct } { "direct" }
+		{ sdg.groupAt(dest) !? (_.shortName) ? dest.asString }
+	}
+
+	// the orbits' and bus tracks' output menus and bus numbers to where they go
+	refreshRouting {
+		var items = this.prDestItems;
+		strips.do { |strip, i|
+			var dest = sdg.orbitDest(i);
+			strip[\destItems] = items;
+			strip[\destMenu].items = items.collect { |x| this.prDestLabel(x) };
+			strip[\destMenu].value = items.indexOf(dest) ? 0;
+			strip[\outBox].value = sdg.directBusOf(i);
+			strip[\outBox].stringColor = if(dest == \direct) { colText } { colDim };
+		};
+		busViews.do { |views|
+			var track = views[\track];
+			views[\destMenu] !? { |m| m.value = if(track.dest == \direct) { 1 } { 0 } };
+			views[\outBox] !? { |b|
+				b.value = track.directBus;
+				if(track.isKindOf(SDGMaster).not) { b.stringColor = if(track.dest == \direct) { colText } { colDim } };
+			};
+		};
+	}
+
+	// right click on an orbit's name
+	prShowOrbitMenu { |i|
+		var group = sdg.groupOf(i), clip = sdg.insertClipboard ? [], track = sdg.trackClipboard;
+		menu !? (_.destroy);
+		menu = Menu(*([
+			MenuAction("orbit %".format(i)).enabled_(false),
+			MenuAction.separator,
+			MenuAction(if(this.isCollapsed("orbit " ++ i)) { "unfold" } { "fold thin" }, {
+				this.setCollapsed("orbit " ++ i, this.isCollapsed("orbit " ++ i).not)
+			}),
+			MenuAction.separator,
+			MenuAction("new group with orbit %".format(i), { sdg.addGroup([i]) })
+		] ++ sdg.groups.reject { |g| g === group }.collect { |g|
+			MenuAction("into %".format(g.shortName), { sdg.setOrbitDest(i, g.name) })
+		} ++ [
+			MenuAction("out of %".format(group !? (_.shortName) ? "its group"), { sdg.setOrbitDest(i, \master) })
+				.enabled_(group.notNil),
+			MenuAction.separator,
+			MenuAction("copy its inserts (%)".format(sdg.insertsOf(i).size), { sdg.copyInserts(sdg.insertsOf(i)) })
+				.enabled_(sdg.insertsOf(i).notEmpty),
+			MenuAction(this.prPasteLabel, { sdg.pasteInserts(i) }).enabled_(clip.notEmpty),
+			MenuAction(if(track.notNil) { "paste effect track %".format(this.class.effectShortName(track[\name])) } { "paste effect track" }, {
+				if(sdg.pasteTrack(i).isNil) { hints.note("orbit % has % already, or it is gone".format(i, track[\name])) }
+			}).enabled_(track.notNil)
+		]));
+		menu.front;
+	}
+
+	*effectShortName { |name|
+		var str = name.asString;
+		^case
+		{ str.beginsWith("global_") } { str.drop(7) }
+		{ str.beginsWith("dirt_") } { str.drop(5) }
+		{ str }
+	}
+
+	// what the clipboard holds, as a menu says it
+	prPasteLabel {
+		var clip = sdg.insertClipboard ? [];
+		^case
+		{ clip.isEmpty } { "paste" }
+		{ clip.size == 1 } { "paste %".format(this.prDataLabel(clip[0])) }
+		{ "paste % effects (%)".format(clip.size, clip.collect { |d| this.prDataLabel(d) }.join(", ")) }
+	}
+
+	prDataLabel { |data|
+		^if(data[\kind] == \vst) { PathName(data[\plugin].asString).fileNameWithoutExtension } {
+			SDGInsert.kindLabel(data[\kind]) ? data[\kind].asString
+		}
+	}
+
+	// ---------------------------------------------------------------- bus tracks
 
 	// a send knob: nothing to 0 dB, a dB readout in the hint bar as it moves. Answers
 	// its Event; what it holds shows through refreshMixer
@@ -716,9 +956,10 @@ SDGWindow {
 	}
 
 	// send knobs three to a row: a strip is narrow and returns have no limit. Its height
-	// is fixed, 36 a row, so an orbit's and a return's meters start level
-	prSendGrid { |cells|
-		var rows = (cells.size / 3).ceil.asInteger;
+	// is fixed, 36 a row, so every strip's meters start level; the master has none,
+	// and room for as many
+	prSendGrid { |cells, count|
+		var rows = ((count ? cells.size) / 3).ceil.asInteger;
 		^View().fixedHeight_((rows * 38 - 2).max(0)).layout_(VLayout(*(cells.collect(_[\view]).clump(3).collect { |row|
 			HLayout(*(row ++ [nil])).margins_(0).spacing_(1)
 		})).margins_(0).spacing_(2))
@@ -729,115 +970,159 @@ SDGWindow {
 		if(strip.isNil) { ^this };
 		strip[\sendView] !? { |v| v.remove };
 		cells = sdg.returns.collect { |ret|
-			this.prSendKnob(ret, ret.orbitLevel(i), true, { |amp| sdg.setSend(i, ret, amp) },
+			var cell = this.prSendKnob(ret, ret.orbitLevel(i), true, { |amp| sdg.setSend(i, ret, amp) },
 				"how much of orbit % goes to return %, %".format(i, ret.letter,
-					if(ret.preFader) { "before its fader" } { "after its fader" }))
+					if(ret.preFader) { "before its fader" } { "after its fader" }));
+			this.prMidiAttach(cell[\knob], [\send, i, ret.letter]);
+			cell
 		};
 		strip[\sendKnobs] = cells;
 		strip[\sendView] = this.prSendGrid(cells);
 		strip[\sendHolder].layout.add(strip[\sendView]);
 	}
 
-	// A return's strip: as an orbit's, with the effect a track has
-	makeReturnStrip { |ret, preRows, postRows|
+	*busColour { |track|
+		^case
+		{ track.isKindOf(SDGMaster) } { Color(0.28, 0.23, 0.17) }
+		{ track.isKindOf(SDGGroup) } { Color(0.19, 0.26, 0.21) }
+		{ Color(0.20, 0.24, 0.27) }
+	}
+
+	// A return's, a group's or the master's strip: as an orbit's, with sends to the
+	// returns (none on the master), and its output to the master or the hardware
+	makeBusStrip { |track|
 		var ampSpec = paramSpecs[\orbitAmp];
-		var view = View().fixedWidth_(92).background_(Color(0.20, 0.24, 0.27));
+		var isMaster = track.isKindOf(SDGMaster), isReturn = track.isKindOf(SDGReturn), isGroup = track.isKindOf(SDGGroup);
+		var key = track.shortName, colour = this.class.busColour(track);
+		var view = View().fixedWidth_(92).background_(colour);
 		var label = Button().fixedHeight_(22).states_([
-			[ret.shortName, colText, Color(0.27, 0.33, 0.38)],
-			[ret.shortName, Color.black, colSel]
-		]).value_((ret === selectedReturn).binaryValue);
-		var rm = Button().fixedWidth_(16).fixedHeight_(22).font_(smallFont).states_([["✕", colWarn, Color.grey(0.26)]]);
-		var names = this.class.effectCandidates(sdg, ret);
-		var loadMenu = PopUpMenu().font_(smallFont).fixedHeight_(18)
-			.items_(["load effect…"] ++ names.collect(_.asString) ++ if(ret.fx.notNil) { ["no effect"] } { [] });
-		var onBtn = Button().fixedHeight_(18).font_(smallFont).states_([
-			["off", colDim, Color.grey(0.26)],
-			["on", Color.black, colOn]
-		]).value_(ret.effectOn.binaryValue);
-		var addPre = Button().fixedHeight_(16).font_(smallFont).states_([["+ pre", colDim, Color.grey(0.21)]]);
-		var addPost = Button().fixedHeight_(16).font_(smallFont).states_([["+ post", colDim, Color.grey(0.21)]]);
-		var mark = StaticText().fixedHeight_(14).align_(\center).font_(smallFont)
-			.string_("▼ " ++ ret.effectLabel ++ " ▼").stringColor_(if(ret.fx.notNil) { colAccent } { colDim });
-		var sends = ret.targets.collect { |to|
-			this.prSendKnob(to, ret.returnLevel(to), sdg.returnFeedback, { |amp| sdg.setReturnSend(ret, to, amp) },
-				"how much of return % goes to return %, a block later - needs feedback on".format(ret.letter, to.letter))
-		};
+			[track.shortName, colText, colour.blend(Color.grey(0.5), 0.25)],
+			[track.shortName, Color.black, colSel]
+		]).value_((track === selectedBus).binaryValue);
+		var rm = if(isMaster.not) { Button().fixedWidth_(14).fixedHeight_(22).font_(smallFont).states_([["✕", colWarn, Color.grey(0.26)]]) };
+		var fold = this.prFoldButton(key);
+		var insertHolder = View().layout_(VLayout(*(track.inserts.collect { |x| this.prInsertButton(x) } ++ [nil])).margins_(0).spacing_(2));
+		var addFx = Button().fixedHeight_(18).font_(smallFont).states_([["+ effect", colDim, Color.grey(0.21)]]);
+		var sends = case
+		{ isReturn } {
+			track.targets.collect { |to|
+				this.prSendKnob(to, track.returnLevel(to), sdg.returnFeedback, { |amp| sdg.setReturnSend(track, to, amp) },
+					"how much of return % goes to return %, a block later - needs feedback on".format(track.letter, to.letter))
+			}
+		}
+		{ isGroup } {
+			track.targets.collect { |to|
+				var cell = this.prSendKnob(to, track.returnLevel(to), true, { |amp| sdg.setGroupSend(track, to, amp) },
+					"how much of % goes to return %, %".format(track.shortName, to.letter,
+						if(to.preFader) { "before its fader" } { "after its fader" }));
+				this.prMidiAttach(cell[\knob], [\groupSend, track.name, to.letter]);
+				cell
+			}
+		}
+		{ [] };
 		var meters = { LevelIndicator().fixedWidth_(11).minHeight_(150)
 			.drawsPeak_(true).warning_(0.85).critical_(0.95)
 			.numTicks_(13).numMajorTicks_(3) } ! dirt.numChannels;
 		var fader = Slider().fixedWidth_(20).minHeight_(150);
 		var faderText = StaticText().fixedHeight_(14).align_(\right).stringColor_(colText).font_(smallFont);
-		var mute = Button().fixedHeight_(20).states_([["M", colDim, Color.grey(0.26)], ["M", Color.black, colWarn]]);
-		var solo = Button().fixedHeight_(20).states_([["S", colDim, Color.grey(0.26)], ["S", Color.black, colAccent]]);
-		var prePost = Button().fixedHeight_(16).font_(smallFont).states_([
-			["post fader", colDim, Color.grey(0.26)],
-			["pre fader", Color.black, colSel]
-		]);
-		var lim = PopUpMenu().fixedHeight_(20).items_(["raw", "limit", "clip"]).value_(ret.limitertype);
-		var outBox = NumberBox().fixedHeight_(20).clipLo_(0).step_(1).decimals_(0).value_(ret.outBus);
-		var outLabel = StaticText().string_("out").stringColor_(colDim).fixedWidth_(24);
-		var head;
-
-		label.action = { this.selectReturn(ret) };
-		// these go with the strip they are in, so not from inside their own action
-		rm.action = { { sdg.removeReturn(ret) }.defer };
-		loadMenu.action = { |m|
-			case
-			{ m.value == 0 } { }
-			{ m.value <= names.size } { { this.loadReturnEffect(ret, names[m.value - 1]) }.defer }
-			{ { this.loadReturnEffect(ret, nil) }.defer };
+		var mute = if(isMaster.not) { Button().fixedHeight_(20).states_([["M", colDim, Color.grey(0.26)], ["M", Color.black, colWarn]]) };
+		var solo = if(isMaster.not) { Button().fixedHeight_(20).states_([["S", colDim, Color.grey(0.26)], ["S", Color.black, colAccent]]) };
+		var second = if(isReturn) {
+			Button().fixedHeight_(16).font_(smallFont).states_([
+				["post fader", colDim, Color.grey(0.26)],
+				["pre fader", Color.black, colSel]
+			])
+		} {
+			StaticText().fixedHeight_(16).font_(smallFont).stringColor_(colDim).align_(\center)
+				.string_(if(isGroup) { this.prMembersString(track) } { "everything" })
 		};
-		onBtn.action = { |b| { ret.effectOn = b.value == 1 }.defer };
-		addPre.action = { this.prShowAddInsertMenu(nil, ret, \pre) };
-		addPost.action = { this.prShowAddInsertMenu(nil, ret, \post) };
-		fader.action = { |sl| ret.level = ampSpec.map(sl.value) };
-		mute.action = { |b| ret.mute = b.value == 1 };
-		solo.action = { |b| ret.solo = b.value == 1 };
-		prePost.action = { |b| ret.preFader = b.value == 1 };
-		lim.action = { |m| ret.limitertype = m.value };
-		outBox.action = { |b| ret.outBus = b.value.asInteger.max(0) };
+		var lim = PopUpMenu().fixedHeight_(20).items_(["raw", "limit", "clip"]).value_(track.limitertype);
+		var destMenu = if(isMaster.not) { PopUpMenu().fixedHeight_(20).font_(smallFont).items_(["master", "direct"]) };
+		var outLabel = if(isMaster) { StaticText().string_("out").stringColor_(colDim).fixedWidth_(24) };
+		var outBox = NumberBox().fixedHeight_(20).fixedWidth_(28).clipLo_(0).step_(1).decimals_(0).value_(track.directBus);
+		var head, thin, views;
 
-		hints.attach(label, "% - its effect's parameters on the effects tab".format(ret.shortName));
-		hints.attach(rm, "take % out, with its effect, inserts and every send to it".format(ret.shortName));
-		hints.attach(loadMenu, "the global effect on this return; it comes out fully wet, and with none the line just passes");
-		hints.attach(onBtn, "off bypasses the effect: the line passes as if it were not there");
-		hints.attach(addPre, "an insert before the effect - an eq, a compressor, an insight or a VST plugin");
-		hints.attach(addPost, "an insert after the effect, before the sends and the fader");
-		hints.attach(meters, "what the return plays, after its fader");
-		hints.attach([fader, faderText], "the level of what comes back");
-		hints.attach(mute, "silence this return, and what it sends to other returns");
-		hints.attach(solo, "hear only this - the orbits' direct sound stops, what they send here goes on");
-		hints.attach(prePost, "whether what is sent into this return is taken before or after the source's fader");
-		hints.attach(lim, "how the output is guarded: nothing, a limiter, or a hard clip - a feedback loop can get loud");
-		hints.attach([outLabel, outBox], "the bus this return writes to");
+		label.action = { this.selectBus(track) };
+		rm !? {
+			// these go with the strip they are in, so not from inside their own action
+			rm.action = { { if(isReturn) { sdg.removeReturn(track) } { sdg.removeGroup(track) } }.defer };
+		};
+		addFx.action = { this.prShowAddInsertMenu(nil, track, \chain) };
+		fader.action = { |sl| track.level = ampSpec.map(sl.value) };
+		mute !? { mute.action = { |b| track.mute = b.value == 1 } };
+		solo !? { solo.action = { |b| track.solo = b.value == 1 } };
+		case
+		{ isReturn } {
+			this.prMidiAttach(fader, [\returnLevel, track.letter]);
+			this.prMidiAttach(mute, [\returnMute, track.letter]);
+			this.prMidiAttach(solo, [\returnSolo, track.letter]);
+			second.action = { |b| track.preFader = b.value == 1 };
+		}
+		{ isGroup } {
+			this.prMidiAttach(fader, [\groupLevel, track.name]);
+			this.prMidiAttach(mute, [\groupMute, track.name]);
+			this.prMidiAttach(solo, [\groupSolo, track.name]);
+		}
+		{ this.prMidiAttach(fader, [\masterLevel]) };
+		lim.action = { |m| track.limitertype = m.value };
+		destMenu !? { destMenu.action = { |m| { track.route(if(m.value == 1) { \direct } { \master }) }.defer } };
+		outBox.action = { |b| { track.route(\direct, b.value.asInteger.max(0)) }.defer };
+
+		hints.attach(label, "% - its effects on the effects tab".format(track.shortName));
+		rm !? { hints.attach(rm, if(isReturn) {
+			"take % out, with its effects and every send to it".format(track.shortName)
+		} {
+			"take % out, with its effects - its orbits go to the master".format(track.shortName)
+		}) };
+		hints.attach(addFx, "an effect at the end of the chain - an eq, a compressor, an insight, an fx kit effect or a VST plugin");
+		hints.attach(meters, "what % plays, after its fader".format(track.shortName));
+		hints.attach([fader, faderText], if(isMaster) { "the level of everything" } { "the level of what % plays".format(track.shortName) });
+		mute !? { hints.attach(mute, "silence %".format(track.shortName)) };
+		solo !? { hints.attach(solo, if(isReturn) {
+			"hear only this - the orbits' direct sound stops, what they send here goes on"
+		} { "hear only this group's orbits" }) };
+		case
+		{ isReturn } { hints.attach(second, "whether what is sent into this return is taken before or after the source's fader") }
+		{ isGroup } { hints.attach(second, "the orbits that go into it - choose the group in an orbit's output menu, or right click the orbit's name") };
+		hints.attach(lim, "how the output is guarded: nothing, a limiter, or a hard clip%".format(if(isReturn) { " - a feedback loop can get loud" } { "" }));
+		destMenu !? { hints.attach(destMenu, "where % goes: the master, or direct to the hardware bus beside it".format(track.shortName)) };
+		hints.attach([outLabel, outBox].reject(_.isNil), if(isMaster) { "the hardware bus everything goes to" } {
+			"the hardware bus % writes to when it goes direct".format(track.shortName)
+		});
 
 		head = View().layout_(VLayout(
-			HLayout(label, rm).spacing_(1),
-			loadMenu,
-			onBtn,
-			this.prInsertColumn(ret.pre, preRows),
-			addPre,
-			mark,
-			this.prInsertColumn(ret.post, postRows),
-			addPost,
+			HLayout(*[label, rm, fold].reject(_.isNil)).spacing_(1),
+			insertHolder,
+			addFx,
 			nil
 		).margins_(0).spacing_(4));
 		view.layout = VLayout(
 			head,
-			this.prSendGrid(sends),
+			this.prSendGrid(sends, sdg.returns.size),
 			[HLayout(*(meters ++ [fader])).spacing_(2), stretch: 1],
-			// row for row as an orbit's, pre/post where it has its peak
-			View().fixedHeight_(this.prFootHeight).layout_(VLayout(
+			// row for row as an orbit's
+			View().fixedHeight_(this.prFootHeight).layout_(VLayout(*[
 				faderText,
-				prePost,
-				HLayout(mute, solo).spacing_(2),
+				second,
+				if(isMaster) { View().fixedHeight_(20) } { HLayout(mute, solo).spacing_(2) },
 				lim,
-				HLayout(outLabel, outBox).spacing_(2),
+				HLayout(*[outLabel, destMenu, outBox].reject(_.isNil)).spacing_(2),
 				nil
-			).margins_(0).spacing_(4))
+			]).margins_(0).spacing_(4))
 		).margins_(4).spacing_(4);
-		^(view: view, head: head, track: ret, label: label, sendKnobs: sends, meters: meters, fader: fader,
-			faderText: faderText, mute: mute, solo: solo, prePost: prePost, loadMenu: loadMenu, candidates: names)
+
+		thin = this.prThinStrip(key, track.shortName, colour, { this.selectBus(track) },
+			mute !? { { |b| track.mute = b.value == 1 } }, solo !? { { |b| track.solo = b.value == 1 } });
+		views = (head: head, track: track, label: label, insertHolder: insertHolder, sendKnobs: sends, meters: meters,
+			fader: fader, faderText: faderText, mute: mute, solo: solo, prePost: if(isReturn) { second },
+			members: if(isGroup) { second }, lim: lim, destMenu: destMenu, outBox: outBox);
+		^this.prWrapStrip(views, view, thin, key, 92)
+	}
+
+	// "orbits 0 1 2"
+	prMembersString { |group|
+		var list = group.members;
+		^if(list.isEmpty) { "no orbits" } { "orbit% %".format(if(list.size > 1) { "s" } { "" }, list.join(" ")) }
 	}
 
 	// + return, and the switch that lets returns send to each other
@@ -849,52 +1134,78 @@ SDGWindow {
 		]).value_(sdg.returnFeedback.binaryValue);
 		add.action = { { sdg.addReturn }.defer };
 		feedback.action = { |b| { sdg.returnFeedback = b.value == 1 }.defer };
-		hints.attach(add, "a new return track, with a send knob on every orbit");
+		hints.attach(add, "a new return track, with a send knob on every orbit and group");
 		hints.attach(feedback, "lets returns send to each other and to themselves, by their knobs - a loop can get loud, keep the limiter on");
-		^View().layout_(VLayout(add, feedback, nil).margins_(0).spacing_(4))
+		^View().fixedWidth_(76).layout_(VLayout(add, feedback, nil).margins_(0).spacing_(4))
 	}
 
-	// the return strips made again, and the send knobs of every orbit
-	prReturnsChanged {
-		var list;
+	// + group: a new group with the selected orbit in it
+	prMakeGroupButton {
+		var add = Button().fixedWidth_(76).fixedHeight_(22).states_([["+ group", colText, Color.grey(0.26)]]);
+		add.action = { { sdg.addGroup(if(selectedBus.isNil) { [selectedOrbitIndex] } { [] }) }.defer };
+		hints.attach(add, "a new group track with the selected orbit in it - more go in by their output menu, or a right click on their name");
+		^View().fixedWidth_(76).layout_(VLayout(add, nil).margins_(0).spacing_(4))
+	}
+
+	// the group, return and master strips made again, and the send knobs of every orbit
+	prBussesChanged {
+		var list, groupViews, rest;
 		if(this.isOpen.not and: { window.notNil }) { ^this };
-		list = sdg.returns;
-		if(selectedReturn.notNil and: { list.includes(selectedReturn).not }) { selectedReturn = nil };
-		returnViews.do { |views| if(list.includes(views[\track]).not) { views[\track].metering = false } };
-		returnViews = list.collect { |ret|
-			this.makeReturnStrip(ret, this.prMaxRows(list.collect(_.pre)), this.prMaxRows(list.collect(_.post)))
-		};
-		returnViews.do { |views| views[\track].metering = true };
-		returnContent !? { returnContent.remove };
-		returnContent = View().background_(colBg);
-		returnContent.layout = HLayout(*(returnViews.collect(_[\view]) ++ [this.prMakeReturnButtons]))
+		list = sdg.busTracks;
+		if(selectedBus.notNil and: { list.includes(selectedBus).not }) { selectedBus = nil };
+		busViews.do { |views| if(list.includes(views[\track]).not) { views[\track].metering = false } };
+		busViews = list.collect { |track| this.makeBusStrip(track) };
+		busViews.do { |views| views[\track].metering = true; this.prApplyCollapse(views) };
+		groupViews = busViews.select { |views| views[\track].isKindOf(SDGGroup) };
+		rest = busViews.reject { |views| views[\track].isKindOf(SDGGroup) };
+		groupContent !? { groupContent.remove };
+		groupContent = View().background_(colBg);
+		groupContent.layout = HLayout(*(groupViews.collect(_[\view]) ++ [this.prMakeGroupButton]))
 			.margins_(0).spacing_(5);
-		returnHolder.layout.add(returnContent);
+		groupHolder.layout.add(groupContent);
+		busContent !? { busContent.remove };
+		busContent = View().background_(colBg);
+		// the returns, their buttons, the master: on the right as in Ableton
+		busContent.layout = HLayout(*(
+			rest.reject { |views| views[\track].isKindOf(SDGMaster) }.collect(_[\view])
+			++ [this.prMakeReturnButtons]
+			++ rest.select { |views| views[\track].isKindOf(SDGMaster) }.collect(_[\view])
+		)).margins_(0).spacing_(5);
+		busHolder.layout.add(busContent);
 		strips.size.do { |i| this.rebuildStripSends(i) };
 		this.prAlignStrips;
+		this.prFitBusArea;
+		this.refreshRouting;
 		this.refreshMixer;
 		if(paramHolder.notNil) { this.rebuildEffectSection };
 	}
 
-	// a return's effect, parameters and inserts on the effects tab, in the place of the
-	// selected orbit's. A click on an orbit's name brings that back
-	selectReturn { |ret|
-		selectedReturn = ret;
+	prReturnsChanged { this.prBussesChanged }
+
+	// the right-hand area as wide as the returns, their buttons and the master
+	prFitBusArea {
+		var widths;
+		if(busScroll.isNil) { ^this };
+		widths = busViews.reject { |views| views[\track].isKindOf(SDGGroup) }.collect { |views|
+			if(this.isCollapsed(views[\key])) { this.class.thinWidth } { views[\width] }
+		} ++ [76];
+		busScroll.fixedWidth = widths.sum + (5 * (widths.size - 1)) + 16;
+	}
+
+	// a return's, group's or the master's effects on the effects tab, in the place of
+	// the selected orbit's. A click on an orbit's name brings that back
+	selectBus { |track|
+		selectedBus = track;
 		strips.do { |strip| strip[\label].value = 0 };
-		returnViews.do { |views| views[\label].value = (views[\track] === ret).binaryValue };
+		busViews.do { |views| views[\label].value = (views[\track] === track).binaryValue };
 		this.selectTab(0);
 		this.rebuildEffectSection;
 	}
 
-	// what the effects tab has on show: the return, or the orbit
-	prHost { ^selectedReturn ?? { this.selectedOrbit } }
+	selectReturn { |ret| this.selectBus(ret) }
 
-	// an effect on a return, and its window state follows. Answers the new effect, or nil
-	loadReturnEffect { |ret, name|
-		var fx = sdg.setReturnEffect(ret, name);
-		if(fx.isNil and: { name.notNil }) { hints.note("could not load % - the post window says why".format(name)) };
-		^fx
-	}
+	// what the effects tab has on show: the bus track, or the orbit
+	prHost { ^selectedBus ?? { this.selectedOrbit } }
 
 	// --------------------------------------------------------------- inserts
 
@@ -933,22 +1244,17 @@ SDGWindow {
 	}
 
 	// Strips side by side keep their faders level, however many inserts each has: every
-	// strip of a row leaves room for the longest list. Orbits and returns share one row,
-	// so the part above the sends is one height for both. Track strips: rebuildTrackStrips
+	// strip leaves room for the longest list, orbits, groups, returns and the master
+	// alike, so the part above the sends is one height for all. Track strips:
+	// rebuildTrackStrips
 	prAlignStrips {
-		var rows = this.prColumnHeight(this.prMaxRows(strips.size.collect { |i| sdg.insertsOf(i) }));
+		var rows = this.prColumnHeight(this.prMaxRows(
+			strips.size.collect { |i| sdg.insertsOf(i) } ++ sdg.busTracks.collect(_.inserts)));
 		var height = 22 + rows + 18 + (2 * 4);	// name, inserts, + insert
-		if(returnViews.notEmpty) {
-			// name, load, on, pre, + pre, the effect's name, post, + post
-			height = max(height, 22 + 18 + 18 + 16 + 14 + 16 + (7 * 4)
-				+ this.prColumnHeight(this.prMaxRows(sdg.returns.collect(_.pre)))
-				+ this.prColumnHeight(this.prMaxRows(sdg.returns.collect(_.post))));
-		};
-		strips.do { |strip|
+		(strips ++ busViews).do { |strip|
 			strip[\insertHolder].fixedHeight = rows;
 			strip[\head].fixedHeight = height;
 		};
-		returnViews.do { |views| views[\head].fixedHeight = height };
 	}
 
 	prMaxRows { |lists| ^lists.collect(_.size).maxItem ? 0 }
@@ -981,8 +1287,8 @@ SDGWindow {
 		};
 		hints.attach(b, "% on %% - click for its window, right click to bypass, move or remove it".format(
 			insert.shortLabel,
-			if(insert.isOnReturn) {
-				"% %'s effect".format(if(insert.place == \pre) { "before" } { "after" }, insert.where)
+			if(insert.isOnBus) {
+				insert.where
 			} {
 				insert.track !? { |t| "% of orbit %'s %".format(if(insert.place == \pre) { "before" } { "after" }, insert.orbitIndex, t.shortName) }
 					?? { "orbit %".format(insert.orbitIndex) }
@@ -1020,6 +1326,15 @@ SDGWindow {
 			MenuAction("move up", { sdg.moveInsert(insert, k - 1) }).enabled_(k > 0),
 			MenuAction("move down", { sdg.moveInsert(insert, k + 1) }).enabled_(k < (list.size - 1)),
 			MenuAction.separator,
+			MenuAction("copy", { sdg.copyInserts([insert]); hints.note("% copied - paste it on any strip".format(insert.shortLabel)) }),
+			MenuAction("copy the whole chain (%)".format(list.size), {
+				sdg.copyInserts(list);
+				hints.note("% effects copied - paste them on any strip".format(list.size))
+			}).enabled_(list.size > 1),
+			MenuAction(this.prPasteLabel ++ " after this", {
+				sdg.pasteInserts(insert.orbitIndex, insert.track, insert.place, k + 1)
+			}).enabled_((sdg.insertClipboard ? []).notEmpty),
+			MenuAction.separator,
 			MenuAction("remove", { sdg.removeInsert(insert) })
 		]));
 		menu.front;
@@ -1027,17 +1342,25 @@ SDGWindow {
 
 	// track and place: on a track, before or after its effect
 	prShowAddInsertMenu { |i, track, place|
+		var item = { |kind|
+			MenuAction(this.class.insertKindName(kind), { this.addInsert(i, kind, track, place) })
+				.enabled_(SDGInsert.available(kind))
+		};
+		var fxKinds = SDGInsert.fxKindNames;
+		var clip = sdg.insertClipboard ? [];
 		menu !? (_.destroy);
+		// the sc fx kit effects (Growl, Tunnel ...) go in an "fx" submenu
 		menu = Menu(*([
 			MenuAction(case
-				{ track.isKindOf(SDGReturn) } { "add an insert % the effect, %".format(if(place == \pre) { "before" } { "after" }, track.where) }
+				{ track.isKindOf(SDGBusTrack) } { "add an effect to %".format(track.where) }
 				{ track.notNil } { "add an insert %, orbit %".format(if(place == \pre) { "before " } { "after " } ++ track.shortName, i) }
 				{ "add an insert to orbit %".format(i) }).enabled_(false),
 			MenuAction.separator
-		] ++ SDGInsert.kindNames.collect { |kind|
-			MenuAction(this.class.insertKindName(kind), { this.addInsert(i, kind, track, place) })
-				.enabled_(SDGInsert.available(kind))
-		}));
+		] ++ if(clip.notEmpty) { [
+			MenuAction(this.prPasteLabel, { sdg.pasteInserts(i, track, place) }),
+			MenuAction.separator
+		] } { [] } ++ SDGInsert.kindNames.reject { |kind| fxKinds.includes(kind) }.collect(item)
+		++ if(fxKinds.notEmpty) { [Menu(*fxKinds.collect(item)).title_("fx")] } { [] }));
 		menu.front;
 	}
 
@@ -1136,8 +1459,8 @@ SDGWindow {
 	// the insert lists of one orbit, or of every orbit when i is nil
 	prInsertsChanged { |i|
 		if(this.isOpen.not) { ^this };
-		// nil: an insert of a return, whose strip shows it
-		if(i.isNil) { this.prReturnsChanged } { this.rebuildStripInserts(i) };
+		// nil: an insert of a return, group or the master, whose strip shows it
+		if(i.isNil) { this.prBussesChanged } { this.rebuildStripInserts(i) };
 		if(i.isNil or: { i == selectedOrbitIndex }) {
 			this.rebuildInsertRows;
 			this.rebuildTrackStrips;
@@ -1149,20 +1472,13 @@ SDGWindow {
 		if(i.isNil or: { i == selectedOrbitIndex }) { this.rebuildEffectSection };
 	}
 
-	prOutIndex { |orbit|
-		^(orbit.outBus.tryPerform(\index) ? orbit.outBus ? 0).asInteger
-	}
-
-	// DirtOrbit:outBus_ starts the orbit's effects again: SuperDirtGUI:setOutBus
-	// releases them the way that frees sleeping ones, and puts the inserts back
-	prSetOutBus { |orbit, index|
-		sdg.setOutBus(orbit.orbitIndex, index);
-	}
+	// the hardware bus an orbit writes to when it goes direct
+	prOutIndex { |orbit| ^sdg.directBusOf(orbit.orbitIndex) }
 
 	selectOrbit { |i|
 		selectedOrbitIndex = i.clip(0, dirt.orbits.size - 1);
-		selectedReturn = nil;
-		returnViews.do { |views| views[\label].value = 0 };
+		selectedBus = nil;
+		busViews.do { |views| views[\label].value = 0 };
 		strips.do { |strip, j|
 			strip[\label].value = (j == selectedOrbitIndex).binaryValue
 		};
@@ -1185,21 +1501,22 @@ SDGWindow {
 				strip[\faderShown] = this.class.faderString(faders[i]);
 				strip[\faderText].string = strip[\faderShown];
 			};
-			mutes !? { mutes[i] !? { strip[\mute].value = mutes[i].binaryValue } };
-			solos !? { solos[i] !? { strip[\solo].value = solos[i].binaryValue } };
+			mutes !? { mutes[i] !? { [strip[\mute], strip[\thinMute]].do { |b| b !? { b.value = mutes[i].binaryValue } } } };
+			solos !? { solos[i] !? { [strip[\solo], strip[\thinSolo]].do { |b| b !? { b.value = solos[i].binaryValue } } } };
 			(strip[\sendKnobs] ? []).do { |cell|
 				cell[\knob].value = this.class.sendSpec.unmap(cell[\ret].orbitLevel(i))
 			};
 		};
-		returnViews.do { |views|
-			var ret = views[\track];
-			views[\fader].value = ampSpec.unmap(ret.level);
-			views[\faderText].string = this.class.faderString(ret.level);
-			views[\mute].value = ret.muted.binaryValue;
-			views[\solo].value = ret.soloed.binaryValue;
-			views[\prePost].value = ret.preFader.binaryValue;
+		busViews.do { |views|
+			var track = views[\track];
+			views[\fader].value = ampSpec.unmap(track.level);
+			views[\faderText].string = this.class.faderString(track.level);
+			[views[\mute], views[\thinMute]].do { |b| b !? { b.value = track.muted.binaryValue } };
+			[views[\solo], views[\thinSolo]].do { |b| b !? { b.value = track.soloed.binaryValue } };
+			views[\prePost] !? { |b| b.value = track.preFader.binaryValue };
+			views[\members] !? { |t| t.string = this.prMembersString(track) };
 			views[\sendKnobs].do { |cell|
-				cell[\knob].value = this.class.sendSpec.unmap(ret.returnLevel(cell[\ret]))
+				cell[\knob].value = this.class.sendSpec.unmap(track.returnLevel(cell[\ret]))
 			};
 		};
 	}
@@ -1220,19 +1537,41 @@ SDGWindow {
 
 	// ------------------------------------------------------------------- meters
 
+	// a cmd-period has cleared AppClock, and with it the library poll and the
+	// meter routine: start them again. The meter OSCFuncs are fixed and stay.
+	// SuperDirt makes the orbits again on ServerTree with the reply rate in
+	// dirt_rms's state, so the meters go on with the next event
+	// A refresh that was on its way is gone with it: its flag is dropped, or
+	// the explorer, the knobs and the midi marks would never be drawn again
+	prCmdPeriod {
+		if(this.isOpen.not) { ^this };
+		libraryPoll !? (_.stop);
+		meterRoutine !? (_.stop);
+		this.startLibraryPoll;
+		this.prStartMeterRoutine;
+		this.refreshExplorer;
+		this.refreshParams;
+		this.prMidiPaintAll;
+	}
+
 	startMeters {
 		// 20 replies a second, peaks held 1.5 s - see SuperDirtGUI:startMeters
 		sdg.startMeters(20, 1.5);
+		// fixed: a cmd-period frees every other OSCFunc, and cleanup frees these
 		rmsFunc = OSCFunc({ |msg|
 			var i = (msg[2] ? -1).asInteger;
 			if(i >= 0 and: { i < meterData.size }) {
 				meterData[i] = msg.copyToEnd(3);
 				meterStamps[i] = Main.elapsedTime;
 			};
-		}, '/rms', dirt.server.addr);
+		}, '/rms', dirt.server.addr).fix;
 		trackFunc = OSCFunc({ |msg|
 			trackMeterData[msg[2].asInteger] = [Main.elapsedTime, msg.copyToEnd(3)];
-		}, '/sdgtrack', dirt.server.addr);
+		}, '/sdgtrack', dirt.server.addr).fix;
+		this.prStartMeterRoutine;
+	}
+
+	prStartMeterRoutine {
 		meterRoutine = Routine {
 			loop {
 				this.updateMeterViews;
@@ -1243,29 +1582,37 @@ SDGWindow {
 
 	updateMeterViews {
 		var now = Main.elapsedTime;
+		// a strip's meters, and its thin strip's one meter the loudest channel
+		var show = { |views, numbers|
+			var top = 0, topPeak = 0;
+			views[\meters].do { |m, ch|
+				var peak = (numbers[ch * 2] ? 0.0).asFloat;
+				var rms = (numbers[(ch * 2) + 1] ? 0.0).asFloat;
+				var v = if(rms <= 0.0) { 0 } { rms.ampdb.linlin(-60, 0, 0, 1) };
+				var p = if(peak <= 0.0) { 0 } { peak.ampdb.linlin(-60, 0, 0, 1) };
+				m.value = v;
+				m.peakLevel = p;
+				top = max(top, v);
+				topPeak = max(topPeak, p);
+			};
+			views[\thinMeter] !? { |t| t.value = top; t.peakLevel = topPeak };
+		};
 		strips.do { |strip, i|
-			var vals = meterData[i];
 			// dirt_rms pauses itself when the orbit is silent, so a strip whose
 			// messages stopped is showing old numbers - drop it to zero instead
 			var stale = (now - meterStamps[i]) > 0.5;
-			strip[\meters].do { |m, ch|
-				var peak = if(stale) { 0.0 } { (vals[ch * 2] ? 0.0).asFloat };
-				var rms = if(stale) { 0.0 } { (vals[(ch * 2) + 1] ? 0.0).asFloat };
-				m.value = if(rms <= 0.0) { 0 } { rms.ampdb.linlin(-60, 0, 0, 1) };
-				m.peakLevel = if(peak <= 0.0) { 0 } { peak.ampdb.linlin(-60, 0, 0, 1) };
+			var vals = if(stale) { [] } { meterData[i] };
+			show.(strip, vals);
+			dirt.numChannels.do { |ch|
+				var peak = (vals[ch * 2] ? 0.0).asFloat;
 				if(peak > peakHolds[i]) { peakHolds[i] = peak };
 			};
 			this.prShowPeak(i);
 		};
-		(trackViews ++ returnViews).do { |views|
+		(trackViews ++ busViews).do { |views|
 			var data = trackMeterData[views[\track].id];
 			var stale = data.isNil or: { (now - data[0]) > 0.5 };
-			views[\meters].do { |m, ch|
-				var peak = if(stale) { 0.0 } { (data[1][ch * 2] ? 0.0).asFloat };
-				var rms = if(stale) { 0.0 } { (data[1][(ch * 2) + 1] ? 0.0).asFloat };
-				m.value = if(rms <= 0.0) { 0 } { rms.ampdb.linlin(-60, 0, 0, 1) };
-				m.peakLevel = if(peak <= 0.0) { 0 } { peak.ampdb.linlin(-60, 0, 0, 1) };
-			}
+			show.(views, if(stale) { [] } { data[1] });
 		};
 	}
 
@@ -1362,7 +1709,7 @@ SDGWindow {
 	// ------------------------------------------------------------- effect editor
 
 	makeEffectSection {
-		var addBtn, refreshBtn, headerRow;
+		var addBtn, pasteBtn, refreshBtn, headerRow;
 		var section = View().background_(colPanel);
 		effectHeader = StaticText().stringColor_(colText)
 			.font_(Font.sansSerif(12, true)).string_("global effects");
@@ -1381,16 +1728,24 @@ SDGWindow {
 		addMenu = PopUpMenu();
 		addBtn = Button().fixedWidth_(50).states_([["add", colText, Color.grey(0.26)]]);
 		addBtn.action = {
-			if(addCandidates.notNil and: { addCandidates.notEmpty }) {
-				if(selectedReturn.notNil) {
-					this.loadReturnEffect(selectedReturn, addCandidates[addMenu.value ? 0])
-				} {
-					this.addEffect(this.selectedOrbit, addCandidates[addMenu.value ? 0])
-				}
+			if(addCandidates.notNil and: { addCandidates.notEmpty } and: { selectedBus.isNil }) {
+				this.addEffect(this.selectedOrbit, addCandidates[addMenu.value ? 0])
 			};
+		};
+		pasteBtn = Button().fixedWidth_(50).states_([["paste", colText, Color.grey(0.26)]]);
+		pasteBtn.action = {
+			var copied = sdg.trackClipboard;
+			case
+			{ copied.isNil } { hints.note("nothing copied - right click an effect track's name to copy it") }
+			{ sdg.pasteTrack(selectedOrbitIndex).isNil } {
+				hints.note("orbit % has % already, or it is gone".format(selectedOrbitIndex, copied[\name]))
+			}
+			{ selectedEffectName = copied[\name]; this.rebuildEffectSection };
 		};
 		hints.attach(addMenu, "every SynthDef that follows the global effect convention and is not in this orbit yet");
 		hints.attach(addBtn, "the chosen effect on a new track, after the others");
+		hints.attach(pasteBtn, "the effect track you copied (right click its name), with its parameters, level and inserts, on this orbit");
+		addRow = View().layout_(HLayout(addMenu, addBtn, pasteBtn).margins_(0).spacing_(4));
 
 		paramHolder = View();
 		paramHolder.layout = VLayout().margins_(0).spacing_(0);
@@ -1398,7 +1753,7 @@ SDGWindow {
 		section.layout = VLayout(
 			headerRow,
 			trackScroll,
-			HLayout(addMenu, addBtn),
+			addRow,
 			paramHolder,
 			this.makeInsertSection,
 			[View(), stretch: 1]	// what is left stays under them, not between them
@@ -1417,8 +1772,8 @@ SDGWindow {
 		addBtn.action = {
 			var kind = available[insertAddMenu.value ? 0];
 			if(SDGInsert.available(kind)) {
-				if(selectedReturn.notNil) {
-					this.addInsert(nil, kind, selectedReturn, \post)
+				if(selectedBus.notNil) {
+					this.addInsert(nil, kind, selectedBus, \chain)
 				} {
 					this.addInsert(selectedOrbitIndex, kind)
 				}
@@ -1435,7 +1790,7 @@ SDGWindow {
 	}
 
 	rebuildInsertRows {
-		var list = if(selectedReturn.notNil) { selectedReturn.inserts } { sdg.insertsOf(selectedOrbitIndex) };
+		var list = if(selectedBus.notNil) { selectedBus.inserts } { sdg.insertsOf(selectedOrbitIndex) };
 		var rows = list.collect { |insert, k| this.makeInsertRow(insert, k, list.size) };
 		if(insertListHolder.isNil) { ^this };
 		insertRowsView !? { insertRowsView.remove };
@@ -1474,11 +1829,14 @@ SDGWindow {
 		var visible = orbit.globalEffects.reject { |x|
 			this.class.isHiddenEffect(x.name)
 		};
-		effectHeader.string = if(selectedReturn.notNil) {
-			"% - %".format(selectedReturn.shortName, selectedReturn.effectLabel)
+		effectHeader.string = if(selectedBus.notNil) {
+			"% - its effects".format(selectedBus.shortName)
 		} {
 			"orbit % - effect tracks".format(selectedOrbitIndex)
 		};
+		// a bus track has no global effects: its effects are the inserts under them
+		trackScroll.visible = selectedBus.isNil;
+		addRow.visible = selectedBus.isNil;
 		if(selectedEffectName.notNil
 			and: { visible.detect { |x| x.name == selectedEffectName }.isNil }) {
 			selectedEffectName = nil;
@@ -1495,7 +1853,7 @@ SDGWindow {
 	// a strip per track of the selected orbit, left to right the order of its
 	// chain. Only the tracks on show send meter numbers.
 	rebuildTrackStrips {
-		var list = if(selectedReturn.notNil) { [] } { sdg.tracksOf(selectedOrbitIndex) };
+		var list = if(selectedBus.notNil) { [] } { sdg.tracksOf(selectedOrbitIndex) };
 		trackViews.do { |views| if(list.includes(views[\track]).not) { views[\track].metering = false } };
 		// room for the longest list of each strip's inserts, so that the faders stay level
 		trackViews = list.collect { |track, k|
@@ -1540,6 +1898,10 @@ SDGWindow {
 		var faderText = StaticText().fixedHeight_(14).align_(\right).stringColor_(colText).font_(smallFont);
 
 		label.action = { this.prSelectTrack(track) };
+		label.mouseDownAction = { |v, x, y, mods, button|
+			if((button ? 0) == 1) { { this.prShowTrackMenu(track) }.defer(0.05) };
+			nil
+		};
 		loadMenu.action = { |m|
 			var name = if(m.value > 0) { names[m.value - 1] };
 			// the menu goes with the strip it is in, so not from inside its own action
@@ -1559,8 +1921,9 @@ SDGWindow {
 		addPre.action = { this.prShowAddInsertMenu(track.orbitIndex, track, \pre) };
 		addPost.action = { this.prShowAddInsertMenu(track.orbitIndex, track, \post) };
 		fader.action = { |sl| track.level = ampSpec.map(sl.value) };
+		track.name !? { |name| this.prMidiAttach(fader, [\trackLevel, track.orbitIndex, name]) };
 
-		hints.attach(label, "% - its parameters under the strips".format(track.name));
+		hints.attach(label, "% - its parameters under the strips; right click to copy it to another orbit".format(track.name));
 		hints.attach(loadMenu, "another global effect on this track, in place of % - its inserts and fader stay".format(track.shortName));
 		hints.attach(onBtn, "% - off pauses the synth, on resumes it".format(track.shortName));
 		hints.attach([left, right], "move the track in the chain");
@@ -1585,6 +1948,22 @@ SDGWindow {
 
 		^(view: view, track: track, label: label, loadMenu: loadMenu, candidates: names,
 			meters: meters, fader: fader, faderText: faderText)
+	}
+
+	// right click on a track's name: copy it, with its parameters, level and inserts
+	prShowTrackMenu { |track|
+		menu !? (_.destroy);
+		menu = Menu(
+			MenuAction("% · orbit %".format(track.shortName, track.orbitIndex)).enabled_(false),
+			MenuAction.separator,
+			MenuAction("copy this effect track", {
+				sdg.copyTrack(track);
+				hints.note("% copied - paste it with paste under the tracks, or a right click on an orbit's name".format(track.shortName))
+			}),
+			MenuAction("copy its inserts (%)".format(track.inserts.size), { sdg.copyInserts(track.inserts) })
+				.enabled_(track.inserts.notEmpty)
+		);
+		menu.front;
 	}
 
 	// the track's name selects it, as an orbit's does: its parameters under the strips
@@ -1615,7 +1994,7 @@ SDGWindow {
 	}
 
 	refreshAddMenu {
-		addCandidates = this.class.effectCandidates(sdg, this.prHost);
+		addCandidates = this.class.effectCandidates(sdg, this.selectedOrbit);
 		addMenu.items = if(addCandidates.isEmpty) {
 			["(no other effect defs)"]
 		} {
@@ -1655,11 +2034,10 @@ SDGWindow {
 
 	rebuildParamPanel {
 		var orbit = this.prHost;
-		var fx = if(selectedReturn.notNil) { selectedReturn.fx } {
-			orbit.globalEffects.detect { |x| x.name == selectedEffectName }
-		};
+		var fx = if(selectedBus.isNil) { orbit.globalEffects.detect { |x| x.name == selectedEffectName } };
 		var cells;
 		paramContentView !? { paramContentView.remove };
+		paramCells = List.new;
 		cells = if(fx.isNil) { [] } {
 			fx.paramNames.asArray.collect { |param| this.makeParamCell(orbit, fx, param) }
 		};
@@ -1714,49 +2092,29 @@ SDGWindow {
 		};
 
 		hints.attach(clear, "% back to what it was before the window touched it".format(param));
+		paramCells.add((orbit: orbit, fx: fx, param: param, spec: spec, knob: knob, box: box));
+		this.prMidiAttach(knob, [\param, orbit.orbitIndex, fx.name, param]);
 
-		^this.prKnobCell(param.asString, knob, box, if(orbit.isKindOf(SDGReturn)) {
-			"% of % - no event comes to a return, this is its value".format(param, fx.name)
-		} {
-			"% of % - set here and carried by every event that follows".format(param, fx.name)
-		}, clear)
+		^this.prKnobCell(param.asString, knob, box,
+			"% of % - set here and carried by every event that follows".format(param, fx.name), clear)
 	}
 
-	specFor { |fx, param|
-		^paramSpecs[param] ?? { sdg.effectParamSpec(fx.name, param) } ?? {
-			var default = this.descDefault(fx, param) ? 0;
-			ControlSpec(0, max(default * 2, 1), \lin, 0, default)
-		}
-	}
+	// the knob's range, default and value of an effect parameter, and setting it:
+	// SuperDirtGUI's, so a controller does the same with the window closed
+	specFor { |fx, param| ^sdg.effectParamSpecOf(fx, param) }
 
-	descDefault { |fx, param|
-		var desc = SynthDescLib.at((fx.name.asString ++ dirt.numChannels).asSymbol);
-		var ctl = desc !? { desc.controlDict[param] };
-		var default = ctl !? { ctl.defaultValue };
-		^if(default.isNumber) { default } { nil }
-	}
+	descDefault { |fx, param| ^sdg.effectParamDefault(fx, param) }
 
-	currentValue { |orbit, fx, param|
-		var v = orbit.defaultParentEvent[param];
-		if(v.isNumber.not) { v = fx.state[param] };
-		if(v.isNumber.not) { v = this.descDefault(fx, param) };
-		if(v.isNumber.not) { v = this.specFor(fx, param).default };
-		^v
-	}
+	currentValue { |orbit, fx, param| ^sdg.effectParamValue(orbit, fx, param) }
 
-	setEffectParam { |orbit, fx, param, value|
-		orbit.set(param, value);
-		fx.set(orbit.defaultParentEvent);
-		// its track's send and return may be asleep: an effect started by a knob is heard too
-		sdg.wakeOrbit(orbit);
-	}
+	setEffectParam { |orbit, fx, param, value| sdg.setEffectParam(orbit, fx, param, value) }
 
 	// put the parameter back to what it was before the GUI touched it. Keys the
 	// defaultParentEvent defines by itself (cps, lock, dry ...) are restored to
 	// their startup value, never removed - other code relies on them existing.
 	// Answers the value the widgets should show afterwards.
 	clearEffectParam { |orbit, fx, param|
-		var snapshot = if(orbit.isKindOf(SDGReturn).not) { parentSnapshots[selectedOrbitIndex][param] };
+		var snapshot = parentSnapshots[selectedOrbitIndex][param];
 		var default;
 		if(snapshot.isNumber) {
 			this.setEffectParam(orbit, fx, param, snapshot);
@@ -1769,6 +2127,145 @@ SDGWindow {
 		orbit.defaultParentEvent.removeAt(param);
 		fx.state.removeAt(param);
 		^default
+	}
+
+	// a controller moved a parameter (sdg.setEffectParam says so, and so does this
+	// window's own knob): the knobs on show follow, at most 20 times a second
+	prParamChanged {
+		if(paramRefreshPending) { ^this };
+		paramRefreshPending = true;
+		AppClock.sched(0.05, {
+			paramRefreshPending = false;
+			if(this.isOpen) { this.refreshParams };
+			nil
+		});
+	}
+
+	// setting a view's value never fires its action
+	refreshParams {
+		paramCells.do { |cell|
+			var v = this.currentValue(cell[\orbit], cell[\fx], cell[\param]);
+			if(v.isNumber and: { cell[\knob].isClosed.not } and: { cell[\box].value != v }) {
+				cell[\box].value = v;
+				cell[\knob].value = cell[\spec].unmap(v);
+			}
+		}
+	}
+
+	// --------------------------------------------------------------------- midi
+
+	// A view a controller can move, by an SDGMidiTarget's address. In learn mode a
+	// click on it waits for the controller instead of moving it; a right click gives
+	// its MIDI menu. Without Modality nothing changes. Answers the view.
+	prMidiAttach { |view, address|
+		var entry;
+		if(SDGMidi.isAvailable.not) { ^view };
+		entry = (view: view, address: address, style: this.prMidiStyle(view));
+		// an Array: add answers the grown one
+		midiViews = midiViews.reject { |e| e[\view].isClosed }.add(entry);
+		// true keeps the click from the view; nil passes it on
+		view.mouseDownAction = { |v, x, y, mods, button|
+			case
+			{ midiLearning } { this.prMidiArm(address); true }
+			{ (button ? 0) == 1 } { { this.prShowMidiMenu(address) }.defer(0.05); true }
+			{ nil }
+		};
+		this.prMidiPaint(entry);
+		^view
+	}
+
+	// the colours a view had, to paint the marks over and take them off again
+	prMidiStyle { |view|
+		^case
+		{ view.isKindOf(Knob) } { (knob: view.color.copy) }
+		{ view.isKindOf(Button) } { (states: view.states.deepCopy) }
+		// a Slider's background_ sets its groove, and background answers something else
+		{ view.isKindOf(Slider) } { (groove: view.getProperty(\grooveColor), knobColor: view.knobColor) }
+		{ () }
+	}
+
+	// mapped: blue (a knob's arc, a slider's handle, a button's letter). In learn mode
+	// every mappable view gets a blue ground, and the one waiting for the controller orange
+	prMidiPaint { |entry|
+		var view = entry[\view], style = entry[\style];
+		var mapped = sdg.midi.mapFor(entry[\address]).notNil;
+		var armed = sdg.midi.armed !? { |t| t.address == entry[\address] } ? false;
+		var ground = case { armed } { colAccent } { midiLearning } { Color(0.2, 0.3, 0.42) } { nil };
+		var value;
+		if(view.isClosed) { ^this };
+		case
+		{ style[\knob].notNil } {
+			view.color = style[\knob].copy
+				.put(0, ground ? style[\knob][0])
+				.put(1, if(mapped and: { style[\knob][1] != colDim }) { colSel } { style[\knob][1] })
+		}
+		{ style[\states].notNil } {
+			value = view.value;
+			view.states = style[\states].collect { |st, k|
+				[st[0], if(mapped and: { k == 0 }) { colSel } { st[1] }, if(ground.notNil) { ground } { st[2] }]
+			};
+			view.value = value;
+		}
+		{ style[\knobColor].notNil } {
+			view.background = ground ? style[\groove];
+			view.knobColor = if(mapped) { colSel } { style[\knobColor] };
+		}
+	}
+
+	// the marks again, a moment after the last change
+	prMidiChanged {
+		if(midiPaintPending) { ^this };
+		midiPaintPending = true;
+		AppClock.sched(0.05, {
+			midiPaintPending = false;
+			if(this.isOpen) { this.prMidiPaintAll };
+			nil
+		});
+	}
+
+	prMidiPaintAll {
+		midiViews = midiViews.reject { |e| e[\view].isClosed };
+		midiViews.do { |e| this.prMidiPaint(e) };
+	}
+
+	// learn mode: clicks pick what the next controller move is mapped to, one after
+	// another, until it is switched off
+	midiLearning_ { |bool|
+		midiLearning = bool == true and: { SDGMidi.isAvailable };
+		if(midiLearning.not) { sdg.midi.cancelLearn };
+		learnBtn !? { if(learnBtn.isClosed.not) { learnBtn.value = midiLearning.binaryValue } };
+		hints.note(if(midiLearning) {
+			"midi learn: click what to map, then move a control on the controller"
+		} { "midi learn off" });
+		this.prMidiPaintAll;
+		sdg.midi.changed(\learnMode, midiLearning);
+	}
+
+	// the next element moved on a controller is mapped to address
+	prMidiArm { |address|
+		sdg.midi.learn(address);
+		hints.note("move a control on the controller for % - or click something else".format(SDGMidiTarget(sdg, address).label));
+		this.prMidiPaintAll;
+	}
+
+	prShowMidiMenu { |address|
+		var target = SDGMidiTarget(sdg, address), m = sdg.midi.mapFor(address);
+		var waiting = sdg.midi.armed == target;
+		menu !? (_.destroy);
+		menu = Menu(*[
+			MenuAction(target.label).enabled_(false),
+			MenuAction(m !? { "midi: % %".format(m.ktl, m.element) } ? "no midi mapping").enabled_(false),
+			MenuAction.separator,
+			if(waiting) {
+				MenuAction("stop waiting for the controller", { sdg.midi.cancelLearn })
+			} {
+				MenuAction("learn midi", { this.prMidiArm(address) })
+			},
+			MenuAction("edit mapping...", { sdg.midi.gui.select(address) }).enabled_(m.notNil),
+			MenuAction("remove midi mapping", { sdg.midi.unmap(address) }).enabled_(m.notNil),
+			MenuAction("post its code", { m.asCode.postln }).enabled_(m.notNil)
+		]);
+		menu.front;
 	}
 
 	// ------------------------------------------------------------ sound explorer
@@ -1797,8 +2294,8 @@ SDGWindow {
 		var refresh = this.prButton("↻", 26, { this.refreshExplorer }, "read the sound library again");
 		var expand = this.prButton("open all", 60, { this.openAll }, "open every bank");
 		var collapse = this.prButton("close all", 62, { this.closeAll }, "close every bank");
-		var playBtn = this.prButton("play", 50, { this.playSelected },
-			"play the selected sample into the orbit chosen below, through the \\dirt event type (enter)");
+		var playBtn = this.prMidiAttach(this.prButton("play", 50, { this.playSelected },
+			"play the selected sample into the orbit chosen below, through the \\dirt event type (enter)"), [\play]);
 		var loadBtn = this.prButton("load folder...", 92, { this.loadFolderDialog },
 			"read more samples from a folder: its files become a bank named after it, each subfolder a bank of its own");
 		var tagsBtn, syncBtn;
@@ -2713,27 +3210,34 @@ SDGWindow {
 		)
 	}
 
-	// posted whatever happens - the clipboard is best effort. On Windows through
-	// PowerShell's Set-Clipboard, the path in single quotes, where only a ' needs
-	// doubling
+	// posted whatever happens - the clipboard is best effort
 	*copyPathToClipboard { |path|
 		var cmd;
 		if(path.isNil) { ^false };
 		path.postln;
+		if(thisProcess.platform.name == \windows) { path = this.prWindowsPath(path) };
 		cmd = this.prClipboardCommand(path);
 		cmd !? { cmd.unixCmd };
 		^cmd.notNil
 	}
 
-	// the shell command that puts path on the clipboard, for this platform or
-	// the one named; nil where there is none
-	*prClipboardCommand { |path, platform|
+	// the shell command that puts text on the clipboard, for this platform or
+	// the one named; nil where there is none. On Windows unixCmd runs `cmd /c`,
+	// whose command line ends at the first newline and whose quoting a " in
+	// the text breaks (Tidal code has both), so the text goes through a temp
+	// file that PowerShell reads into Set-Clipboard; only a ' in the file's
+	// path needs doubling there
+	*prClipboardCommand { |text, platform|
 		^switch(platform ? thisProcess.platform.name,
-			\osx, { "printf %s" + path.shellQuote + "| pbcopy" },
-			\linux, { "printf %s" + path.shellQuote + "| xclip -selection clipboard" },
+			\osx, { "printf %s" + text.shellQuote + "| pbcopy" },
+			\linux, { "printf %s" + text.shellQuote + "| xclip -selection clipboard" },
 			\windows, {
-				"powershell -NoProfile -NonInteractive -Command \"Set-Clipboard -Value '"
-					++ this.prWindowsPath(path).replace("'", "''") ++ "'\""
+				var file = Platform.defaultTempDir +/+ "superdirt-gui-clipboard.txt";
+				var ok = try { File.use(file, "w", { |f| f.write(text.asString) }); true } { false };
+				if(ok) {
+					"powershell -NoProfile -NonInteractive -Command \"Get-Content -Raw -Encoding UTF8 -LiteralPath '"
+						++ this.prWindowsPath(file).replace("'", "''") ++ "' | Set-Clipboard\""
+				}
 			}
 		)
 	}
@@ -2795,7 +3299,7 @@ SDGWindow {
 		pathText = hints.attach(StaticText().string_(sdg.path.asString).stringColor_(colDim).font_(smallFont),
 			"the folder the files are read from");
 		notesView = hints.attach(TextView().editable_(false).font_(Font.monospace(10))
-			.background_(Color.grey(0.16)).minHeight_(170),
+			.background_(Color.grey(0.16)).minHeight_(110),
 			"what the selected one does, and its parameters - the comments at the top of its file");
 
 		section.layout = VLayout(
@@ -2804,7 +3308,8 @@ SDGWindow {
 			fileText,
 			HLayout(reloadBtn, freeBtn, bankBtn, nil).spacing_(4),
 			pathText,
-			[notesView, stretch: 2]
+			[notesView, stretch: 2],
+			[this.makePreviewSection, stretch: 3]
 		).margins_(6).spacing_(6);
 		^section
 	}
@@ -2856,6 +3361,7 @@ SDGWindow {
 		{ "% - %".format(entry[\name], this.prShortPath(entry[\path])) };
 		fileText.stringColor = if(entry.notNil and: { entry[\failed] }) { colWarn } { colDim };
 		this.prShowNotes(entry);
+		this.prShowPreview(entry);
 	}
 
 	// what the selected name does and takes, at the bottom of the tab: a line per
@@ -2893,6 +3399,406 @@ SDGWindow {
 		notesView.setStringColor(colDim, 0, text.size);
 		notesView.setStringColor(colText, 0, notes[\description].size);
 		spans.do { |span| notesView.setStringColor(colAccent, span[0], span[1]) };
+	}
+
+	// ------------------------------------------------------------ synth preview
+
+	// Under the notes, for a synth: a knob per parameter of its header, a note, the
+	// preset (n, a menu of the synth's presets by name), a sustain and an orbit.
+	// play sends one \dirt event, as Tidal would; copy puts it on the clipboard as
+	// Tidal code, with only the parameters dialed away from the preset; random
+	// throws every knob; save as... and delete change the synth's presets
+	// (SuperDirtGUI:savePreset, removePreset, kept by SDGSynthPresets), file
+	// presets puts back its file's. The model is preview, an Event; checks read it.
+	makePreviewSection {
+		previewHolder = View().background_(Color.grey(0.16)).visible_(false);
+		previewHolder.layout = VLayout().margins_(4).spacing_(4);
+		^previewHolder
+	}
+
+	// the selected synth's preview, made again when another one is selected or its
+	// SynthDef changed (its file saved); what was dialed stays across a reload
+	prShowPreview { |entry|
+		var name = entry !? { entry[\name] }, desc, old;
+		if(previewHolder.isNil) { ^this };
+		desc = name !? { SynthDescLib.global.at(name.asSymbol) };
+		if(loadedKind != \synths or: { desc.isNil }) {
+			preview = nil;
+			previewContent !? { previewContent.remove; previewContent = nil };
+			previewHolder.visible = false;
+			^this
+		};
+		name = name.asSymbol;
+		if(preview.notNil and: { preview[\name] == name } and: { preview[\desc] === desc }) { ^this };
+		old = if(preview.notNil and: { preview[\name] == name }) { preview };
+		preview = this.prPreviewModel(name, desc, old);
+		this.prBuildPreview;
+		previewHolder.visible = true;
+	}
+
+	// the synth's presets changed: the menu again, on preset n if given, else on the
+	// one it showed (the dialed values kept unless n is given)
+	prPresetsChanged { |synth, n|
+		var old = preview;
+		if(old.isNil or: { old[\name] != synth.asSymbol } or: { this.isOpen.not }) { ^this };
+		preview = this.prPreviewModel(old[\name], old[\desc], if(n.isNil) { old });
+		n !? {
+			preview[\n] = n.clip(0, (preview[\presets] - 1).max(0));
+			preview[\note] = old[\note];
+			preview[\orbit] = old[\orbit];
+			this.prPreviewPreset(preview);
+		};
+		this.prBuildPreview;
+	}
+
+	// (name:, desc:, presets:, presetNames:, n:, note:, sustain:, orbit:, params: [key],
+	// specs:, values:, start:) - start is what the preset (or the def) gives, values what plays
+	prPreviewModel { |name, desc, old|
+		var notes = sdg.notes(\synths, name);
+		var controls = desc.controls.collect { |c| c.name.asSymbol };
+		var params = notes[\params].select { |p| controls.includes(p[\name].asSymbol) };
+		var model = (
+			name: name, desc: desc,
+			presets: sdg.presetsOf(name).size,
+			presetNames: sdg.presetNames(name),
+			n: 0, note: 0, orbit: selectedOrbitIndex,
+			params: params.collect { |p| p[\name].asSymbol },
+			ranges: IdentityDictionary.new,
+			specs: IdentityDictionary.new,
+			values: IdentityDictionary.new,
+			start: IdentityDictionary.new
+		);
+		params.do { |p|
+			var key = p[\name].asSymbol;
+			model[\ranges][key] = p[\range];
+			model[\specs][key] = this.class.previewSpec(p[\range], this.class.prControlDefault(desc, key));
+		};
+		old !? {
+			model[\n] = old[\n].clip(0, (model[\presets] - 1).max(0));
+			model[\note] = old[\note];
+			model[\orbit] = old[\orbit];
+		};
+		this.prPreviewPreset(model);
+		// what was dialed before, where the parameter still is
+		old !? {
+			old[\values].keysValuesDo { |key, v|
+				if(model[\specs][key].notNil and: { this.prPreviewChanged(old, key) }) {
+					model[\values][key] = model[\specs][key].constrain(v)
+				}
+			};
+			if(old[\sustain] != old[\startSustain]) { model[\sustain] = old[\sustain] };
+		};
+		^model
+	}
+
+	// the values of the model's preset n (a def default where the preset says nothing)
+	// as both what plays and what copy compares with
+	prPreviewPreset { |model|
+		var event = sdg.presetsOf(model[\name])[model[\n]] ? ();
+		var defSustain = this.class.prControlDefault(model[\desc], \sustain);
+		model[\params].do { |key|
+			var v = event[key];
+			v = if(v.isNumber) { v } { this.class.prControlDefault(model[\desc], key) ? model[\specs][key].default };
+			model[\start][key] = v;
+			model[\values][key] = v;
+		};
+		// a drum voice lasts its def's sustain (useSynthDefSustain); anything else a second
+		model[\startSustain] = if(event[\unitDuration].notNil and: { defSustain.isNumber }) { defSustain.clip(0.05, 8) } { 1 };
+		model[\sustain] = model[\startSustain];
+	}
+
+	*prControlDefault { |desc, key|
+		var control = desc.controls.detect { |c| c.name.asSymbol == key };
+		^control !? { |c| if(c.defaultValue.isNumber) { c.defaultValue } }
+	}
+
+	// a knob's spec from a header's range, "30 to 120 Hz": exponential where the top
+	// is twenty times the bottom or more; a parameter with no range goes 0 to twice
+	// its default
+	*previewSpec { |range, default|
+		var m = range !? { range.asString.findRegexp("^\\s*(-?[0-9]*\\.?[0-9]+)\\s+to\\s+(-?[0-9]*\\.?[0-9]+)") };
+		var lo, hi;
+		default = default ? 0;
+		if(m.notNil and: { m.size >= 3 }) {
+			lo = m[1][1].asFloat;
+			hi = m[2][1].asFloat;
+		} {
+			lo = min(0, default);
+			hi = max(1, default.abs * 2);
+		};
+		if(hi <= lo) { hi = lo + 1 };
+		^ControlSpec(lo, hi, if(lo > 0 and: { hi / lo >= 20 }) { \exp } { \lin }, 0, default.clip(lo, hi))
+	}
+
+	prPreviewChanged { |model, key|
+		var spec = model[\specs][key];
+		^(model[\values][key] - model[\start][key]).abs > (abs(spec.maxval - spec.minval) * 1e-4)
+	}
+
+	// the event play sends: everything the knobs say, into the chosen orbit
+	previewEvent {
+		var event;
+		if(preview.isNil) { ^nil };
+		event = (type: \dirt, dirt: dirt, s: preview[\name], orbit: preview[\orbit] ? 0,
+			note: preview[\note], sustain: preview[\sustain],
+			latency: 0.05);    // snappier than the server latency the event type defaults to
+		if(preview[\presets] > 0) { event[\n] = preview[\n] };
+		preview[\values].keysValuesDo { |key, v| event[key] = v };
+		^event
+	}
+
+	previewPlay {
+		this.previewEvent !? { |event| event.play }
+	}
+
+	// the preview as a line of Tidal: the preset, the note, the sustain if changed,
+	// and every parameter dialed away from the preset, as pF so it needs no boot.hs
+	previewCode {
+		var m = preview, code;
+		if(m.isNil) { ^nil };
+		code = "d1 $ s \"%\"".format(if(m[\presets] > 0 and: { m[\n] > 0 }) { "%:%".format(m[\name], m[\n]) } { m[\name] });
+		if(m[\note] != 0) { code = code ++ " # note " ++ this.class.tidalNumber(m[\note]) };
+		if((m[\sustain] - m[\startSustain]).abs > 1e-4) { code = code ++ " # sustain " ++ this.class.tidalNumber(m[\sustain]) };
+		m[\params].do { |key|
+			if(this.prPreviewChanged(m, key)) {
+				code = code ++ " # pF \"%\" %".format(key, this.class.tidalNumber(m[\values][key]))
+			}
+		};
+		^code
+	}
+
+	// a number as Tidal reads it: a negative one in brackets
+	*tidalNumber { |v|
+		var r = if(v.abs >= 100) { v.round(1) } { v.round(0.0001) };
+		var str = if(r == r.round) { r.round.asInteger.asString } { r.asFloat.asStringPrec(6) };
+		^if(r < 0) { "(" ++ str ++ ")" } { str }
+	}
+
+	// previewCode on the clipboard, and in the post window whatever happens
+	previewCopy {
+		var code = this.previewCode, cmd;
+		if(code.isNil) { ^false };
+		code.postln;
+		cmd = this.class.prClipboardCommand(code);
+		cmd !? { cmd.unixCmd };
+		hints.note(if(cmd.notNil) { "on the clipboard: " ++ code } { "no clipboard here - the code is in the post window" });
+		^cmd.notNil
+	}
+
+	// every knob back to the preset
+	previewReset {
+		if(preview.isNil) { ^this };
+		this.prPreviewPreset(preview);
+		this.prPreviewShowValues;
+	}
+
+	// every knob somewhere in its range, evenly over the knob's travel (an
+	// exponential knob as often low as high); the note, preset and sustain stay
+	previewRandomize {
+		if(preview.isNil) { ^this };
+		preview[\params].do { |key|
+			preview[\values][key] = preview[\specs][key].map(1.0.rand)
+		};
+		this.prPreviewShowValues;
+	}
+
+	// the knobs as they are, as preset n of the synth under a name: answers n
+	previewSave { |name|
+		var n;
+		if(preview.isNil) { ^nil };
+		name = (name ? "").asString.stripWhiteSpace;
+		if(name.isEmpty) { name = "preset %".format(preview[\presets]) };
+		n = sdg.savePreset(preview[\name], name, preview[\values]);
+		this.prPresetsChanged(preview[\name], n);
+		hints.note("saved as %:% \"%\" - on this machine; file presets puts back the file's".format(preview[\name], n, name));
+		^n
+	}
+
+	previewDelete {
+		var m = preview, name;
+		if(m.isNil or: { m[\presets] == 0 }) { ^false };
+		name = m[\presetNames][m[\n]];
+		sdg.removePreset(m[\name], m[\n]);
+		this.prPresetsChanged(m[\name], m[\n].min(m[\presets] - 2).max(0));
+		hints.note("% deleted from % - the ones after it moved down by one".format(name, m[\name]));
+		^true
+	}
+
+	previewRestore {
+		if(preview.isNil) { ^this };
+		sdg.restoreFilePresets(preview[\name]);
+		this.prPresetsChanged(preview[\name], 0);
+		hints.note("% plays its file's presets again".format(preview[\name]));
+	}
+
+	// a small window asking the new preset's name; enter or save saves it
+	previewSaveDialog {
+		var win, field, save, m = preview;
+		if(m.isNil) { ^nil };
+		win = Window("save a preset of %".format(m[\name]),
+			Rect(window.bounds.left + 300, window.bounds.top + 300, 360, 76)).background_(colBg);
+		if(GUI.id == \qt) { win.view.palette = QPalette.dark };
+		field = TextField().font_(font).string_("my % %".format(m[\name], m[\presets]));
+		save = { this.previewSave(field.string); win.close };
+		field.action = { save.value };
+		field.keyDownAction = { |view, char, mod, uni, keycode, key|
+			if(key == 16r1000000) { win.close; true } { nil }
+		};
+		win.layout = VLayout(
+			StaticText().string_("as %:% - a name to know it by in the menu".format(m[\name], m[\presets]))
+				.stringColor_(colDim).font_(smallFont),
+			HLayout(field,
+				Button().states_([["save", colText, Color.grey(0.26)]]).action_({ save.value }),
+				Button().states_([["cancel", colText, Color.grey(0.26)]]).action_({ win.close })
+			).spacing_(4)
+		).margins_(8).spacing_(6);
+		win.front;
+		field.focus(true);
+		^win
+	}
+
+	prPreviewShowValues {
+		preview[\views].keysValuesDo { |key, views|
+			var spec = if(key == \sustain) { this.class.previewLengthSpec } { preview[\specs][key] };
+			var v = if(key == \sustain) { preview[\sustain] } { preview[\values][key] };
+			views[0].value = spec.unmap(v);
+			views[1].value = v;
+		}
+	}
+
+	*previewLengthSpec { ^ControlSpec(0.05, 8, \exp, 0, 1) }
+
+	prBuildPreview {
+		var m = preview, cells, title, noteBox, noteText, presetMenu, orbitMenu, scroll, canvas;
+		var playBtn, copyBtn, randomBtn, resetBtn, saveBtn, deleteBtn, restoreBtn, deleteArmed = false;
+		var own = sdg.hasOwnPresets(m[\name]);
+		var label = { |str| StaticText().string_(str).stringColor_(colDim).font_(smallFont) };
+		var noteName = { |note|
+			var midi = (note + 60).round.asInteger;
+			SDGSampleFeatures.noteNames[midi % 12].toLower ++ (midi div: 12)
+		};
+		previewContent !? { previewContent.remove };
+		m[\views] = IdentityDictionary.new;
+		title = StaticText().string_("preview " ++ m[\name]).stringColor_(colText).font_(boldFont);
+
+		noteBox = NumberBox().fixedWidth_(40).decimals_(0).step_(1).clipLo_(-48).clipHi_(48)
+			.value_(m[\note]).font_(smallFont).normalColor_(colText);
+		noteText = StaticText().string_(noteName.(m[\note])).stringColor_(colDim).font_(smallFont).fixedWidth_(26);
+		noteBox.action = { |b|
+			m[\note] = b.value.asInteger;
+			noteText.string = noteName.(m[\note]);
+			this.previewPlay;
+		};
+		hints.attach([noteBox, noteText], "note - semitones from the synth's own pitch, as Tidal's note: 0 is c5; changing it plays");
+
+		presetMenu = PopUpMenu().font_(smallFont).minWidth_(140)
+			.items_(if(m[\presets] > 0) {
+				m[\presetNames].collect { |str, i| "% %".format(i, str) }
+			} { ["no presets: n is the pitch"] })
+			.value_(m[\n]).enabled_(m[\presets] > 0);
+		presetMenu.action = { |v|
+			m[\n] = v.value;
+			this.previewReset;
+			this.previewPlay;
+		};
+		hints.attach(presetMenu, if(m[\presets] > 0) {
+			"n - the synth's presets%: picking one sets every knob to it and plays".format(if(own) { " (this machine's list)" } { "" })
+		} {
+			"this synth has no presets, so Tidal's n is its pitch - save as... makes the first"
+		});
+
+		orbitMenu = PopUpMenu().fixedWidth_(78).font_(smallFont)
+			.items_(dirt.orbits.collect { |o, i| "orbit " ++ i }).value_(m[\orbit]);
+		orbitMenu.action = { |v| m[\orbit] = v.value };
+		hints.attach(orbitMenu, "the orbit the preview plays into, with its effects and fader");
+
+		playBtn = this.prButton("play", 44, { this.previewPlay },
+			"play one note of the synth with these settings - releasing a knob plays too");
+		copyBtn = this.prButton("copy", 44, { this.previewCopy },
+			"put it on the clipboard as Tidal: s, n, note, and the parameters moved away from the preset");
+		randomBtn = this.prButton("random", 54, { this.previewRandomize; this.previewPlay },
+			"every knob somewhere in its range, and play it - the note, preset and sustain stay");
+		resetBtn = this.prButton("reset", 44, { this.previewReset; this.previewPlay },
+			"every knob back to the preset");
+		saveBtn = this.prButton("save as...", 66, { this.previewSaveDialog },
+			"the knobs as a new preset at the end of the menu, under a name - kept on this machine");
+		deleteBtn = Button().fixedWidth_(52).states_([
+			["delete", colText, Color.grey(0.26)], ["sure?", Color.black, colWarn]
+		]).enabled_(m[\presets] > 0);
+		deleteBtn.action = { |b|
+			if(deleteArmed) {
+				deleteArmed = false;
+				this.previewDelete;
+			} {
+				deleteArmed = true;
+				b.value = 1;
+				{ deleteArmed = false; if(b.isClosed.not) { b.value = 0 } }.defer(3);
+			}
+		};
+		hints.attach(deleteBtn, "take the preset shown out of the synth - click twice; the ones after it move down by one n");
+		restoreBtn = this.prButton("file presets", 74, { this.previewRestore },
+			"forget this machine's list and play the presets the synth's file registers").enabled_(own);
+		// a disabled Button keeps its states' colours in Qt: dim them
+		if(own.not) { restoreBtn.states = [["file presets", colDim, Color.grey(0.2)]] };
+		if(m[\presets] == 0) { deleteBtn.states = [["delete", colDim, Color.grey(0.2)], ["sure?", Color.black, colWarn]] };
+
+		cells = m[\params].collect { |key| this.prPreviewCell(key) };
+		cells = cells.add(this.prPreviewLengthCell);
+		canvas = View().background_(Color.grey(0.16));
+		canvas.layout = VLayout(*(cells.clump(6).collect { |row|
+			HLayout(*(row ++ [nil])).margins_(0).spacing_(4)
+		} ++ [nil])).margins_(0).spacing_(6);
+		scroll = ScrollView().autohidesScrollers_(true).hasBorder_(false)
+			.background_(Color.grey(0.16)).minHeight_(84).canvas_(canvas);
+
+		previewContent = View().layout_(VLayout(
+			HLayout(title, nil, label.("note"), noteBox, noteText, orbitMenu).spacing_(4),
+			HLayout(label.("n"), presetMenu, saveBtn, deleteBtn, restoreBtn, nil).spacing_(4),
+			HLayout(playBtn, copyBtn, randomBtn, resetBtn, nil).spacing_(4),
+			[scroll, stretch: 1]
+		).margins_(0).spacing_(4));
+		previewHolder.layout.add(previewContent);
+	}
+
+	prPreviewCell { |key|
+		var m = preview, spec = m[\specs][key];
+		var knob = this.class.makeKnob(36, spec.minval < 0 and: { spec.maxval > 0 });
+		var box = NumberBox().decimals_(3);
+		knob.value = spec.unmap(m[\values][key]);
+		box.value = m[\values][key];
+		knob.action = { |k|
+			m[\values][key] = spec.map(k.value);
+			box.value = m[\values][key];
+		};
+		knob.mouseUpAction = { this.previewPlay; nil };
+		box.action = { |b|
+			m[\values][key] = spec.constrain(b.value);
+			b.value = m[\values][key];
+			knob.value = spec.unmap(m[\values][key]);
+			this.previewPlay;
+		};
+		m[\views][key] = [knob, box];
+		^this.prKnobCell(key.asString, knob, box,
+			"% - % - dial it and let go to hear it; copy writes the ones you moved".format(key, m[\ranges][key] ? "no range in the header"))
+	}
+
+	prPreviewLengthCell {
+		var m = preview, spec = this.class.previewLengthSpec;
+		var knob = this.class.makeKnob(36);
+		var box = NumberBox().decimals_(3);
+		knob.value = spec.unmap(m[\sustain]);
+		box.value = m[\sustain];
+		knob.action = { |k| m[\sustain] = spec.map(k.value); box.value = m[\sustain] };
+		knob.mouseUpAction = { this.previewPlay; nil };
+		box.action = { |b|
+			m[\sustain] = spec.constrain(b.value);
+			b.value = m[\sustain];
+			knob.value = spec.unmap(m[\sustain]);
+			this.previewPlay;
+		};
+		m[\views][\sustain] = [knob, box];
+		^this.prKnobCell("sustain", knob, box,
+			"sustain - how long the note is held, in seconds; a drum voice only shortens (a choke)")
 	}
 
 	// words wrapped to the width of the notes, every line after the first indented
@@ -3076,9 +3982,7 @@ SDGWindow {
 
 	refreshBusMenus {
 		var names, entries;
-		strips.do { |strip, i|
-			strip[\outBox].value = this.prOutIndex(dirt.orbits[i]);
-		};
+		this.refreshRouting;
 		if(busManager.isNil) { ^this };
 		entries = busManager.entries.select { |e| e.isAudio };
 		strips.do { |strip, i|
@@ -3106,8 +4010,8 @@ SDGWindow {
 		trackFunc = nil;
 		trackViews.do { |views| views[\track].metering = false };
 		trackViews = [];
-		returnViews.do { |views| views[\track].metering = false };
-		returnViews = [];
+		busViews.do { |views| views[\track].metering = false };
+		busViews = [];
 		meterRoutine !? { meterRoutine.stop };
 		meterRoutine = nil;
 		libraryPoll !? { libraryPoll.stop };
@@ -3115,6 +4019,9 @@ SDGWindow {
 		try { sdg.stopMeters };
 		busManager !? { busManager.removeDependant(this) };
 		sdg.removeDependant(this);
+		sdg.midi.removeDependant(this);
+		if(midiLearning) { sdg.midi.cancelLearn };
+		{ sdg.midi.changed(\learnMode, false) }.defer(0.05);	// once the window is gone
 		sdg.tags.removeDependant(this);
 		tagDialog !? { |w| if(w.isClosed.not) { w.close } };
 		tagDialog = nil;

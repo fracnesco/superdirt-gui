@@ -1,0 +1,108 @@
+-- SuperDirtGUI from Tidal - 18: hyper-real drums
+--
+-- Every sound is a material - latex, plastic, steel, bubbles - made from a
+-- sine pushed into shapes, louder and cleaner and stranger than anything
+-- real, with a lot of silence between.
+-- Two voices do most of it:
+--
+--   sdgslam     the hit: a driven sine that dives a long way in pitch, a metal
+--               clang over it and a gate of noise, squashed flat inside
+--   sdgplastic  the material: bubble, latex snap, squeak, plastic clank, drip,
+--               rubber - a pitch that moves a long way very fast
+--
+-- with the classic hats and claps (file 16) cut short and crushed. sdgslam is
+-- louder than its peak suggests: it is limited inside, like a mastered hit.
+
+setcps (128/60/4)
+
+let sdgfreq = pF "sdgfreq"
+    sdgdecay = pF "sdgdecay"
+    sdgatk = pF "sdgatk"
+    sdgpunch = pF "sdgpunch"
+    sdgbend = pF "sdgbend"
+    sdgrise = pF "sdgrise"
+    sdgwobble = pF "sdgwobble"
+    sdgslip = pF "sdgslip"
+    sdgcolor = pF "sdgcolor"
+    sdgratio = pF "sdgratio"
+    sdgindex = pF "sdgindex"
+    sdgwavefold = pF "sdgwavefold"
+    sdgq = pF "sdgq"
+    sdgtone = pF "sdgtone"
+    sdgclick = pF "sdgclick"
+    sdgdrive = pF "sdgdrive"
+    sdgmetal = pF "sdgmetal"
+    sdgsnap = pF "sdgsnap"
+    sdgnoise = pF "sdgnoise"
+    sdgbits = pF "sdgbits"
+    sdgspread = pF "sdgspread"
+    sdgtail = pF "sdgtail"
+
+-- the slam, and room around it. Two hits a bar, the second off the beat; the
+-- silence is part of the sound
+d1 $ s "sdgslam ~ ~ ~ ~ ~ ~ ~ ~ ~ sdgslam ~ ~ ~ ~ ~"
+
+-- tweak to taste, the slam, a bar each. sdgpunch and sdgbend are the dive: how
+-- far above it starts, how long the fall takes. sdgmetal is the clang over it
+-- and sdgcolor on this voice is the clang's pitch, a low gong (0) to thin steel
+-- (1); sdgwavefold lays a folded, metallic copy of the body on top
+d1 $ s "sdgslam ~ ~ ~ ~ ~ ~ ~ ~ ~ sdgslam ~ ~ ~ ~ ~" # sdgpunch "<30 44 30 30>"
+   # sdgbend "<0.15 0.3 0.05 0.15>" # sdgmetal "<0.4 0.1 1 0.6>" # sdgcolor "<0.5 0.5 0.9 0.1>"
+   # sdgwavefold "<0.15 0 0.2 0.8>" 
+
+-- long dives timed to the bar. :1 is the dive; at 128 a beat is 60/128 s, so
+-- sdgbend 0.94 falls for exactly two beats and lands on the next hit, and 0.47
+-- for one. sdgdecay has to be at least as long, or the dive is cut off
+d1 $ s "sdgslam:1 ~ sdgslam:1 ~" # sdgbend "<0.94 0.94 0.47 [0.94 0.23]>" # sdgdecay 1
+
+-- latex on d2: the snap (:1) as a groove, tuned by note, with a plastic clank
+-- (:3) answering it. Each hit is a pitch that falls a long way, very fast
+d2 $ n "1 ~ 1 [1 1] ~ 1 ~ 3 1 ~ ~ 1 ~ [1 3] 1 ~" # s "sdgplastic" # note "0 0 -5 <7 3>"
+
+-- bubbles on d3: the bubble (:0) and the drip (:4), every pitch somewhere else,
+-- every pan somewhere else. A bubble rises as it dies; the drip rises further
+d3 $ degradeBy 0.4 $ s "sdgplastic*16" # n "<0 4>" # note (irand 12) # pan rand # gain 0.9
+
+-- tweak to taste, the plastic. sdgrise is how far the pitch rises as it dies
+-- (a bubble), sdgwobble a rubbery wobble that dies away, sdgslip the catches of
+-- a squeak, and sdgcolor on this voice is how fast the wobble and the slips go,
+-- 6 to 160 Hz. sdgwavefold gives it shine; sdgq high makes the filter ping
+d2 $ n "1 ~ 1 [1 1] ~ 1 ~ 3 1 ~ ~ 1 ~ [1 3] 1 ~" # s "sdgplastic" # note "0 0 -5 <7 3>"
+   # sdgrise "<0 12 0 0>" # sdgwobble "<0.5 0 1 0.2>" # sdgslip "<0 0 0.3 0.9>"
+   # sdgcolor "<0.45 0.45 0.1 0.9>" # sdgwavefold "<0.4 0 0.9 0.4>" # sdgq "<0.6 0.3 0.9 0.6>"
+
+-- metal clangs on d4: the clank (:2) is mostly clang, and its pitch walks a
+-- little every bar. Off the beat, and only in the second half of the bar
+d4 $ s "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ sdgslam:2 ~ ~ sdgslam:2 ~" # sdgcolor "<0.65 0.8 0.5 0.95>"
+   # note "<0 0 3 -2>" # gain 0.9
+
+-- the classic hats and claps, made hyper. On d5 the 606 hat cut down to almost
+-- nothing and crushed, swinging left and right; on d6 a finger snap (:4) and a
+-- big room clap (:3) spread wide, both a little too clean to be real
+do
+  d5 $ s "sdghat:5*16" # sdgdecay "0.02 0.04 0.02 0.08" # sdgbits 0.5 # pan (fast 2 sine) # gain 0.9
+  d6 $ s "~ sdgclap:4 ~ [~ sdgclap:3]" # sdgspread 1 # sdgtail "<0.2 0.9>"
+
+-- a melody that is percussion: the squeak (:2) plays the notes, short, and the
+-- rubber (:5) plays a bass under it: a tune out of a drum and a drum out of
+-- a tune
+d3 $ stack [
+     note "12 ~ 15 ~ 19 ~ 15 [24 22]" # s "sdgplastic:2" # legato 0.8 # pan 0.65,
+     note "~ -12 ~ ~ ~ -12 [~ -14] ~" # s "sdgplastic:5"
+   ]
+
+-- let it run: the dive and the metal move by themselves. The dive's length
+-- sweeps from a click (0.05 s) to two beats and back over 16 bars, the slam's
+-- clang rises and falls on slow noise, the latex wobbles more and less, and the
+-- clank's pitch climbs over 8 bars
+do
+  d1 $ s "sdgslam ~ ~ ~ ~ ~ ~ ~ ~ ~ sdgslam ~ ~ ~ ~ ~" # sdgbend (range 0.05 0.94 $ slow 16 sine)
+     # sdgdecay 1 # sdgmetal (range 0 0.9 $ slow 8 perlin) # sdgpunch (range 24 44 $ slow 12 sine)
+  d2 $ n "1 ~ 1 [1 1] ~ 1 ~ 3 1 ~ ~ 1 ~ [1 3] 1 ~" # s "sdgplastic" # note "0 0 -5 <7 3>"
+     # sdgwobble (range 0 1 $ slow 10 sine)
+  d4 $ s "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ sdgslam:2 ~ ~ sdgslam:2 ~" # sdgcolor (slow 8 $ range 0.3 1 saw)
+     # gain 0.9
+  d5 $ s "sdghat:5*16" # sdgdecay (range 0.02 0.1 $ slow 4 perlin) # sdgbits 0.5 # pan (fast 2 sine)
+     # gain 0.9
+
+hush

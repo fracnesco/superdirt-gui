@@ -12,13 +12,14 @@
 //   sdgcolor   0 to 1             0 the 808, 1 the 909
 //   sdgdrive   0 to 1             saturation of the shells
 //
-// presets, by n: 0 808, 1 909, 2 tight, 3 piccolo, 4 fat. note tunes the shells and,
-// half as far, the noise; legato or sustain shorten it, like a choke.
+// presets, by n: 0 808, 1 909, 2 tight, 3 piccolo, 4 fat, 5 rimshot crack, 6 brush,
+// 7 trap, 8 lofi dusty, 9 gated 80s. note tunes the shells and, half as far, the noise;
+// legato or sustain shorten it, like a choke.
 //
 //   d1 $ s "~ sdgsnare ~ sdgsnare"
 //   d1 $ s "~ sdgsnare:1 ~ [~ sdgsnare:2]" # pF "sdgsnap" "0.7 0.4"
 //
-// examples/tidal/16-drums-classic.tidal plays it.
+// examples/tidal/lessons/16-drums-classic.tidal plays it.
 (
 var name = \sdgsnare;
 SynthDef(name, { |out, sustain = 1.2, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -61,11 +62,16 @@ SynthDef(name, { |out, sustain = 1.2, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgfreq: 172, sdgdecay: 0.22, sdgsnap: 0.55, sdgnoise: 0.2, sdgtone: 0.4, sdgpunch: 3, sdgcolor: 0, sdgdrive: 0),	// 0 808
-	(sdgfreq: 190, sdgdecay: 0.15, sdgsnap: 0.6, sdgnoise: 0.2, sdgtone: 0.6, sdgpunch: 7, sdgcolor: 1, sdgdrive: 0.4),	// 1 909
-	(sdgfreq: 215, sdgdecay: 0.09, sdgsnap: 0.65, sdgnoise: 0.08, sdgtone: 0.6, sdgpunch: 5, sdgcolor: 0.5, sdgdrive: 0.1),	// 2 tight
-	(sdgfreq: 330, sdgdecay: 0.16, sdgsnap: 0.4, sdgnoise: 0.12, sdgtone: 0.9, sdgpunch: 5, sdgcolor: 0.3, sdgdrive: 0.3),	// 3 piccolo
-	(sdgfreq: 140, sdgdecay: 0.32, sdgsnap: 0.45, sdgnoise: 0.3, sdgtone: 0.25, sdgpunch: 4, sdgcolor: 0.6, sdgdrive: 0.2)	// 4 fat
+	(presetName: "808", sdgfreq: 172, sdgdecay: 0.22, sdgsnap: 0.55, sdgnoise: 0.2, sdgtone: 0.4, sdgpunch: 3, sdgcolor: 0, sdgdrive: 0),	// 0 808
+	(presetName: "909", sdgfreq: 190, sdgdecay: 0.15, sdgsnap: 0.6, sdgnoise: 0.2, sdgtone: 0.6, sdgpunch: 7, sdgcolor: 1, sdgdrive: 0.4),	// 1 909
+	(presetName: "tight", sdgfreq: 215, sdgdecay: 0.09, sdgsnap: 0.65, sdgnoise: 0.08, sdgtone: 0.6, sdgpunch: 5, sdgcolor: 0.5, sdgdrive: 0.1),	// 2 tight
+	(presetName: "piccolo", sdgfreq: 330, sdgdecay: 0.16, sdgsnap: 0.4, sdgnoise: 0.12, sdgtone: 0.9, sdgpunch: 5, sdgcolor: 0.3, sdgdrive: 0.3),	// 3 piccolo
+	(presetName: "fat", sdgfreq: 140, sdgdecay: 0.32, sdgsnap: 0.45, sdgnoise: 0.3, sdgtone: 0.25, sdgpunch: 4, sdgcolor: 0.6, sdgdrive: 0.2),	// 4 fat
+	(presetName: "rimshot crack", sdgfreq: 230, sdgdecay: 0.12, sdgsnap: 0.35, sdgnoise: 0.1, sdgtone: 0.85, sdgpunch: 9, sdgcolor: 0.8, sdgdrive: 0.7),	// 5 rimshot crack
+	(presetName: "brush", sdgfreq: 160, sdgdecay: 0.06, sdgsnap: 0.95, sdgnoise: 0.35, sdgtone: 0.25, sdgpunch: 0, sdgcolor: 0.2, sdgdrive: 0),	// 6 brush
+	(presetName: "trap", sdgfreq: 200, sdgdecay: 0.18, sdgsnap: 0.7, sdgnoise: 0.28, sdgtone: 0.75, sdgpunch: 6, sdgcolor: 0.9, sdgdrive: 0.3),	// 7 trap
+	(presetName: "lofi dusty", sdgfreq: 180, sdgdecay: 0.2, sdgsnap: 0.5, sdgnoise: 0.18, sdgtone: 0.15, sdgpunch: 2, sdgcolor: 0.4, sdgdrive: 0.5),	// 8 lofi dusty
+	(presetName: "gated 80s", sdgfreq: 160, sdgdecay: 0.35, sdgsnap: 0.6, sdgnoise: 0.3, sdgtone: 0.55, sdgpunch: 5, sdgcolor: 0.7, sdgdrive: 0.15)	// 9 gated 80s
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

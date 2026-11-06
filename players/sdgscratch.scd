@@ -5,7 +5,7 @@
 // the wobble outruns the reading the pointer runs backwards, and that is a scratch.
 //
 // parameters:
-//   sdgscratch  0.1 to 40 per s  how many times a second the pointer wobbles
+//   sdgscratch  0 to 40 per s    how many times a second the pointer wobbles: 0 reads straight
 //   sdgdepth    0 to 0.5 s       how far to either side: small is tape wow
 //
 //   d1 $ s "numbers:3" # pF "sdgscratch" 6

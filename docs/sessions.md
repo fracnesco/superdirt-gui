@@ -22,7 +22,8 @@ for a name. Choosing in the menu changes nothing until you press load.
 | every insert in its place with its settings | Tidal's patterns |
 | a VST plugin's name, file path and state | the insert windows' places |
 | the return tracks with every send, effect, inserts and levels, and the feedback switch | |
-| the window's tab, selected orbit, play orbit, and speed, amp and pan knobs | |
+| the MIDI mappings, and the controllers they use (`midi.scd`) | the MKtls' own state: Modality's |
+| the window's tab, selected orbit, play orbit, speed, amp and pan knobs, the explorer's sort and columns, the right panel's width | |
 
 **A session's parameters are the default event's only**, never `fx.state`, which also holds the last
 value a pattern sent. Otherwise that value would come back as one the pattern never has to send again.
@@ -36,12 +37,13 @@ support directory, so that it survives an update of the quark:
  superdirt-gui-sessions/
    gig/
      session.scd      readable, an orbit or a return per line
+     midi.scd         the MIDI mappings, as the code that makes them
      vst1.state       a plugin's state, as it hands it over
      vst2.state
 ```
 
-Copy the folder to give a session to someone. **`session.scd` is SuperCollider code, read by running
-it: only load sessions you trust.**
+Copy the folder to give a session to someone. **`session.scd` and `midi.scd` are SuperCollider code,
+read by running them: only load sessions you trust.**
 
 The state files are separate to keep the text readable, since a plugin's state can run to megabytes. A
 name can be anything a folder can be on any system a student has: none of `/ \ : * ? " < > |`, no leading
@@ -54,7 +56,8 @@ dot, no trailing dot or space.
 2. The session is put together as an Event and written out as text.
 3. **That text is compiled and run first.** A session that cannot be read back is not saved at all, and
    whatever had that name is untouched.
-4. The state files are written, then `session.scd`, then any state file no longer used is deleted.
+4. The state files are written, then `session.scd`, then `midi.scd`, always, even with no mappings,
+   so that loading it always says what the mappings are. Then any state file no longer used is deleted.
 
 From code it saves over a session of the same name without asking; the window's button says **replace** first. It answers false, with a warning, if the
 name will not do, the server is not running, the orbits are not ready, or another save or load is running.
@@ -77,7 +80,11 @@ Nothing is touched if the session cannot be read. An orbit not ready yet, loaded
 5. **Its inserts,** in the session's order, settings before their synths start: they land in the effect's
    state, which `play` sends, or for a plugin wait for it to open.
 6. **Fader, mute and solo last,** so a level comes up on the chain it was saved with.
-7. **Waiting.** The action gets its answer once every insert has its synth and every plugin its state, at most
+7. **The MIDI mappings** are replaced by the session's `midi.scd`. A session saved with none, or from
+   before there were mappings, leaves none. A controller the session names and Modality does not have
+   yet is made; one already there with another description is kept, with a warning. A mapping whose
+   effect or return is not there waits for it.
+8. **Waiting.** The action gets its answer once every insert has its synth and every plugin its state, at most
    thirty seconds.
 
 Orbits beyond the session's are left as they are.
@@ -89,6 +96,9 @@ file that is gone: each is left out with a warning, and the rest loads. All of t
 as `session 'x' loaded without:`, and `~sdg.session.problems` holds them as Strings. A session with more orbits
 than this SuperDirt fills what it can. A session saved by a newer version says so and leaves out what it does
 not know.
+
+To take another session's mappings and leave the mixer alone: **from session...** in the MIDI window,
+or `~sdg.midi.loadSession("gig")`.
 
 ## Adding to it
 

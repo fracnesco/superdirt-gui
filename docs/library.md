@@ -33,9 +33,11 @@ d1 $ s "sdgsine" # pF "sdgshape" 0.8
 
 ### sdgacid
 
-[synths/sdgacid.scd](../synths/sdgacid.scd) · played in [11-acid.tidal](../examples/tidal/11-acid.tidal)
+[synths/sdgacid.scd](../synths/sdgacid.scd) · played in [11-acid.tidal](../examples/tidal/lessons/11-acid.tidal)
 
 A 303-like voice: one oscillator, a resonant low pass, and an envelope that opens the filter on each note. Plucks and arpeggios too.
+
+Presets, by n: 0 303, 1 squelch, 2 square, 3 deep rubber, 4 plucky, 5 screamer, 6 open, 7 muted, 8 long decay, 9 slow glide. A pattern's n picks one of them and note plays the pitch: s "sdgacid:1" # note "0 7".
 
 A synth forgets the note before it, so a slide is written as the distance back to that note: after a2, a3 with sdgslide -12 glides up from a2.
 
@@ -59,11 +61,11 @@ d1 $ note "a2 a3" # s "sdgacid" # legato 1 # pF "sdgslide" "0 -12"
 
 ### sdgchaos
 
-[synths/sdgchaos.scd](../synths/sdgchaos.scd) · played in [19-drums-autechre.tidal](../examples/tidal/19-drums-autechre.tidal)
+[synths/sdgchaos.scd](../synths/sdgchaos.scd) · played in [19-drums-small-machines.tidal](../examples/tidal/lessons/19-drums-small-machines.tidal)
 
-Digital and chaotic noise percussion: a chaotic source (crackle, logistic map, stepped noise or Xenakis' gendy) over a dropping sine, a comb that rings it, drive, and a sample-rate and bit crush. Glitch snares, digital hats, broken kicks; no two hits are the same.
+Digital and chaotic noise percussion: a chaotic source (crackle, logistic map, stepped noise or gendy) over a dropping sine, a comb that rings it, drive, and a sample-rate and bit crush. Glitch snares, digital hats, broken kicks; no two hits are the same.
 
-Presets, by n: 0 glitch snare, 1 digital hat, 2 broken kick, 3 crackle, 4 gendy tom, 5 static. Note tunes it; legato or sustain shorten it, like a choke.
+Presets, by n: 0 glitch snare, 1 digital hat, 2 broken kick, 3 crackle, 4 gendy tom, 5 static, 6 gendy kick, 7 logistic open hat, 8 broken clap, 9 digital rim. Note tunes it; legato or sustain shorten it, like a choke.
 
 **Out:** audio 2 on `out`.
 
@@ -89,9 +91,11 @@ d1 $ s "sdgchaos:1*16" # pF "sdgcolor" (slow 4 saw) # pF "sdgnoise" (range 0.02 
 
 ### sdgchoir
 
-[synths/sdgchoir.scd](../synths/sdgchoir.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgchoir.scd](../synths/sdgchoir.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 A choir pad: three slightly different voices through the formants of a vowel, with some breath on top.
+
+Presets, by n: 0 ahh, 1 ooh, 2 eeh, 3 cathedral, 4 whisper, 5 solo voice, 6 big chorus, 7 staccato, 8 slow swell, 9 robot. A pattern's n picks one of them and note plays the pitch: s "sdgchoir:1" # note "0 7".
 
 Attack and release happen inside sustain, shortened together if a note is too short for both.
 
@@ -114,11 +118,11 @@ d1 $ slow 2 $ note "a'min7" # s "sdgchoir" # legato 1 # pF "sdgvowel" "<0 3 4>"
 
 ### sdgclap
 
-[synths/sdgclap.scd](../synths/sdgclap.scd) · played in [16-drums-classic.tidal](../examples/tidal/16-drums-classic.tidal)
+[synths/sdgclap.scd](../synths/sdgclap.scd) · played in [16-drums-classic.tidal](../examples/tidal/lessons/16-drums-classic.tidal)
 
 A hand clap: noise through a band pass, struck as a few bursts a hand's width apart, the last one longer, with a short room after it. As in the 808 and 909; one burst and a narrow band make a finger snap.
 
-Presets, by n: 0 808, 1 909, 2 tight, 3 big room, 4 snap. Note moves the band in semitones; legato or sustain shorten it, like a choke. Every clap is a little different.
+Presets, by n: 0 808, 1 909, 2 tight, 3 big room, 4 snap, 5 trap, 6 real hands, 7 crowd, 8 lofi, 9 micro. Note moves the band in semitones; legato or sustain shorten it, like a choke. Every clap is a little different.
 
 **Out:** audio 2 on `out`.
 
@@ -140,11 +144,11 @@ d1 $ s "~ sdgclap:3 ~ [sdgclap:4 sdgclap:4]" # pF "sdgspread" 0.6
 
 ### sdgcowbell
 
-[synths/sdgcowbell.scd](../synths/sdgcowbell.scd) · played in [16-drums-classic.tidal](../examples/tidal/16-drums-classic.tidal)
+[synths/sdgcowbell.scd](../synths/sdgcowbell.scd) · played in [16-drums-classic.tidal](../examples/tidal/lessons/16-drums-classic.tidal)
 
 A cowbell: the 808's two square waves a fifth-ish apart through a filter, loud for the first few milliseconds and then a ringing tail. Agogo and bell by preset; ring the two together for clank.
 
-Presets, by n: 0 808, 1 808 short, 2 agogo, 3 bell, 4 clank. Note tunes it in semitones from the 808's 558 Hz; agogo pairs are a note apart, "0 5" or "0 7".
+Presets, by n: 0 808, 1 808 short, 2 agogo, 3 bell, 4 clank, 5 808 long, 6 fifth, 7 tin can, 8 gamelan, 9 two-tone. Note tunes it in semitones from the 808's 558 Hz; agogo pairs are a note apart, "0 5" or "0 7".
 
 **Out:** audio 2 on `out`.
 
@@ -163,11 +167,11 @@ d1 $ s "sdgcowbell:2*8" # note "7 0 0 7 0 7 0 0"
 
 ### sdgcymbal
 
-[synths/sdgcymbal.scd](../synths/sdgcymbal.scd) · played in [17-drums-fm.tidal](../examples/tidal/17-drums-fm.tidal)
+[synths/sdgcymbal.scd](../synths/sdgcymbal.scd) · played in [17-drums-fm.tidal](../examples/tidal/lessons/17-drums-fm.tidal)
 
 Cymbals, gongs and bells: a wash of six square waves at the 808's out-of-tune ratios, multiplied in pairs and mixed with noise, under an FM bell that gives the ping. The wash darkens as it rings, and can swell in.
 
-Presets, by n: 0 ride, 1 crash, 2 china, 3 gong, 4 bell. Note tunes it in semitones from its own pitch. It rings up to 10 seconds: legato or sustain shorten it, like a hand that grabs the cymbal.
+Presets, by n: 0 ride, 1 crash, 2 china, 3 gong, 4 bell, 5 splash, 6 sizzle ride, 7 swell, 8 dark crash, 9 singing bowl. Note tunes it in semitones from its own pitch. It rings up to 10 seconds: legato or sustain shorten it, like a hand that grabs the cymbal.
 
 **Out:** audio 2 on `out`.
 
@@ -192,9 +196,11 @@ d1 $ s "sdgcymbal:1" # pF "sdgbloom" "<0 0.5>"
 
 ### sdgfm
 
-[synths/sdgfm.scd](../synths/sdgfm.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgfm.scd](../synths/sdgfm.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 Two-operator FM: electric piano, bells, metal, all from where you put the two numbers. The brightness dies faster than the note.
+
+Presets, by n: 0 e-piano, 1 bell, 2 metal, 3 dx bass, 4 marimba, 5 tubular, 6 soft flute, 7 harsh lead, 8 clav, 9 chorus keys. A pattern's n picks one of them and note plays the pitch: s "sdgfm:1" # note "0 7".
 
 **Out:** audio 2 on `out`.
 
@@ -212,11 +218,11 @@ d1 $ note "c6 e6 g6" # s "sdgfm" # legato 2 # pF "sdgratio" 3.5 # pF "sdgindex" 
 
 ### sdgfmdrum
 
-[synths/sdgfmdrum.scd](../synths/sdgfmdrum.scd) · played in [17-drums-fm.tidal](../examples/tidal/17-drums-fm.tidal)
+[synths/sdgfmdrum.scd](../synths/sdgfmdrum.scd) · played in [17-drums-fm.tidal](../examples/tidal/lessons/17-drums-fm.tidal)
 
 A whole drum kit from one FM voice, the Elektron way (Machinedrum EFM, Digitone FM drum, Model:Cycles): a sine carrier with a pitch sweep, a modulator with feedback and its own envelope, a noise part that can clap, and a click. Every knob does something big, so changing one per step turns a kick into a tom into a clank.
 
-Presets, by n: 0 FM kick, 1 FM snare, 2 FM tom, 3 FM clap, 4 FM metal, 5 perc (Cycles PERC, a struck signpost). Note tunes it in semitones from its own pitch; legato or sustain shorten it, like a choke.
+Presets, by n: 0 FM kick, 1 FM snare, 2 FM tom, 3 FM clap, 4 FM metal, 5 perc (Cycles PERC, a struck signpost), 6 FM hat, 7 FM zap, 8 FM rim, 9 FM hard kick. Note tunes it in semitones from its own pitch; legato or sustain shorten it, like a choke.
 
 **Out:** audio 2 on `out`.
 
@@ -245,11 +251,11 @@ d1 $ s "sdgfmdrum:0 sdgfmdrum:2 sdgfmdrum:1 sdgfmdrum:4" # pF "sdgcolor" "0.1 0.
 
 ### sdghat
 
-[synths/sdghat.scd](../synths/sdghat.scd) · played in [16-drums-classic.tidal](../examples/tidal/16-drums-classic.tidal)
+[synths/sdghat.scd](../synths/sdghat.scd) · played in [16-drums-classic.tidal](../examples/tidal/lessons/16-drums-classic.tidal)
 
 A hi-hat: the 808's six square oscillators, a band pass around 7 kHz and a high pass, through a swing VCA. Closed, pedal and open by decay; noise in place of the squares for the sampled 909 kind.
 
-Presets, by n: 0 808 closed, 1 pedal, 2 808 open, 3 909 closed, 4 909 open, 5 606 closed. Note shifts the squares and half as much the filters. Put closed and open in one cut group and a closed hat chokes the open one:
+Presets, by n: 0 808 closed, 1 pedal, 2 808 open, 3 909 closed, 4 909 open, 5 606 closed, 6 606 open, 7 shaker, 8 crushed, 9 dark open. Note shifts the squares and half as much the filters. Put closed and open in one cut group and a closed hat chokes the open one:
 
 **Out:** audio 2 on `out`.
 
@@ -269,11 +275,11 @@ d1 $ s "sdghat:3*16" # gain "1 0.9" # pF "sdgdecay" (range 0.05 0.2 sine)
 
 ### sdgkick
 
-[synths/sdgkick.scd](../synths/sdgkick.scd) · played in [16-drums-classic.tidal](../examples/tidal/16-drums-classic.tidal)
+[synths/sdgkick.scd](../synths/sdgkick.scd) · played in [16-drums-classic.tidal](../examples/tidal/lessons/16-drums-classic.tidal)
 
 A kick drum: a sine that drops onto its pitch and rings out. sdgcolor goes from the 808, a ringing sine that sags a little as it fades, to the 909, a rounded triangle swept down from three times its pitch; a click on top, drive for the hard ones.
 
-Presets, by n: 0 808 long boom, 1 909, 2 606 tight, 3 hard techno, 4 deep sub. Note tunes it in semitones from its own pitch; legato or sustain shorten it, like a choke.
+Presets, by n: 0 808 long boom, 1 909, 2 606 tight, 3 hard techno, 4 deep sub, 5 linn, 6 gabber, 7 lofi soft, 8 trap 808, 9 minimal click. Note tunes it in semitones from its own pitch; legato or sustain shorten it, like a choke.
 
 **Out:** audio 2 on `out`.
 
@@ -295,9 +301,11 @@ d1 $ s "sdgkick:1*4" # pF "sdgdecay" 0.3 # note "-2"
 
 ### sdglead
 
-[synths/sdglead.scd](../synths/sdglead.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdglead.scd](../synths/sdglead.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 A mono synth lead: two saws and a square an octave down, a filter that opens on each note, vibrato that comes in late.
+
+Presets, by n: 0 mono lead, 1 fat saw, 2 singing, 3 squelchy, 4 soft, 5 screaming, 6 bass lead, 7 brass, 8 pluck, 9 slow glide. A pattern's n picks one of them and note plays the pitch: s "sdglead:1" # note "0 7".
 
 As on sdgacid a slide is the distance back to the note before.
 
@@ -325,11 +333,11 @@ d1 $ note "a5 e6" # s "sdglead" # legato 1 # pF "sdgslide" "0 -7"
 
 ### sdgmodal
 
-[synths/sdgmodal.scd](../synths/sdgmodal.scd) · played in [17-drums-fm.tidal](../examples/tidal/17-drums-fm.tidal)
+[synths/sdgmodal.scd](../synths/sdgmodal.scd) · played in [17-drums-fm.tidal](../examples/tidal/lessons/17-drums-fm.tidal)
 
 A struck object, modelled: ten resonant modes hit by a mallet (the Machinedrum's PI machines, the Syntakt's). One knob morphs the material from a tuned drum through a skin, a marimba bar and a free bar to a plate; others choose where it is hit and with what.
 
-Presets, by n: 0 drum (a tom-like skin), 1 marimba, 2 glass, 3 metal plate, 4 tabla, 5 wood. Note tunes it in semitones from its own pitch; legato or sustain shorten it, like a hand on the head.
+Presets, by n: 0 drum (a tom-like skin), 1 marimba, 2 glass, 3 metal plate, 4 tabla, 5 wood, 6 vibes, 7 kalimba, 8 steel pan, 9 snare drum. Note tunes it in semitones from its own pitch; legato or sustain shorten it, like a hand on the head.
 
 **Out:** audio 2 on `out`.
 
@@ -351,9 +359,11 @@ d1 $ s "sdgmodal*8" # pF "sdgmetal" (slow 4 saw) # pF "sdgcolor" "0 0.5 1 0.3"
 
 ### sdgpad
 
-[synths/sdgpad.scd](../synths/sdgpad.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgpad.scd](../synths/sdgpad.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 A warm analog pad: saws and pulses that drift against each other, through a low pass that moves slowly and differently in each ear.
+
+Presets, by n: 0 warm, 1 dark, 2 bright, 3 sweep, 4 wide, 5 resonant motion, 6 slow swell, 7 stab, 8 ambient drift, 9 tight chords. A pattern's n picks one of them and note plays the pitch: s "sdgpad:1" # note "0 7".
 
 SuperDirt ends the event at the end of sustain, so attack and release happen inside it, shortened together if a note is too short for both. Chords want legato 1 and a slow pattern.
 
@@ -376,11 +386,11 @@ d1 $ slow 4 $ note "c'maj9" # s "sdgpad" # legato 1 # pF "sdgcut" (slow 8 $ rang
 
 ### sdgping
 
-[synths/sdgping.scd](../synths/sdgping.scd) · played in [19-drums-autechre.tidal](../examples/tidal/19-drums-autechre.tidal)
+[synths/sdgping.scd](../synths/sdgping.scd) · played in [19-drums-small-machines.tidal](../examples/tidal/lessons/19-drums-small-machines.tidal)
 
-Pinged resonant filters: one click rings three tuned resonators at once, and their pitch sweeps as they ring. Blips, droplets, metallic ticks, wood and rubber, the small sounds of an Autechre kit.
+Pinged resonant filters: one click rings three tuned resonators at once, and their pitch sweeps as they ring. Blips, droplets, metallic ticks, wood and rubber.
 
-Presets, by n: 0 blip, 1 droplet, 2 metal tick, 3 wood, 4 zap, 5 rubber. Note tunes it in semitones from its own pitch; legato or sustain shorten it, like a choke.
+Presets, by n: 0 blip, 1 droplet, 2 metal tick, 3 wood, 4 zap, 5 rubber, 6 sonar, 7 laser, 8 bar, 9 glitch rattle. Note tunes it in semitones from its own pitch; legato or sustain shorten it, like a choke.
 
 **Out:** audio 2 on `out`.
 
@@ -404,11 +414,11 @@ d1 $ s "sdgping:1(5,8)" # note (range (-5) 12 rand) # pF "sdgdecay" 0.1
 
 ### sdgplastic
 
-[synths/sdgplastic.scd](../synths/sdgplastic.scd) · played in [18-drums-sophie.tidal](../examples/tidal/18-drums-sophie.tidal)
+[synths/sdgplastic.scd](../synths/sdgplastic.scd) · played in [18-drums-hyperreal.tidal](../examples/tidal/lessons/18-drums-hyperreal.tidal)
 
 Hyper-real material percussion: bubbles, latex, squeaks, plastic knocks and drips. A sine whose pitch moves a long way very fast, bent by fm and folding, through a resonant filter that follows it, and squashed at the end.
 
-Presets, by n: 0 bubble, 1 latex snap, 2 squeak, 3 plastic clank, 4 drip, 5 rubber. Note tunes it in semitones; legato or sustain shorten it, like a choke.
+Presets, by n: 0 bubble, 1 latex snap, 2 squeak, 3 plastic clank, 4 drip, 5 rubber, 6 cork pop, 7 balloon rub, 8 boing, 9 bottle tap. Note tunes it in semitones; legato or sustain shorten it, like a choke.
 
 **Out:** audio 2 on `out`.
 
@@ -438,9 +448,11 @@ d1 $ s "sdgplastic:1 ~ sdgplastic:3 sdgplastic:1" # pF "sdgwobble" "<0.2 0.8>"
 
 ### sdgpluck
 
-[synths/sdgpluck.scd](../synths/sdgpluck.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgpluck.scd](../synths/sdgpluck.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 A plucked string: a burst of noise rings in a short delay (Karplus-Strong). Guitars, harps, kalimbas, depending on the two knobs.
+
+Presets, by n: 0 guitar, 1 harp, 2 kalimba, 3 muted, 4 steel, 5 nylon, 6 koto, 7 pizzicato, 8 bass, 9 ringing. A pattern's n picks one of them and note plays the pitch: s "sdgpluck:1" # note "0 7".
 
 A note ends at the end of its sustain whatever is still ringing, so let it have some legato.
 
@@ -459,11 +471,11 @@ d1 $ note (arp "updown" "a'min7'8") # s "sdgpluck" # legato 2 # pF "sdgdamp" 0.7
 
 ### sdgratchet
 
-[synths/sdgratchet.scd](../synths/sdgratchet.scd) · played in [19-drums-autechre.tidal](../examples/tidal/19-drums-autechre.tidal)
+[synths/sdgratchet.scd](../synths/sdgratchet.scd) · played in [19-drums-small-machines.tidal](../examples/tidal/lessons/19-drums-small-machines.tidal)
 
 A roll in one event: sdgcount clicks spread over sdglen seconds, evenly or like a bouncing ball, each one pinging a resonant filter whose pitch walks from click to click.
 
-The gaps shrink or grow by one ratio, so at sdgcurve 1 the last gap is 1/32 of the first, at -1 32 times it. Presets, by n: 0 bounce, 1 ratchet, 2 slowdown, 3 zipper, 4 crushed. Note tunes it; legato or sustain cut the roll short.
+The gaps shrink or grow by one ratio, so at sdgcurve 1 the last gap is 1/32 of the first, at -1 32 times it. Presets, by n: 0 bounce, 1 ratchet, 2 slowdown, 3 zipper, 4 crushed, 5 ping pong, 6 machine gun, 7 tape stop, 8 geiger, 9 flam. Note tunes it; legato or sustain cut the roll short.
 
 **Out:** audio 2 on `out`.
 
@@ -487,9 +499,11 @@ d1 $ s "[sdgratchet:1, sdgkick]" # pF "sdgcurve" (range (-1) 1 sine)
 
 ### sdgreese
 
-[synths/sdgreese.scd](../synths/sdgreese.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgreese.scd](../synths/sdgreese.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 The reese bass of drum and bass: detuned saws that beat against each other, a clean sine holding the bottom, some drive.
+
+Presets, by n: 0 reese, 1 slow beat, 2 nasty, 3 sub heavy, 4 growl, 5 bright, 6 pluck, 7 wide, 8 clean, 9 acid. A pattern's n picks one of them and note plays the pitch: s "sdgreese:1" # note "0 7".
 
 **Out:** audio 2 on `out`.
 
@@ -510,11 +524,11 @@ d1 $ note "e2" # s "sdgreese" # legato 1 # pF "sdgcut" (slow 4 $ range 200 2000 
 
 ### sdgrim
 
-[synths/sdgrim.scd](../synths/sdgrim.scd) · played in [16-drums-classic.tidal](../examples/tidal/16-drums-classic.tidal)
+[synths/sdgrim.scd](../synths/sdgrim.scd) · played in [16-drums-classic.tidal](../examples/tidal/lessons/16-drums-classic.tidal)
 
 Rimshot, claves, woodblock: short pings, the way the 808 makes them - a resonant filter struck once, a lower one under it, a tick of noise, and clipping for the rimshot's crack.
 
-Presets, by n: 0 808 rim, 1 claves, 2 woodblock, 3 909 rim, 4 stick. Note tunes both tones in semitones.
+Presets, by n: 0 808 rim, 1 claves, 2 woodblock, 3 909 rim, 4 stick, 5 cross stick, 6 high block, 7 low block, 8 castanet, 9 hi click. Note tunes both tones in semitones.
 
 **Out:** audio 2 on `out`.
 
@@ -534,11 +548,11 @@ d1 $ s "sdgrim:1(3,8,<0 2>)" # note "<0 2 -3>"
 
 ### sdgslam
 
-[synths/sdgslam.scd](../synths/sdgslam.scd) · played in [18-drums-sophie.tidal](../examples/tidal/18-drums-sophie.tidal)
+[synths/sdgslam.scd](../synths/sdgslam.scd) · played in [18-drums-hyperreal.tidal](../examples/tidal/lessons/18-drums-hyperreal.tidal)
 
 A hyper-real kick, the slam: a driven sine that dives a long way in pitch, a struck metal clang over it and a gated burst of noise, squashed flat by a drive, an eq and a limiter inside the synth. Loud at a modest peak, like a mastered hit.
 
-Presets, by n: 0 slam, 1 dive, 2 clank, 3 gated, 4 crunch, 5 boom. Note tunes it in semitones; legato or sustain shorten it, like a choke. It is louder than its peak suggests: the limiter leaves only a few dB between peak and body.
+Presets, by n: 0 slam, 1 dive, 2 clank, 3 gated, 4 crunch, 5 boom, 6 sub drop, 7 industrial, 8 hardstyle, 9 soft thud. Note tunes it in semitones; legato or sustain shorten it, like a choke. It is louder than its peak suggests: the limiter leaves only a few dB between peak and body.
 
 **Out:** audio 2 on `out`.
 
@@ -564,11 +578,11 @@ d1 $ s "sdgslam:1" # pF "sdgbend" "<0.3 0.8>" # pF "sdgmetal" 0.6
 
 ### sdgsnare
 
-[synths/sdgsnare.scd](../synths/sdgsnare.scd) · played in [16-drums-classic.tidal](../examples/tidal/16-drums-classic.tidal)
+[synths/sdgsnare.scd](../synths/sdgsnare.scd) · played in [16-drums-classic.tidal](../examples/tidal/lessons/16-drums-classic.tidal)
 
 A snare drum: two tuned shells and a burst of filtered noise, the snares. sdgcolor goes from the 808, clean shells nearly an octave apart, to the 909, shaped shells a fifth apart whose noise holds a moment before it falls.
 
-Presets, by n: 0 808, 1 909, 2 tight, 3 piccolo, 4 fat. Note tunes the shells and, half as far, the noise; legato or sustain shorten it, like a choke.
+Presets, by n: 0 808, 1 909, 2 tight, 3 piccolo, 4 fat, 5 rimshot crack, 6 brush, 7 trap, 8 lofi dusty, 9 gated 80s. Note tunes the shells and, half as far, the noise; legato or sustain shorten it, like a choke.
 
 **Out:** audio 2 on `out`.
 
@@ -590,9 +604,11 @@ d1 $ s "~ sdgsnare:1 ~ [~ sdgsnare:2]" # pF "sdgsnap" "0.7 0.4"
 
 ### sdgstrings
 
-[synths/sdgstrings.scd](../synths/sdgstrings.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgstrings.scd](../synths/sdgstrings.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 A string machine: one bright saw an octave doubled, thickened by a chorus of three modulated delays, the sound of the Solina.
+
+Presets, by n: 0 solina, 1 dark, 2 bright, 3 slow, 4 stab, 5 dry, 6 lush, 7 cello, 8 violins, 9 pad. A pattern's n picks one of them and note plays the pitch: s "sdgstrings:1" # note "0 7".
 
 Attack and release happen inside sustain, shortened together if a note is too short for both.
 
@@ -613,9 +629,11 @@ d1 $ slow 2 $ note "c'maj7 a'min7" # s "sdgstrings" # legato 1 # pF "sdgchorus" 
 
 ### sdgsub
 
-[synths/sdgsub.scd](../synths/sdgsub.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgsub.scd](../synths/sdgsub.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 A sub bass: a sine, a quick drop in pitch to give it a front, and drive for the harmonics that let small speakers hear it.
+
+Presets, by n: 0 sub, 1 clean sine, 2 808 bass, 3 punchy, 4 dirty, 5 square, 6 slow drop, 7 click, 8 warm, 9 dive. A pattern's n picks one of them and note plays the pitch: s "sdgsub:1" # note "0 7".
 
 **Out:** audio 2 on `out`.
 
@@ -632,9 +650,11 @@ d1 $ note "e2*2" # s "sdgsub" # legato 1 # pF "sdgpunch" 24 # pF "sdgdrive" 0.5
 
 ### sdgsupersaw
 
-[synths/sdgsupersaw.scd](../synths/sdgsupersaw.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgsupersaw.scd](../synths/sdgsupersaw.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 The trance and big-room stack: seven saws, detuned unevenly the way Roland's JP-8000 did it, spread across the stereo field.
+
+Presets, by n: 0 trance, 1 big room, 2 subtle, 3 pluck, 4 pad, 5 mono, 6 filtered, 7 wide, 8 stab, 9 lead. A pattern's n picks one of them and note plays the pitch: s "sdgsupersaw:1" # note "0 7".
 
 SuperDirt ends the event at the end of sustain, so attack and release happen inside it: a chord that should ring out wants a long legato.
 
@@ -659,9 +679,11 @@ d1 $ note (arp "up" "a'min7'8") # s "sdgsupersaw" # pF "sdgdetune" 0.6 # pF "sdg
 
 ### sdgsync
 
-[synths/sdgsync.scd](../synths/sdgsync.scd) · played in [14-synths.tidal](../examples/tidal/14-synths.tidal)
+[synths/sdgsync.scd](../synths/sdgsync.scd) · played in [14-synths.tidal](../examples/tidal/lessons/14-synths.tidal)
 
 A hard sync lead: one oscillator restarts another, and moving the second one's pitch makes the tearing, vocal sweep.
+
+Presets, by n: 0 sync lead, 1 tearing, 2 static, 3 vocal, 4 zap, 5 dark, 6 screamer, 7 slow sweep, 8 vibrato, 9 pluck. A pattern's n picks one of them and note plays the pitch: s "sdgsync:1" # note "0 7".
 
 **Out:** audio 2 on `out`.
 
@@ -684,11 +706,11 @@ d1 $ note "a4" # s "sdgsync" # legato 1 # pF "sdgsync" (range 1 6 sine)
 
 ### sdgtom
 
-[synths/sdgtom.scd](../synths/sdgtom.scd) · played in [16-drums-classic.tidal](../examples/tidal/16-drums-classic.tidal)
+[synths/sdgtom.scd](../synths/sdgtom.scd) · played in [16-drums-classic.tidal](../examples/tidal/lessons/16-drums-classic.tidal)
 
 A tom, conga or bongo: a tuned skin that starts sharp and settles, as the 808's do, with a stick on top and a breath of noise under the low ones. sdgcolor rounds the sine toward the 909's shaped triangle.
 
-Presets, by n: 0 low tom, 1 mid tom, 2 high tom, 3 conga, 4 bongo, 5 808 deep. Note tunes it in semitones from its own pitch, so one preset plays a whole set of toms.
+Presets, by n: 0 low tom, 1 mid tom, 2 high tom, 3 conga, 4 bongo, 5 808 deep, 6 909 low, 7 909 high, 8 syndrum, 9 floor tom. Note tunes it in semitones from its own pitch, so one preset plays a whole set of toms.
 
 **Out:** audio 2 on `out`.
 
@@ -712,7 +734,7 @@ d1 $ n "3 3 4 3" # s "sdgtom" # note "0 0 0 -5"
 
 An effect on one event: it runs behind the sound, in the event's own group, on every event whose parameter is set.
 
-[sdgcomb](#sdgcomb)
+[sdgcomb](#sdgcomb) · [sdgbody](#sdgbody) · [sdgboom](#sdgboom) · [sdgchrome](#sdgchrome) · [sdgdive](#sdgdive) · [sdggated](#sdggated) · [sdglatex](#sdglatex) · [sdgroll](#sdgroll) · [sdgtrans](#sdgtrans)
 
 ### sdgcomb
 
@@ -733,6 +755,197 @@ A module is a function SuperDirt calls for every event whose test passes, after 
 
 ```haskell
 d1 $ s "bd*4" # pF "sdgcomb" 0.4 # pF "sdgres" 2
+```
+
+### sdgbody
+
+[modules/sdgbody.scd](../modules/sdgbody.scd)
+
+The hit strikes a body: a drum shell, a bar, a tube or a bell.
+
+The event's sound goes into a bank of resonators tuned to the modes of a real object, so a clap rings like a tom, a hat like a struck bar. sdgbodytype picks the object: 0 a membrane (a drum's skin), 1 a free bar (marimba, glock), 2 a tube (harmonic, like a string), 3 a bell (hum, prime, tierce, quint, nominal). sdgbodyfreq is its lowest mode, sdgbodydecay how long it rings; higher modes die sooner. The event lasts at least as long as the ring (Ableton's Corpus and the Machinedrum's PI machines do the same).
+
+**In:** audio 2 on `out`.
+
+**Out:** audio 2 on `out`.
+
+| parameter | range | default | what it does |
+|-----------|-------|---------|--------------|
+| `sdgbody` | 0 to 1 | 0.5 | how much of the body against the dry hit |
+| `sdgbodyfreq` | 40 to 2000 Hz | 180.0 | the lowest mode |
+| `sdgbodytype` | 0 to 3 | - | 0 membrane, 1 bar, 2 tube, 3 bell |
+| `sdgbodydecay` | 0.05 to 4 s | 0.6 | how long it rings, to -60 dB |
+
+```haskell
+d1 $ s "cp*4" # pF "sdgbody" 0.6 # pF "sdgbodyfreq" 110
+d1 $ s "hh*8" # pF "sdgbody" 0.5 # pF "sdgbodytype" 1 # pF "sdgbodyfreq" "440 660"
+d1 $ s "sn*2" # pF "sdgbody" 0.7 # pF "sdgbodytype" 3 # pF "sdgbodyfreq" 220 # pF "sdgbodydecay" 2
+```
+
+### sdgboom
+
+[modules/sdgboom.scd](../modules/sdgboom.scd)
+
+A tuned sub under every hit, like an 808's.
+
+It listens for the hits in the event's sound and answers each with a sine at sdgboomfreq, as loud as the hit and dying in sdgboomdecay seconds. It starts half an octave up and falls onto its note in 20 ms, which is the thump. A hat gets a kick under it; a break gets a sub on every hit it finds (Ableton's Drum Buss calls this Boom). The event lasts at least as long as the boom.
+
+**In:** audio 2 on `out`.
+
+**Out:** audio 2 on `out`.
+
+| parameter | range | default | what it does |
+|-----------|-------|---------|--------------|
+| `sdgboom` | 0 to 1 | 0.5 | how loud the sub is |
+| `sdgboomfreq` | 25 to 200 Hz | 50.0 | its pitch: 41 is E, 49 G, 55 A |
+| `sdgboomdecay` | 0.05 to 3 s | 0.5 | how long it rings, to -60 dB |
+
+```haskell
+d1 $ s "hh*4" # pF "sdgboom" 0.7
+d1 $ s "bd*4" # pF "sdgboom" 0.5 # pF "sdgboomfreq" 41 # pF "sdgboomdecay" 1.5
+d1 $ s "breaks125" # legato 1 # pF "sdgboom" 0.4 # pF "sdgboomfreq" "<55 49>"
+```
+
+### sdgchrome
+
+[modules/sdgchrome.scd](../modules/sdgchrome.scd)
+
+Turns a hit to metal: four short combs, wobbling, squashed.
+
+SOPHIE's metal came from feeding a short hit into short delays with a lot of feedback and then squashing everything. Here four combs ring at sdgchromefreq and at 1.41, 1.73 and 2.24 times it - no two in a harmonic ratio, so it sounds struck, not plucked - their delay times wobble a little, like a chorus, and the sum is driven into a soft clip. sdgchromefb is how long the metal rings; the event lasts at least that long.
+
+**In:** audio 2 on `out`.
+
+**Out:** audio 2 on `out`.
+
+| parameter | range | default | what it does |
+|-----------|-------|---------|--------------|
+| `sdgchrome` | 0 to 1 | 0.5 | how much metal against the dry hit |
+| `sdgchromefreq` | 50 to 2000 Hz | 220.0 | the lower comb's pitch |
+| `sdgchromefb` | 0 to 1 | 0.5 | how long it rings: 0 is 50 ms, 1 is 3 s |
+
+```haskell
+d1 $ s "sn*4" # pF "sdgchrome" 0.6
+d1 $ s "hh*8" # pF "sdgchrome" 0.8 # pF "sdgchromefreq" "<300 450>" # pF "sdgchromefb" 0.3
+d1 $ s "bd*2" # pF "sdgchrome" 0.5 # pF "sdgchromefreq" 90 # pF "sdgchromefb" 0.8
+```
+
+### sdgdive
+
+[modules/sdgdive.scd](../modules/sdgdive.scd)
+
+The hit dives in pitch, like a record stopped by hand.
+
+The event's sound goes through a delay that grows longer as it plays, so it is read slower and slower: by sdgdivetime seconds it is sdgdive semitones down, and it stays there, stretched, until the delay is full (half a second). A hat becomes a zap, a kick a tape stop. A delay can only make things later, so a dive only goes down.
+
+**In:** audio 2 on `out`.
+
+**Out:** audio 2 on `out`.
+
+| parameter | range | default | what it does |
+|-----------|-------|---------|--------------|
+| `sdgdive` | 0 to 48 st | 12.0 | how far down it ends |
+| `sdgdivetime` | 0.01 to 1 s | 0.15 | how long it takes to get there |
+
+```haskell
+d1 $ s "hh*8" # pF "sdgdive" 24 # pF "sdgdivetime" 0.05
+d1 $ s "bd*4" # pF "sdgdive" "0 12" # pF "sdgdivetime" 0.3
+d1 $ s "breaks125" # legato 1 # pF "sdgdive" 36 # pF "sdgdivetime" 1
+```
+
+### sdggated
+
+[modules/sdggated.scd](../modules/sdggated.scd)
+
+Gated reverb: a big room cut off dead after every hit.
+
+The 80s snare: each hit goes into a dense, bright room, and a gate that the hit opens shuts it sdggatedtime seconds later, in 10 ms. The room is the event's own, so every hit gets its own gate: a long one on the snare and a short one on the toms in one pattern. The event lasts at least as long as the gate is open.
+
+**In:** audio 2 on `out`.
+
+**Out:** audio 2 on `out`.
+
+| parameter | range | default | what it does |
+|-----------|-------|---------|--------------|
+| `sdggated` | 0 to 1 | 0.5 | how much room against the dry hit |
+| `sdggatedtime` | 0.05 to 1 s | 0.25 | how long the gate stays open after a hit |
+
+```haskell
+d1 $ s "~ sn" # pF "sdggated" 0.6
+d1 $ s "bd sn:3 bd sn:3" # pF "sdggated" "0 0.7" # pF "sdggatedtime" 0.4
+d1 $ s "sdgtom*4" # n "0 1 2 3" # pF "sdggated" 0.5 # pF "sdggatedtime" 0.15
+```
+
+### sdglatex
+
+[modules/sdglatex.scd](../modules/sdglatex.scd)
+
+A squelch on every hit: a resonant filter diving with it.
+
+SOPHIE's latex sounds: a low pass with a sharp resonance whose cutoff falls from high to sdglatexfreq in sdglatextime on every hit it finds, driven into a soft clip. Short times (5 to 50 ms) are a rubbery click, longer ones a wet zap; sdglatexfreq is where the resonance lands, so it gives the hit a pitch.
+
+**In:** audio 2 on `out`.
+
+**Out:** audio 2 on `out`.
+
+| parameter | range | default | what it does |
+|-----------|-------|---------|--------------|
+| `sdglatex` | 0 to 1 | 0.5 | how much: the squelch against the dry hit, and its drive |
+| `sdglatexfreq` | 40 to 2000 Hz | 120.0 | where the cutoff lands |
+| `sdglatextime` | 0.005 to 0.3 s | 0.04 | how long the dive takes |
+
+```haskell
+d1 $ s "bd*4" # pF "sdglatex" 0.7 # pF "sdglatexfreq" 80
+d1 $ s "hh*8" # pF "sdglatex" 0.8 # pF "sdglatexfreq" "200 400" # pF "sdglatextime" 0.02
+d1 $ s "cp*4" # pF "sdglatex" 1 # pF "sdglatextime" (range 0.01 0.2 sine)
+```
+
+### sdgroll
+
+[modules/sdgroll.scd](../modules/sdgroll.scd)
+
+A roll from one hit: it plays its own start again, faster and faster.
+
+Autechre fed a drum machine into a delay that retriggered itself. This keeps the first quarter second of the event's sound and plays it again sdgroll times: the first repeat sdgrolltime cycles after the hit, every next gap sdgrollcurve times the last (under 1 the roll speeds up, over 1 it slows down, 1 is a ratchet). Each repeat is a little quieter, and sdgrollpitch moves each one by that many semitones. The event lasts as long as the roll.
+
+**In:** audio 2 on `out`.
+
+**Out:** audio 2 on `out`.
+
+| parameter | range | default | what it does |
+|-----------|-------|---------|--------------|
+| `sdgroll` | 1 to 16 | 4.0 | how many repeats |
+| `sdgrolltime` | 0.01 to 1 cycles | - | the first gap: 0.0625 is a 16th, 0.125 an 8th |
+| `sdgrollcurve` | 0.5 to 1.5 | 0.8 | each gap is the last times this |
+| `sdgrollpitch` | -12 to 12 st | 0.0 | each repeat moves by this |
+
+```haskell
+d1 $ s "sn" # pF "sdgroll" 8 # pF "sdgrollcurve" 0.8
+d1 $ s "bd ~ ~ cp" # pF "sdgroll" 3 # pF "sdgrolltime" (1/16) # pF "sdgrollcurve" 1
+d1 $ s "drum:2" # pF "sdgroll" 12 # pF "sdgrollcurve" 0.85 # pF "sdgrollpitch" 1
+```
+
+### sdgtrans
+
+[modules/sdgtrans.scd](../modules/sdgtrans.scd)
+
+A transient designer: more or less attack, more or less body.
+
+Two envelope followers on the event's sound, one fast and one slow to rise; where they differ is the attack, and sdgtrans turns it up or down, up to 15 dB either way. Two more, slow and fast to fall, find the body after it, which sdgtransbody turns up or down by up to 18 dB. It listens to the shape, not the level, so a quiet hit gets the same treatment as a loud one (SPL's Transient Designer works this way). On a sample, the body is what was recorded: a dry kick has little to bring up.
+
+**In:** audio 2 on `out`.
+
+**Out:** audio 2 on `out`.
+
+| parameter | range | default | what it does |
+|-----------|-------|---------|--------------|
+| `sdgtrans` | -1 to 1 | 0.0 | the attack: 1 is +15 dB, -1 is -15 dB, 0 leaves it |
+| `sdgtransbody` | -1 to 1 | 0.0 | the body after the attack: 1 is +18 dB, -1 is -18 dB |
+
+```haskell
+d1 $ s "bd*4" # pF "sdgtrans" 1
+d1 $ s "sn*4" # pF "sdgtrans" (-0.8) # pF "sdgtransbody" 0.7
+d1 $ s "breaks125" # pF "sdgtrans" "<1 -1>" # legato 1
 ```
 
 ## Sample players
@@ -808,8 +1021,8 @@ sdgcloud grains a second, sdggrain seconds long, each with a place of its own: s
 
 ```haskell
 d1 $ s "numbers:3" # pF "sdgcloud" 30
-d1 $ s "breaks152" # pF "sdgcloud" 80 # pF "sdggrain" 0.03 # pF "sdgscatter" 0.5
-d1 $ s "numbers:3" # pF "sdgcloud" 12 # pF "sdgrev" 0.5 # pF "sdgpitch" "1 1.5" # speed 0.2
+d1 $ loopAt 2 $ s "breaks152" # pF "sdgcloud" 80 # pF "sdggrain" 0.03 # pF "sdgscatter" 0.5
+d1 $ s "numbers:3" # end 0.4 # pF "sdgcloud" 12 # pF "sdgrev" 0.5 # pF "sdgpitch" "<1 1.5>"
 ```
 
 ### sdgcross
@@ -828,7 +1041,7 @@ sdgcross names a second sample, as a string. The event's own sample keeps its fr
 
 ```haskell
 d1 $ s "breaks125" # pS "sdgcross" "numbers:3"
-d1 $ s "numbers:1 numbers:2" # pS "sdgcross" "breaks152"
+d1 $ s "numbers:1 numbers:2" # pS "sdgcross" "breaks152" # legato 1
 ```
 
 ### sdgcrush
@@ -866,7 +1079,7 @@ The reading bounces between the walls of a window at its start, sdgfold of the t
 | `sdghold` | 0.1 to 16 cycles | - | makes the event last that long |
 
 ```haskell
-d1 $ s "numbers:3" # pF "sdgfold" 0.2
+d1 $ s "numbers:3" # begin 0.1 # pF "sdgfold" 0.2
 d1 $ s "breaks125" # begin 0.25 # pF "sdgfold" "0.02 0.1"
 d1 $ s "cp" # pF "sdgfold" 0.01 # pF "sdghold" 1
 ```
@@ -888,7 +1101,7 @@ The sample plays, and when the reading gets sdgfreeze of the way through (0 to 1
 
 ```haskell
 d1 $ s "numbers:3" # pF "sdgfreeze" 0.3 # pF "sdghold" 4
-d1 $ s "breaks152/4" # pF "sdgfreeze" "<0.1 0.5>" # pF "sdghold" 4
+d1 $ slow 4 $ s "breaks152" # pF "sdgfreeze" "<0.1 0.5>" # pF "sdghold" 4
 ```
 
 ### sdglayer
@@ -956,9 +1169,9 @@ Two overlapping readers repeat a tiny piece of the sample at the pitch sdgscan a
 | `sdghold` | 0.1 to 16 cycles | - | makes the event last that long |
 
 ```haskell
-d1 $ s "breaks152" # pF "sdgscan" "110 165"
-d1 $ s "numbers:3" # pF "sdgscan" 55 # speed 0.1
-d1 $ s "hh" # pF "sdgscan" "220 330" # pF "sdghold" 0.5
+d1 $ loopAt 2 (chop 4 $ s "breaks152") # pF "sdgscan" "110 165"
+d1 $ s "numbers:3" # end 0.4 # pF "sdgscan" 110 # pF "sdghold" 1
+d1 $ s "hh*2" # end 0.12 # pF "sdgscan" "220 330" # pF "sdghold" 0.5
 ```
 
 ### sdgscratch
@@ -973,7 +1186,7 @@ The read pointer wobbles around where it would be, sdgscratch times a second and
 
 | parameter | range | default | what it does |
 |-----------|-------|---------|--------------|
-| `sdgscratch` | 0.1 to 40 per s | 6.0 | how many times a second the pointer wobbles |
+| `sdgscratch` | 0 to 40 per s | 6.0 | how many times a second the pointer wobbles: 0 reads straight |
 | `sdgdepth` | 0 to 0.5 s | 0.05 | how far to either side: small is tape wow |
 
 ```haskell
@@ -1021,7 +1234,7 @@ Warp1 keeps the pitch while speed stretches the time, then sdgsmear (0 to 1) spr
 
 ```haskell
 d1 $ s "numbers:3" # pF "sdgsmear" 0.3
-d1 $ s "breaks152/8" # pF "sdgsmear" 0.8 # speed 0.05
+d1 $ loopAt 8 $ s "breaks152" # pF "sdgsmear" 0.8
 d1 $ s "numbers:3" # pF "sdgsmear" 0.5 # pF "sdghold" 2
 ```
 
@@ -1288,6 +1501,5 @@ Not content: no file makes these and no Tidal word plays them. [the-mixer.md](th
 | `sdgtrack_return2` | audio 2 on `trackOut`, audio 2 on `trackIn`, audio 2 on `dryBus` | audio 2 on `effectBus`, audio 2 on `dryBus` | `dryBus` `effectBus` `trackIn` `trackOut` `trackId` `gate` `trackAmp` `inPlace` `meterOn` `dirt_resumed` |
 | `sdgreturn_send2` | audio 2 on `dryBus`, audio 2 on `effectBus` | audio 2 on `sendBus` | `dryBus` `effectBus` `sendBus` `gate` `sendAmp` `dirt_resumed` |
 | `sdgreturn_head2` | audio 2 on `fbBus`, audio 2 on `inBus` | audio 2 on `lineBus` | `inBus` `fbBus` `lineBus` |
-| `sdgreturn_mix2` | audio 2 on `lineBus`, audio 2 on `wetBus` | audio 2 on `lineBus` | `lineBus` `wetBus` `lineAmp` `wetAmp` |
 | `sdgreturn_link2` | audio 2 on `lineBus` | audio 2 on `sendBus` | `lineBus` `sendBus` `gate` `sendAmp` |
 | `sdgreturn_out2` | audio 2 on `lineBus` | audio 2 on `tapBus`, audio 2 on `outBus` | `lineBus` `tapBus` `trackId` `outBus` `gate` `amp` `limitertype` `meterOn` |

@@ -1,6 +1,6 @@
 // synths/sdgping.scd - pinged resonant filters: one click rings three tuned
 // resonators at once, and their pitch sweeps as they ring. blips, droplets,
-// metallic ticks, wood and rubber, the small sounds of an Autechre kit.
+// metallic ticks, wood and rubber.
 //
 // parameters:
 //   sdgfreq    40 to 12000 Hz        the main resonator's pitch at note 0
@@ -14,13 +14,14 @@
 //   sdgcolor   0 to 1                rattle: the resonators are hit again and again while they ring
 //   sdgclick   0 to 1                a short noisy tick on top
 //
-// presets, by n: 0 blip, 1 droplet, 2 metal tick, 3 wood, 4 zap, 5 rubber. note
-// tunes it in semitones from its own pitch; legato or sustain shorten it, like a choke.
+// presets, by n: 0 blip, 1 droplet, 2 metal tick, 3 wood, 4 zap, 5 rubber, 6 sonar,
+// 7 laser, 8 bar, 9 glitch rattle. note tunes it in semitones from its own pitch;
+// legato or sustain shorten it, like a choke.
 //
 //   d1 $ s "sdgping*8" # n "<0 2>" # note "0 7 12 3"
 //   d1 $ s "sdgping:1(5,8)" # note (range (-5) 12 rand) # pF "sdgdecay" 0.1
 //
-// examples/tidal/19-drums-autechre.tidal plays it.
+// examples/tidal/lessons/19-drums-small-machines.tidal plays it.
 (
 var name = \sdgping;
 SynthDef(name, { |out, sustain = 3, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -67,12 +68,16 @@ SynthDef(name, { |out, sustain = 3, pan = 0.5, freq = 261.6256, accelerate = 0,
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgfreq: 1200, sdgdecay: 0.09, sdgpunch: 12, sdgbend: 0.025, sdgmetal: 0.15, sdgtone: 0.8),	// 0 blip
-	(sdgfreq: 700, sdgdecay: 0.07, sdgpunch: -14, sdgbend: 0.06, sdgmetal: 0, sdgtone: 0.3),	// 1 droplet
-	(sdgfreq: 3400, sdgdecay: 0.05, sdgpunch: 3, sdgbend: 0.004, sdgmetal: 1, sdgtone: 1, sdgclick: 0.4),	// 2 metal tick
-	(sdgfreq: 820, sdgdecay: 0.08, sdgpunch: 2, sdgbend: 0.005, sdgmetal: 0.7, sdgtone: 0.5),	// 3 wood
-	(sdgfreq: 1800, sdgdecay: 0.22, sdgpunch: 30, sdgbend: 0.09, sdgmetal: 0.4, sdgtone: 0.9, sdgindex: 2.5, sdgratio: 1.41),	// 4 zap
-	(sdgfreq: 260, sdgdecay: 0.18, sdgpunch: 5, sdgbend: 0.02, sdgmetal: 0.3, sdgtone: 0.5, sdgcolor: 0.6)	// 5 rubber
+	(presetName: "blip", sdgfreq: 1200, sdgdecay: 0.09, sdgpunch: 12, sdgbend: 0.025, sdgmetal: 0.15, sdgtone: 0.8),	// 0 blip
+	(presetName: "droplet", sdgfreq: 700, sdgdecay: 0.07, sdgpunch: -14, sdgbend: 0.06, sdgmetal: 0, sdgtone: 0.3),	// 1 droplet
+	(presetName: "metal tick", sdgfreq: 3400, sdgdecay: 0.05, sdgpunch: 3, sdgbend: 0.004, sdgmetal: 1, sdgtone: 1, sdgclick: 0.4),	// 2 metal tick
+	(presetName: "wood", sdgfreq: 820, sdgdecay: 0.08, sdgpunch: 2, sdgbend: 0.005, sdgmetal: 0.7, sdgtone: 0.5),	// 3 wood
+	(presetName: "zap", sdgfreq: 1800, sdgdecay: 0.22, sdgpunch: 30, sdgbend: 0.09, sdgmetal: 0.4, sdgtone: 0.9, sdgindex: 2.5, sdgratio: 1.41),	// 4 zap
+	(presetName: "rubber", sdgfreq: 260, sdgdecay: 0.18, sdgpunch: 5, sdgbend: 0.02, sdgmetal: 0.3, sdgtone: 0.5, sdgcolor: 0.6),	// 5 rubber
+	(presetName: "sonar", sdgfreq: 1500, sdgdecay: 1.2, sdgpunch: 0, sdgmetal: 0, sdgtone: 0.3, sdgindex: 0),	// 6 sonar
+	(presetName: "laser", sdgfreq: 900, sdgdecay: 0.3, sdgpunch: 48, sdgbend: 0.2, sdgmetal: 0.2, sdgtone: 1, sdgindex: 4, sdgratio: 2),	// 7 laser
+	(presetName: "bar", sdgfreq: 523.25, sdgdecay: 0.3, sdgpunch: 0, sdgmetal: 1, sdgtone: 0.35),	// 8 bar
+	(presetName: "glitch rattle", sdgfreq: 2500, sdgdecay: 0.12, sdgpunch: 7, sdgbend: 0.01, sdgmetal: 0.6, sdgtone: 0.65, sdgcolor: 0.4, sdgclick: 0.5)	// 9 glitch rattle
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

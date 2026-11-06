@@ -20,13 +20,14 @@
 //   sdgclick     0 to 1             a knock: the strike's own hollow modes
 //   sdgdrive     0 to 1             how hard it is squashed at the end
 //
-// presets, by n: 0 bubble, 1 latex snap, 2 squeak, 3 plastic clank, 4 drip, 5 rubber.
-// note tunes it in semitones; legato or sustain shorten it, like a choke.
+// presets, by n: 0 bubble, 1 latex snap, 2 squeak, 3 plastic clank, 4 drip, 5 rubber,
+// 6 cork pop, 7 balloon rub, 8 boing, 9 bottle tap. note tunes it in semitones; legato
+// or sustain shorten it, like a choke.
 //
 //   d1 $ s "sdgplastic*8" # note (irand 12) # pan rand
 //   d1 $ s "sdgplastic:1 ~ sdgplastic:3 sdgplastic:1" # pF "sdgwobble" "<0.2 0.8>"
 //
-// examples/tidal/18-drums-sophie.tidal plays it.
+// examples/tidal/lessons/18-drums-hyperreal.tidal plays it.
 (
 var name = \sdgplastic;
 SynthDef(name, { |out, sustain = 2.6, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -69,19 +70,23 @@ SynthDef(name, { |out, sustain = 2.6, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgfreq: 600, sdgdecay: 0.07, sdgrise: 14),                                        // 0 bubble
-	(sdgfreq: 220, sdgdecay: 0.22, sdgpunch: 24, sdgbend: 0.035, sdgrise: 0,
+	(presetName: "bubble", sdgfreq: 600, sdgdecay: 0.07, sdgrise: 14),                                        // 0 bubble
+	(presetName: "latex snap", sdgfreq: 220, sdgdecay: 0.22, sdgpunch: 24, sdgbend: 0.035, sdgrise: 0,
 		sdgwobble: 0.5, sdgcolor: 0.45, sdgratio: 2, sdgindex: 1.5, sdgwavefold: 0.4,
 		sdgq: 0.6, sdgtone: 0.4, sdgclick: 0.4, sdgdrive: 0.5),                         // 1 latex snap
-	(sdgfreq: 2200, sdgdecay: 0.16, sdgatk: 0.03, sdgrise: 3, sdgslip: 0.8,
+	(presetName: "squeak", sdgfreq: 2200, sdgdecay: 0.16, sdgatk: 0.03, sdgrise: 3, sdgslip: 0.8,
 		sdgcolor: 0.6, sdgq: 0.5, sdgtone: 0.1, sdgdrive: 0.3),                          // 2 squeak
-	(sdgfreq: 380, sdgdecay: 0.05, sdgpunch: 12, sdgbend: 0.008, sdgrise: 0,
+	(presetName: "plastic clank", sdgfreq: 380, sdgdecay: 0.05, sdgpunch: 12, sdgbend: 0.008, sdgrise: 0,
 		sdgratio: 1.73, sdgindex: 3, sdgwavefold: 0.2, sdgq: 0.85, sdgtone: 0.3,
 		sdgclick: 1, sdgdrive: 0.6),                                                    // 3 plastic clank
-	(sdgfreq: 1000, sdgdecay: 0.03, sdgrise: 24, sdgq: 0.3, sdgclick: 0.1),             // 4 drip
-	(sdgfreq: 140, sdgdecay: 0.45, sdgatk: 0.01, sdgrise: 7, sdgwobble: 0.8,
+	(presetName: "drip", sdgfreq: 1000, sdgdecay: 0.03, sdgrise: 24, sdgq: 0.3, sdgclick: 0.1),             // 4 drip
+	(presetName: "rubber", sdgfreq: 140, sdgdecay: 0.45, sdgatk: 0.01, sdgrise: 7, sdgwobble: 0.8,
 		sdgslip: 0.5, sdgcolor: 0.3, sdgwavefold: 0.5, sdgq: 0.4, sdgtone: 0.5,
-		sdgdrive: 0.5)                                                                  // 5 rubber
+		sdgdrive: 0.5),                                                                  // 5 rubber
+	(presetName: "cork pop", sdgfreq: 400, sdgdecay: 0.04, sdgpunch: 36, sdgbend: 0.01, sdgrise: 0, sdgq: 0.7, sdgtone: 0.6, sdgclick: 0.8, sdgdrive: 0.4),	// 6 cork pop
+	(presetName: "balloon rub", sdgfreq: 300, sdgdecay: 0.6, sdgatk: 0.08, sdgrise: 2, sdgslip: 1, sdgcolor: 0.25, sdgq: 0.3, sdgtone: 0.3, sdgdrive: 0.4),	// 7 balloon rub
+	(presetName: "boing", sdgfreq: 180, sdgdecay: 0.8, sdgrise: 12, sdgwobble: 1, sdgcolor: 0.15, sdgq: 0.5, sdgtone: 0.4),	// 8 boing
+	(presetName: "bottle tap", sdgfreq: 1500, sdgdecay: 0.12, sdgrise: 0, sdgratio: 2.76, sdgindex: 2, sdgwavefold: 0.3, sdgq: 0.85, sdgtone: 0.6, sdgclick: 0.3)	// 9 bottle tap
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

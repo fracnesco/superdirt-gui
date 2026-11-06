@@ -125,6 +125,16 @@ from the comments at the top of its file. They are read again when the file is
 saved. A file without a code::// parameters:: section shows the controls of its
 SynthDef, with their defaults.
 
+Under it, for a synth, a preview: a knob per parameter of its header (the range written there is
+the knob's: link::#*previewSpec::), one for code::sustain::, a note (0 is Tidal's c5), a menu of
+the synth's presets - Tidal's code::n:: - and an orbit. play sends one code::\dirt:: event, as
+Tidal would; letting go of a knob, or changing the note or preset, plays too. copy puts it on the
+clipboard as a line of Tidal (link::#-previewCode::) with only what was moved away from the
+preset; random throws every knob; reset goes back to the preset. save as... adds the knobs as a
+preset under a name, delete (clicked twice) takes the shown one out, and file presets brings
+back the synth's own list: link::Classes/SuperDirtGUI#-savePreset::, kept on this machine by
+link::Classes/SDGSynthPresets::.
+
 While the window is open it reads a content file again within a second of its
 being saved - link::Classes/SuperDirtGUI#-reloadChangedFiles:: on the same
 once-a-second poll as the library - so editing is: edit, save, hear it. A file
@@ -282,6 +292,20 @@ METHOD:: notesColumns
 How many characters fit across the modules tab's notes, where a parameter's description
 wraps. 68 at the window's width.
 
+
+METHOD:: previewSpec
+A knob's spec from a header's range, code::"30 to 120 Hz"::: exponential where the top is twenty
+times the bottom or more. A parameter with no range goes from 0 to twice its default.
+ARGUMENT:: range
+the range column of the header, or nil.
+ARGUMENT:: default
+the control's default.
+RETURNS:: a link::Classes/ControlSpec::
+
+METHOD:: tidalNumber
+A number as Tidal reads it, a negative one in brackets: code::(-2)::.
+ARGUMENT:: v
+a number.
 
 INSTANCEMETHODS::
 
@@ -480,6 +504,50 @@ selection. Called on its code::\loaded:: notification.
 METHOD:: loadedEntries
 What the modules tab's lists show: an IdentityDictionary from kind to
 link::Classes/SuperDirtGUI#-entries::.
+
+METHOD:: preview
+The synth preview's model, nil when no synth is selected: an Event of code::name::,
+code::presets::, code::presetNames::, code::n::, code::note::, code::sustain::, code::orbit::,
+code::params:: (the knobs, in the header's order), code::specs::, code::values:: (what plays)
+and code::start:: (what the preset gives).
+
+METHOD:: previewPlay
+Play the preview: link::#-previewEvent::.
+
+METHOD:: previewEvent
+The code::\dirt:: event play sends.
+
+METHOD:: previewCode
+The preview as a line of Tidal: code::d1 $ s "sdgkick:1" # note (-2) # pF "sdgdecay" 0.3::.
+The preset, the note and sustain if not their starting values, and every parameter moved away
+from the preset, as code::pF:: so it needs no code::examples/tidal/boot.hs::.
+RETURNS:: a link::Classes/String::, or nil with no preview.
+
+METHOD:: previewCopy
+link::#-previewCode:: on the clipboard (and in the post window).
+RETURNS:: false where there is no clipboard command.
+
+METHOD:: previewRandomize
+Every knob somewhere in its range, evenly over the knob's travel.
+
+METHOD:: previewReset
+Every knob back to the preset.
+
+METHOD:: previewSave
+The knobs as a new preset of the synth, under a name; the menu then shows it.
+ARGUMENT:: name
+what the menu calls it.
+RETURNS:: its n.
+
+METHOD:: previewDelete
+Take the preset shown out of the synth.
+
+METHOD:: previewRestore
+The synth's file's presets again: link::Classes/SuperDirtGUI#-restoreFilePresets::.
+
+METHOD:: previewSaveDialog
+The small window save as... opens, asking the name.
+RETURNS:: the link::Classes/Window::
 
 METHOD:: notesString
 What the bottom of the modules tab says about the selected name, as a String;

@@ -48,6 +48,14 @@ SDGSampleTags {
 	*folder { ^folder ?? { Platform.userAppSupportDir +/+ "superdirt-gui-tags" } }
 	*folder_ { |path| folder = path }
 
+	// what a path is kept under. On Windows one file reaches here spelled
+	// several ways (+/+ and pathMatch write \, Qt's dialogs /, any case), and
+	// the tags set under one spelling must not be lost under another; elsewhere
+	// the path itself, as before
+	*keyOf { |path|
+		^if (thisProcess.platform.name == \windows) { SuperDirtGUI.prNormalPath(path) } { path }
+	}
+
 	*recordsPath { ^this.folder +/+ "analysis.tsv" }
 	*manualPath { ^this.folder +/+ "tags.tsv" }
 
@@ -70,7 +78,7 @@ SDGSampleTags {
 	// check false the file is not asked (a list of thousands redrawn often):
 	// what was last analysed is taken as it is
 	recordOf { |path, check = true|
-		var r = records[path];
+		var r = records[this.class.keyOf(path)];
 		if (r.isNil) { ^nil };
 		if (r[\version] != SDGSampleFeatures.version) { ^nil };
 		if (check and: { r[\size] != this.class.prSize(path) or: { r[\mtime] != this.class.prMTime(path) } }) { ^nil };
@@ -85,7 +93,7 @@ SDGSampleTags {
 	//   tags (what counts), auto (the analysis's), added, removed (by hand)
 	//   created, dateAdded             seconds since 1970, nil if unknown
 	infoOf { |path, check = true|
-		var r = this.recordOf(path, check) ? (), m = manual[path] ? ();
+		var r = this.recordOf(path, check) ? (), m = manual[this.class.keyOf(path)] ? ();
 		var auto = r[\auto] ? [], added = m[\add] ? [], removed = m[\remove] ? [];
 		var info = (
 			path: path, analysed: r[\version].notNil,
@@ -129,7 +137,7 @@ SDGSampleTags {
 		^if (s.isEmpty) { nil } { s.asSymbol }
 	}
 
-	prManual { |path| ^manual[path] ?? { manual[path] = (add: [], remove: []); manual[path] } }
+	prManual { |path| var k = this.class.keyOf(path); ^manual[k] ?? { manual[k] = (add: [], remove: []); manual[k] } }
 
 	addTag { |path, tag|
 		var m, t = this.class.normaliseTag(tag);
@@ -160,9 +168,9 @@ SDGSampleTags {
 
 	// back to what the analysis says: tags, bpm and key
 	resetTags { |path|
-		var m = manual[path];
+		var m = manual[this.class.keyOf(path)];
 		if (m.isNil) { ^this };
-		manual[path] = (add: [], remove: [], firstSeen: m[\firstSeen]);
+		manual[this.class.keyOf(path)] = (add: [], remove: [], firstSeen: m[\firstSeen]);
 		this.prManualChanged(path);
 	}
 
@@ -212,8 +220,8 @@ SDGSampleTags {
 		if (f.isNil) { ^nil };
 		dates = dates ?? { this.class.fileDates([path])[0] };
 		r = this.class.recordFrom(f, path, dates);
-		records[path] = r;
-		if (manual[path].isNil or: { manual[path][\firstSeen].isNil }) {
+		records[this.class.keyOf(path)] = r;
+		if (manual[this.class.keyOf(path)].isNil or: { manual[this.class.keyOf(path)][\firstSeen].isNil }) {
 			this.prManual(path)[\firstSeen] = Date.getDate.rawSeconds.round;
 			this.prScheduleSave(\manual);
 		};
@@ -321,6 +329,15 @@ SDGSampleTags {
 
 	isAnalysing { ^routine.notNil }
 
+	// after a cmd-period, which has cleared the clock the routine ran on: the
+	// batch it was in the middle of goes back to the front, and it runs again
+	prResume {
+		routine = nil;
+		SDGSampleFeatures.breathing = false;
+		queued.do { |p| if (queue.includes(p).not) { queue.addFirst(p) } };
+		this.prRun;
+	}
+
 	stop {
 		routine !? (_.stop);
 		routine = nil;
@@ -341,10 +358,10 @@ SDGSampleTags {
 				// the dates of a batch in one call to the system
 				this.class.fileDates(batch).do { |dates, i|
 					var p = batch[i];
-					queued.remove(p);
 					SDGSampleFeatures.breathing = true;
 					this.analyse(p, false, dates);
 					SDGSampleFeatures.breathing = false;
+					queued.remove(p); // after: a cmd-period in the middle puts it back (prResume)
 					done = done + 1;
 					if ((done % 8) == 0 or: { queue.isEmpty }) { this.changed(\analysis, done, total) };
 					0.002.wait;
@@ -557,7 +574,7 @@ SDGSampleTags {
 					keys.do { |k, i| r[k] = this.prParse(k, f[i + 1]) };
 					r[\auto] = f[keys.size + 1].split($,).reject(_.isEmpty).collect(_.asSymbol);
 					r[\onsets] = f[keys.size + 2].split($,).reject(_.isEmpty).collect { |s| s.asInteger / 1000 };
-					out[f[0]] = r;
+					out[this.keyOf(f[0])] = r;
 				};
 			};
 		};
@@ -601,7 +618,7 @@ SDGSampleTags {
 			if (line.notEmpty and: { line[0] != $# }) {
 				f = line.split($\t);
 				if (f.size >= 7) {
-					out[f[0]] = (
+					out[this.keyOf(f[0])] = (
 						add: f[1].split($,).reject(_.isEmpty).collect(_.asSymbol),
 						remove: f[2].split($,).reject(_.isEmpty).collect(_.asSymbol),
 						bpm: this.prParse(\bpm, f[3]), offset: this.prParse(\offset, f[4]),

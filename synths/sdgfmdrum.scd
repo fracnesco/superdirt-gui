@@ -21,14 +21,14 @@
 //   sdgclick   0 to 1             the click at the strike
 //   sdgdrive   0 to 1             saturation
 //
-// presets, by n: 0 FM kick, 1 FM snare, 2 FM tom, 3 FM clap, 4 FM metal,
-// 5 perc (Cycles PERC, a struck signpost). note tunes it in semitones from
-// its own pitch; legato or sustain shorten it, like a choke.
+// presets, by n: 0 FM kick, 1 FM snare, 2 FM tom, 3 FM clap, 4 FM metal, 5 perc (Cycles
+// PERC, a struck signpost), 6 FM hat, 7 FM zap, 8 FM rim, 9 FM hard kick. note tunes it
+// in semitones from its own pitch; legato or sustain shorten it, like a choke.
 //
 //   d1 $ s "sdgfmdrum*4"
 //   d1 $ s "sdgfmdrum:0 sdgfmdrum:2 sdgfmdrum:1 sdgfmdrum:4" # pF "sdgcolor" "0.1 0.5 0.2 0.9"
 //
-// examples/tidal/17-drums-fm.tidal plays it.
+// examples/tidal/lessons/17-drums-fm.tidal plays it.
 (
 var name = \sdgfmdrum;
 SynthDef(name, { |out, sustain = 3.1, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -84,17 +84,21 @@ SynthDef(name, { |out, sustain = 3.1, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(),	// 0 FM kick: the def's defaults
-	(sdgfreq: 185, sdgdecay: 0.2, sdgpunch: 8, sdgbend: 0.03, sdgratio: 1.41, sdgindex: 3,
+	(presetName: "FM kick"),	// 0 FM kick: the def's defaults
+	(presetName: "FM snare", sdgfreq: 185, sdgdecay: 0.2, sdgpunch: 8, sdgbend: 0.03, sdgratio: 1.41, sdgindex: 3,
 		sdgcolor: 0.25, sdgfb: 0.35, sdgsnap: 0.55, sdgnoise: 0.2, sdgtone: 0.6, sdgclick: 0.2),	// 1 FM snare
-	(sdgfreq: 105, sdgdecay: 0.5, sdgpunch: 10, sdgbend: 0.07, sdgratio: 1.4, sdgindex: 2.5,
+	(presetName: "FM tom", sdgfreq: 105, sdgdecay: 0.5, sdgpunch: 10, sdgbend: 0.07, sdgratio: 1.4, sdgindex: 2.5,
 		sdgcolor: 0.15, sdgfb: 0, sdgsnap: 0.05, sdgnoise: 0.08, sdgtone: 0.4, sdgclick: 0.15),	// 2 FM tom
-	(sdgfreq: 1100, sdgdecay: 0.05, sdgpunch: 0, sdgratio: 2.37, sdgindex: 6, sdgcolor: 0.5,
+	(presetName: "FM clap", sdgfreq: 1100, sdgdecay: 0.05, sdgpunch: 0, sdgratio: 2.37, sdgindex: 6, sdgcolor: 0.5,
 		sdgfb: 0.85, sdgsnap: 0.85, sdgcount: 4, sdgnoise: 0.22, sdgtone: 0.42, sdgclick: 0),	// 3 FM clap
-	(sdgfreq: 540, sdgdecay: 0.4, sdgpunch: 0, sdgratio: 1.48, sdgindex: 4, sdgcolor: 0.8,
+	(presetName: "FM metal", sdgfreq: 540, sdgdecay: 0.4, sdgpunch: 0, sdgratio: 1.48, sdgindex: 4, sdgcolor: 0.8,
 		sdgfb: 0.45, sdgmetal: 0.7, sdgsnap: 0.1, sdgnoise: 0.05, sdgtone: 0.85, sdgclick: 0.1),	// 4 FM metal
-	(sdgfreq: 300, sdgdecay: 0.3, sdgpunch: 4, sdgbend: 0.01, sdgratio: 2.76, sdgindex: 1.5,
-		sdgcolor: 0.75, sdgfb: 0, sdgclick: 0.1)	// 5 perc
+	(presetName: "perc", sdgfreq: 300, sdgdecay: 0.3, sdgpunch: 4, sdgbend: 0.01, sdgratio: 2.76, sdgindex: 1.5,
+		sdgcolor: 0.75, sdgfb: 0, sdgclick: 0.1),	// 5 perc
+	(presetName: "FM hat", sdgfreq: 3200, sdgdecay: 0.04, sdgpunch: 0, sdgratio: 2.37, sdgindex: 8, sdgcolor: 0.5, sdgfb: 0.9, sdgmetal: 0.8, sdgsnap: 0.6, sdgnoise: 0.04, sdgtone: 0.9, sdgclick: 0.2),	// 6 FM hat
+	(presetName: "FM zap", sdgfreq: 60, sdgdecay: 0.25, sdgpunch: 48, sdgbend: 0.15, sdgratio: 0.5, sdgindex: 3, sdgcolor: 0.6, sdgfb: 0.3, sdgclick: 0),	// 7 FM zap
+	(presetName: "FM rim", sdgfreq: 800, sdgdecay: 0.12, sdgpunch: 0, sdgratio: 3.5, sdgindex: 6, sdgcolor: 0.3, sdgfb: 0.2, sdgsnap: 0.1, sdgnoise: 0.02, sdgtone: 0.8, sdgclick: 1),	// 8 FM rim
+	(presetName: "FM hard kick", sdgfreq: 55, sdgdecay: 0.3, sdgpunch: 36, sdgbend: 0.05, sdgratio: 1, sdgindex: 3, sdgcolor: 0.05, sdgfb: 0.4, sdgclick: 0.6, sdgdrive: 0.2)	// 9 FM hard kick
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

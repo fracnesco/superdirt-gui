@@ -11,13 +11,14 @@
 //   sdgbits    0 to 1       the 909's sampled grit: fewer bits and a lower rate, 0 clean
 //
 // presets, by n: 0 808 closed, 1 pedal, 2 808 open, 3 909 closed, 4 909 open,
-// 5 606 closed. note shifts the squares and half as much the filters.
-// put closed and open in one cut group and a closed hat chokes the open one:
+// 5 606 closed, 6 606 open, 7 shaker, 8 crushed, 9 dark open. note shifts the squares
+// and half as much the filters. put closed and open in one cut group and a closed hat
+// chokes the open one:
 //
 //   d1 $ s "sdghat*8" # n "0 0 2 0 0 1 2 0" # cut 1
 //   d1 $ s "sdghat:3*16" # gain "1 0.9" # pF "sdgdecay" (range 0.05 0.2 sine)
 //
-// examples/tidal/16-drums-classic.tidal plays it.
+// examples/tidal/lessons/16-drums-classic.tidal plays it.
 (
 var name = \sdghat;
 SynthDef(name, { |out, sustain = 2.1, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -63,12 +64,16 @@ SynthDef(name, { |out, sustain = 2.1, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgdecay: 0.11, sdgtone: 0.8, sdgmetal: 1, sdgclick: 0.5),	// 0 808 closed
-	(sdgdecay: 0.09, sdgtone: 0.1, sdgmetal: 0.85, sdgclick: 0),	// 1 pedal
-	(sdgdecay: 0.55, sdgtone: 0.45, sdgmetal: 1, sdgclick: 0.3),	// 2 808 open
-	(sdgdecay: 0.12, sdgtone: 0.8, sdgmetal: 0.3, sdgclick: 0.6, sdgbits: 0.6),	// 3 909 closed
-	(sdgdecay: 0.6, sdgtone: 0.65, sdgmetal: 0.3, sdgclick: 0.4, sdgbits: 0.6),	// 4 909 open
-	(sdgdecay: 0.08, sdgtone: 0.8, sdgmetal: 1, sdgcolor: 1, sdgclick: 0.7)	// 5 606 closed
+	(presetName: "808 closed", sdgdecay: 0.11, sdgtone: 0.8, sdgmetal: 1, sdgclick: 0.5),	// 0 808 closed
+	(presetName: "pedal", sdgdecay: 0.09, sdgtone: 0.1, sdgmetal: 0.85, sdgclick: 0),	// 1 pedal
+	(presetName: "808 open", sdgdecay: 0.55, sdgtone: 0.45, sdgmetal: 1, sdgclick: 0.3),	// 2 808 open
+	(presetName: "909 closed", sdgdecay: 0.12, sdgtone: 0.8, sdgmetal: 0.3, sdgclick: 0.6, sdgbits: 0.6),	// 3 909 closed
+	(presetName: "909 open", sdgdecay: 0.6, sdgtone: 0.65, sdgmetal: 0.3, sdgclick: 0.4, sdgbits: 0.6),	// 4 909 open
+	(presetName: "606 closed", sdgdecay: 0.08, sdgtone: 0.8, sdgmetal: 1, sdgcolor: 1, sdgclick: 0.7),	// 5 606 closed
+	(presetName: "606 open", sdgdecay: 0.4, sdgtone: 0.8, sdgmetal: 1, sdgcolor: 1, sdgclick: 0.5),	// 6 606 open
+	(presetName: "shaker", sdgdecay: 0.07, sdgtone: 0.6, sdgmetal: 0, sdgcolor: 0, sdgclick: 0),	// 7 shaker
+	(presetName: "crushed", sdgdecay: 0.1, sdgtone: 0.7, sdgmetal: 0.6, sdgclick: 0.5, sdgbits: 1),	// 8 crushed
+	(presetName: "dark open", sdgdecay: 1.2, sdgtone: 0.2, sdgmetal: 0.8, sdgcolor: 0.5, sdgclick: 0.2)	// 9 dark open
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

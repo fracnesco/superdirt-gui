@@ -1,20 +1,20 @@
 TITLE:: SDGReturn
-summary:: a return track as in Ableton: a send knob on every orbit, inserts, an effect, a fader, and sends to other returns for feedback
+summary:: a return track as in Ableton: a send knob on every orbit and group, a chain of effects, a fader, and sends to other returns for feedback
 categories:: Libraries>SuperDirtGUI
-related:: Classes/SuperDirtGUI, Classes/SDGTrack, Classes/SDGInsert, Classes/SDGWindow, Classes/SDGSession
+related:: Classes/SuperDirtGUI, Classes/SDGBusTrack, Classes/SDGGroup, Classes/SDGMaster, Classes/SDGInsert, Classes/SDGWindow
 
 DESCRIPTION::
-A return is one track that any orbit can send to, so one reverb serves them all.
-The link::Classes/SuperDirtGUI:: makes it, and the window shows it as a strip
-after the orbits.
+A return is one track that any orbit or group can send to, so one reverb serves them
+all. The link::Classes/SuperDirtGUI:: makes it, and the window shows it as a strip on
+the right, before the master. Everything it shares with groups and the master - the
+chain of effects, fader, mute, solo, output - is link::Classes/SDGBusTrack::.
 
 code::
 a = ~sdg.addReturn;                       // return A
-~sdg.setReturnEffect(a, \dirt_reverb);    // or none, and only inserts
+~sdg.addBusInsert(a, \eq);                // its effects are inserts: eq, compressor, fx kit, VST
 ~sdg.setSend(0, a, 0.5);                  // orbit 0 into it, -6 dB
 a.level = 0.7;                            // what comes back
 a.preFader = true;                        // sends into it ignore the source's fader
-~sdg.addTrackInsert(a, \post, \eq);       // inserts, as on an orbit's track
 
 b = ~sdg.addReturn;                       // return B
 ~sdg.returnFeedback = true;               // returns may send to returns
@@ -22,33 +22,36 @@ b = ~sdg.addReturn;                       // return B
 ~sdg.setReturnSend(b, a, 0.4);            // and back: a loop
 ::
 
+Its effects are inserts only. SuperDirt's global effects (reverb, delay) are an
+orbit's, driven by Tidal's parameters, and no event reaches a return; a reverb on a
+return is a VST plugin or an sc fx kit effect.
+
 subsection:: The signal
 
 An orbit's send sits in the orbit's chain, right before its fader: it hears the
-effects and inserts, and it comes back with the orbit from every rebuild. The
-return runs in a group of its own after SuperDirt's, so everything the orbits
-sent this block is there to read.
+effects and inserts, and it comes back with the orbit from every rebuild. A group's
+send is a synth of the group, which runs before the returns. The returns run after
+SuperDirt's group and the groups, so everything sent this block is there to read.
 
 code::
 // orbit:  ... inserts, sends, fader, rms, monitor
+// groups: inserts, sends, out
 // heads:  each return's sends in, and last block's feedback
-// return: pre inserts, effect, mix, post inserts, sends to returns, out
+// return: inserts, sends to returns, out
+// master
 ::
 
-The effect comes out fully wet. With no effect, or with it off, the line passes
-as it came. Effects start at values that are heard (link::#*wetDefaults::),
-because most are silent at their SynthDef's defaults. All buses and the output
-are code::numChannels:: wide.
+All buses and the output are code::numChannels:: wide.
 
 subsection:: Rules for sends
 
 Taken from Ableton:
 
 list::
-## link::#-preFader:: says whether what goes into this return is taken before or after the source's fader. It is post fader by default.
+## link::Classes/SDGBusTrack#-preFader:: says whether what goes into this return is taken before or after the source's fader. It is post fader by default.
 ## A muted source sends nothing, pre fader or not.
-## A soloed orbit keeps its returns audible, and the other orbits' sends stop.
-## A soloed return stops the orbits' direct sound and every other return, while what is sent to it goes on.
+## A soloed orbit or group keeps its returns audible, and the other orbits' and groups' sends stop.
+## A soloed return stops the orbits' and groups' direct sound and every other return, while what is sent to it goes on.
 ::
 
 subsection:: Feedback
@@ -66,16 +69,6 @@ The feedback input saturates softly from +6 dB, and bad values become silence, s
 loop with gain above 1 screams at a bounded level instead of running away. It can still
 be loud: keep the limiter on.
 
-subsection:: Who owns what
-
-The link::Classes/SuperDirtGUI:: makes and frees returns. A return never sleeps: no
-event reaches it, so a tick once a second resumes its effect and inserts, and a tail
-never gets cut. After a cmd-period everything comes back with its levels, a VST plugin
-with the state it last read back. link::Classes/SuperDirtGUI#-reload:: keeps returns and
-starts their effects again on the new SynthDefs. A link::Classes/SDGSession:: saves them.
-A return's effect parameters are not Tidal's: they live in its own
-link::#-defaultParentEvent::.
-
 CLASSMETHODS::
 
 METHOD:: new
@@ -85,26 +78,6 @@ the link::Classes/SuperDirtGUI::.
 ARGUMENT:: letter
 its letter, a Symbol.
 
-METHOD:: isReturnName
-Whether a name is that of a return's plumbing.
-ARGUMENT:: name
-a Symbol or String.
-RETURNS:: a link::Classes/Boolean::.
-
-METHOD:: makeDefs
-Add the SynthDefs of a return.
-ARGUMENT:: numChannels
-the channel count.
-
-METHOD:: wetDefaults
-What an effect starts at on a return: known ones for stock delay and reverb, and a
-content effect's parameter named after it at 1.
-ARGUMENT:: name
-the effect's name.
-ARGUMENT:: paramNames
-its parameters.
-RETURNS:: an link::Classes/Event::.
-
 INSTANCEMETHODS::
 
 METHOD:: letter
@@ -113,88 +86,16 @@ RETURNS:: its letter, a link::Classes/Symbol::.
 METHOD:: shortName
 RETURNS:: what a person calls it: "return A".
 
-METHOD:: fx
-RETURNS:: its link::Classes/GlobalDirtEffect::, nil without one. Use link::Classes/SuperDirtGUI#-setReturnEffect:: to change it.
-
-METHOD:: name
-RETURNS:: its effect's name, nil without one.
-
-METHOD:: effectOn
-Whether the effect runs. Off, the line passes as if it were not there.
-ARGUMENT:: bool
-true or false.
-
-METHOD:: level
-The fader, an amplitude from 0 to 4.
-ARGUMENT:: amp
-the amplitude.
-
-METHOD:: muted
-RETURNS:: whether it is muted. Set it with link::#-mute::.
-
-METHOD:: mute
-Mute it, and what it sends to other returns.
-ARGUMENT:: bool
-true or false.
-
-METHOD:: soloed
-RETURNS:: whether it is soloed. Set it with link::#-solo::.
-
-METHOD:: solo
-Solo it. See link::#Rules for sends::.
-ARGUMENT:: bool
-true or false.
-
-METHOD:: preFader
-Whether what is sent into this return is taken before the source's fader.
-ARGUMENT:: bool
-true or false.
-
-METHOD:: limitertype
-The output's guard: 0 nothing, 1 a limiter, 2 a soft clip.
-ARGUMENT:: value
-the number.
-
-METHOD:: outBus
-The bus it writes to; at first orbit 0's.
-ARGUMENT:: index
-a bus number, or a link::Classes/Bus::.
-
 METHOD:: orbitLevel
 ARGUMENT:: orbitIndex
 the orbit's number.
 RETURNS:: the level of that orbit's send, 0 to 1.
 
-METHOD:: returnLevel
-ARGUMENT:: target
-another SDGReturn, or this one.
-RETURNS:: the level of the send to it, 0 to 1.
-
-METHOD:: targets
-RETURNS:: the returns it can send to: all of them, itself too.
-
-METHOD:: pre
-RETURNS:: the link::Classes/SDGInsert::s before the effect, in signal order.
-
-METHOD:: post
-RETURNS:: the link::Classes/SDGInsert::s after the effect, in signal order.
-
-METHOD:: inserts
-RETURNS:: both lists as one.
+METHOD:: sendFxs
+RETURNS:: per orbit, the link::Classes/GlobalDirtEffect:: in its chain that sends to this return.
 
 METHOD:: lineBus
-RETURNS:: the link::Classes/Bus:: its inserts and effect work on.
+RETURNS:: the link::Classes/Bus:: its effects work on: what was sent, and the feedback.
 
-METHOD:: tapBus
-RETURNS:: the link::Classes/Bus:: holding what it plays, after its fader: what the recorder reads.
-
-METHOD:: defaultParentEvent
-RETURNS:: its effect's parameters, the values the window's knobs set.
-
-METHOD:: nodes
-RETURNS:: its chain's synths in signal order, without the head.
-
-METHOD:: metering
-Whether it sends its levels as code::'/sdgtrack'::, 20 a second. The window turns this on.
-ARGUMENT:: bool
-true or false.
+METHOD:: fbBus
+RETURNS:: the link::Classes/Bus:: other returns send to, read a block later.

@@ -1,0 +1,78 @@
+-- SuperDirtGUI from Tidal - 26: drum and bass
+--
+
+setcps (174/60/4)
+
+let sdgbits = pF "sdgbits"
+    sdgonset = pF "sdgonset"
+    sdgcut = pF "sdgcut"
+    sdgdetune = pF "sdgdetune"
+    sdgsub = pF "sdgsub"
+    sdgdrive = pF "sdgdrive"
+    sdgatk = pF "sdgatk"
+    sdgrel = pF "sdgrel"
+    sdgenv = pF "sdgenv"
+    sdgvib = pF "sdgvib"
+    sdgratio = pF "sdgratio"
+    sdgindex = pF "sdgindex"
+    sdgdecay = pF "sdgdecay"
+    sdgcount = pF "sdgcount"
+    sdglen = pF "sdglen"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+
+-- d1, the two-step: the 606 kick (:2) on one and the "and" of three, the
+-- piccolo snare (:3) on two and four; a ghost snare (:2, quiet) before the four
+d1 $ stack [
+     s "sdgkick:2 ~ ~ ~ sdgsnare:3 ~ ~ ~ ~ ~ sdgkick:2 ~ sdgsnare:3 ~ ~ ~",
+     s "~ ~ ~ ~ ~ ~ ~ sdgsnare:2 ~ ~ ~ ~ ~ ~ sdgsnare:2 ~" # gain 0.7
+   ]
+
+-- d2, the hats: the 909 closed hat on the sixteenths, the open one on the last
+-- of each beat, choked by the next (cut 1), the sixteenths rising and falling
+d2 $ s "sdghat*16" # n "3 3 3 4" # cut 1 # sdgbits 0.4 # gain "0.9 0.75 0.8 0.85"
+
+-- d3, the break: breaks152's real hits, one per sixteenth, in order; every
+-- fourth bar the second half runs backwards. The first event of a new file
+-- plays it whole while the hits are found
+d3 $ every 4 (within (0.5, 1) rev) $ s "breaks152*16"
+   # sdgonset "0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15" # legato 1 # hpf 150 # gain 0.85
+
+-- d4, the bass: the reese on one note a bar, a bar each on e, e, g, d; its
+-- filter breathes over eight bars and its sub (sdgsub) is the low end
+d4 $ note "<e2 e2 g2 d2>" # s "sdgreese" # legato 1 # sdgcut (range 300 1500 $ slow 8 sine)
+   # sdgdetune 0.3 # sdgsub 0.7 # sdgdrive 0.5 # gain 0.9
+
+
+-- d8, blips: three pings in eight, starting on another step each bar, their
+-- pitch a bar each on the fifth, the octave and the twelfth
+d8 $ euclidOff 3 8 "<0 1 2>" $ s "sdgping:0" # note "<12 7 19 12>" # gain 0.75 # pan (slow 5 sine)
+
+-- d9, the crash on the first beat of every eighth bar, and in the bar before
+-- it a roll on the third and fourth beats: the ratchet (:1), then the zipper (:3)
+d9 $ stack [
+     every' 8 0 (const $ s "sdgcymbal:1 ~ ~ ~" # sdgdecay 2 # gain 0.8) silence,
+     whenmod 8 7 (const $ s "~ ~ sdgratchet:1 sdgratchet:3" # sdgcount 16 # sdglen 0.3 # gain 0.85) silence
+   ]
+
+-- variations, over the top of all of it
+
+-- the break re-cut: its hits in another order every bar, as a jungle record
+-- re-cuts a break; the two-step keeps time under it
+d3 $ s "breaks152*16" # sdgonset "<[0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15] [0 1 2 3 0 1 2 3 8 9 10 11 8 9 15 15] [4 4 6 6 0 1 2 3 12 13 14 15 7 7 7 7]>"
+   # legato 1 # hpf 150 # gain 0.85
+
+-- the bass moving: a different note every two beats, half of them the octave,
+-- its detune nastier
+d4 $ note "<[e2 e3] [e2 g2] [g2 g3] [d2 e2]>" # s "sdgreese" # legato 1 # sdgcut 900 # sdgdetune 0.5
+   # sdgsub 0.7 # sdgdrive 0.6 # gain 0.9
+
+-- the drop: everything but the bass and the two-step is gone for four bars of
+-- sixteen, then back
+
+-- the hats in triplets on the last bar of four, the lead an octave down
+do
+  d2 $ whenmod 4 3 (const $ s "sdghat:3*12" # sdgbits 0.4 # gain "0.9 0.75 0.8") $ s "sdghat*16" # n "3 3 3 4" # cut 1 # sdgbits 0.4 # gain "0.9 0.75 0.8 0.85"
+  d6 $ struct "~ ~ ~ t ~ ~ ~ ~ ~ ~ t ~ ~ ~ ~ ~" $ note "<e5 g5 d5 b4>" # s "sdglead" # legato 1.5 # sdgcut 1500 # sdgenv 0.3 # sdgvib 0 # sdgspace 0.4 # sdgtime 0.259 # gain 0.8
+
+hush

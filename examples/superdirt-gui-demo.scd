@@ -1,6 +1,6 @@
 // superdirt-gui-demo.scd - a workshop startup, one block at a time.
 // this is an editor document: evaluate the blocks in order, never .load it.
-Server.view
+
 // ---- 1. server, superdirt, samples, orbits, then the add-on
 (
 s.options.numBuffers = 1024 * 256;   // room for the sample banks
@@ -30,7 +30,7 @@ s.waitForBoot {
 //         explorer, and what was loaded
 ~sdg.gui;
 
-// ---- 4. from tidal - examples/tidal/ has a file for each of these
+// ---- 4. from tidal - examples/tidal/lessons/ has a file for each of these
 //   d1 $ s "sdgsine" # n "0 7 12" # sustain 0.4
 //   d1 $ s "bd*4" # pF "sdgcomb" 0.4 # pF "sdgres" 2
 //   d1 $ s "breaks152" # pF "sdgwarp" 1 # speed 0.5 # pF "sdgpitch" 1.5
@@ -78,10 +78,9 @@ s.waitForBoot {
 ~sdg.reload;                              // or every file in the four folders
 
 // ---- 9. more sample banks: one subfolder per bank, appended to what is loaded.
-//         the drum banks rendered from the drum voices: sdgbd, sdgsd, sdghh, sdgperc,
-//         sdgfx, sdgresamp (docs/drums.md)
-~sdg.loadSamples(~sdg.path +/+ "samples");
-// ~sdg.loadSamples("~/more-samples");
+//         the drum banks rendered from the drum voices (sdgbd, sdgsd, sdghh, sdgperc,
+//         sdgfx, sdgresamp, docs/drums.md) came in with ~sdg itself
+~sdg.loadSamples("~/more-samples");
 // ~dirt.postSampleInfo;
 
 // ---- 10. take the add-on out again (superdirt keeps running)

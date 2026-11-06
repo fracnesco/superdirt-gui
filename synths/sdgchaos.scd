@@ -1,5 +1,5 @@
 // synths/sdgchaos.scd - digital and chaotic noise percussion: a chaotic source
-// (crackle, logistic map, stepped noise or Xenakis' gendy) over a dropping sine,
+// (crackle, logistic map, stepped noise or gendy) over a dropping sine,
 // a comb that rings it, drive, and a sample-rate and bit crush. glitch snares,
 // digital hats, broken kicks; no two hits are the same.
 //
@@ -18,12 +18,13 @@
 //   sdgbits    0 to 1                bit and sample-rate crush, 0 clean
 //
 // presets, by n: 0 glitch snare, 1 digital hat, 2 broken kick, 3 crackle, 4 gendy tom,
-// 5 static. note tunes it; legato or sustain shorten it, like a choke.
+// 5 static, 6 gendy kick, 7 logistic open hat, 8 broken clap, 9 digital rim. note tunes
+// it; legato or sustain shorten it, like a choke.
 //
 //   d1 $ s "sdgchaos:2 ~ sdgchaos:0 ~" # pF "sdgbits" "<0 0.4 0.7>"
 //   d1 $ s "sdgchaos:1*16" # pF "sdgcolor" (slow 4 saw) # pF "sdgnoise" (range 0.02 0.1 rand)
 //
-// examples/tidal/19-drums-autechre.tidal plays it.
+// examples/tidal/lessons/19-drums-small-machines.tidal plays it.
 (
 var name = \sdgchaos;
 SynthDef(name, { |out, sustain = 2.5, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -77,12 +78,16 @@ SynthDef(name, { |out, sustain = 2.5, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgcolor: 0.33, sdgsnap: 0.6, sdgfreq: 190, sdgtone: 0.55, sdgdecay: 0.12, sdgnoise: 0.18, sdgpunch: 12, sdgtail: 0.25, sdgdrive: 0.2, sdgbits: 0.3),	// 0 glitch snare
-	(sdgcolor: 0.67, sdgsnap: 1, sdgfreq: 1200, sdgtone: 0.95, sdgnoise: 0.045, sdgtail: 0, sdgdrive: 0, sdgbits: 0),	// 1 digital hat
-	(sdgcolor: 1, sdgsnap: 0.12, sdgfreq: 48, sdgtone: 0.3, sdgdecay: 0.38, sdgnoise: 0.08, sdgpunch: 30, sdgbend: 0.05, sdgindex: 0.6, sdgtail: 0, sdgdrive: 0.45, sdgbits: 0.75),	// 2 broken kick
-	(sdgcolor: 0, sdgsnap: 1, sdgfreq: 900, sdgtone: 0.65, sdgnoise: 0.07, sdgtail: 0.35, sdgdrive: 0.2, sdgbits: 0.1),	// 3 crackle
-	(sdgcolor: 1, sdgsnap: 0.7, sdgfreq: 140, sdgtone: 0.35, sdgdecay: 0.25, sdgnoise: 0.25, sdgpunch: 7, sdgtail: 0.35, sdgdrive: 0.3, sdgbits: 0.15),	// 4 gendy tom
-	(sdgcolor: 0.4, sdgsnap: 1, sdgfreq: 300, sdgtone: 0.6, sdgnoise: 0.25, sdgtail: 0.15, sdgdrive: 0.35, sdgbits: 0.65)	// 5 static
+	(presetName: "glitch snare", sdgcolor: 0.33, sdgsnap: 0.6, sdgfreq: 190, sdgtone: 0.55, sdgdecay: 0.12, sdgnoise: 0.18, sdgpunch: 12, sdgtail: 0.25, sdgdrive: 0.2, sdgbits: 0.3),	// 0 glitch snare
+	(presetName: "digital hat", sdgcolor: 0.67, sdgsnap: 1, sdgfreq: 1200, sdgtone: 0.95, sdgnoise: 0.045, sdgtail: 0, sdgdrive: 0, sdgbits: 0),	// 1 digital hat
+	(presetName: "broken kick", sdgcolor: 1, sdgsnap: 0.12, sdgfreq: 48, sdgtone: 0.3, sdgdecay: 0.38, sdgnoise: 0.08, sdgpunch: 30, sdgbend: 0.05, sdgindex: 0.6, sdgtail: 0, sdgdrive: 0.45, sdgbits: 0.75),	// 2 broken kick
+	(presetName: "crackle", sdgcolor: 0, sdgsnap: 1, sdgfreq: 900, sdgtone: 0.65, sdgnoise: 0.07, sdgtail: 0.35, sdgdrive: 0.2, sdgbits: 0.1),	// 3 crackle
+	(presetName: "gendy tom", sdgcolor: 1, sdgsnap: 0.7, sdgfreq: 140, sdgtone: 0.35, sdgdecay: 0.25, sdgnoise: 0.25, sdgpunch: 7, sdgtail: 0.35, sdgdrive: 0.3, sdgbits: 0.15),	// 4 gendy tom
+	(presetName: "static", sdgcolor: 0.4, sdgsnap: 1, sdgfreq: 300, sdgtone: 0.6, sdgnoise: 0.25, sdgtail: 0.15, sdgdrive: 0.35, sdgbits: 0.65),	// 5 static
+	(presetName: "gendy kick", sdgcolor: 1, sdgsnap: 0.05, sdgfreq: 55, sdgtone: 0.2, sdgdecay: 0.4, sdgnoise: 0.05, sdgpunch: 12, sdgbend: 0.08, sdgindex: 0.3, sdgtail: 0, sdgdrive: 0.3, sdgbits: 0),	// 6 gendy kick
+	(presetName: "logistic open hat", sdgcolor: 0.33, sdgsnap: 1, sdgfreq: 1500, sdgtone: 0.9, sdgnoise: 0.25, sdgtail: 0, sdgdrive: 0, sdgbits: 0.2),	// 7 logistic open hat
+	(presetName: "broken clap", sdgcolor: 0.67, sdgsnap: 0.9, sdgfreq: 800, sdgtone: 0.6, sdgnoise: 0.1, sdgtail: 0.3, sdgdrive: 0.1, sdgbits: 0.4),	// 8 broken clap
+	(presetName: "digital rim", sdgcolor: 0.5, sdgsnap: 0.3, sdgfreq: 1600, sdgtone: 0.8, sdgdecay: 0.03, sdgnoise: 0.03, sdgpunch: 0, sdgtail: 0.1, sdgdrive: 0.7, sdgbits: 0.8)	// 9 digital rim
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

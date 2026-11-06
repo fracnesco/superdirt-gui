@@ -1,0 +1,101 @@
+-- SuperDirtGUI from Tidal - 13: stuttery beats, on the Amen
+--
+-- A stutter is a piece of sound played again before it has finished. The break
+-- everyone stutters is the Amen: Dirt-Samples has it as breaks152, three bars at
+-- 152 bpm. splice cuts it into 48 sixteenths and fits each into its step, so the
+-- break follows the tempo (a little faster and higher at 165), and cut 1 makes
+-- every slice stop the one before it - that is what turns a repeat into a
+-- stutter instead of a smear. Each block changes one thing about the same break,
+-- so play them in order and hear what each word does.
+
+setcps (165/60/4)
+
+let sdgcomb = pF "sdgcomb"
+    sdgres = pF "sdgres"
+    sdgwarp = pF "sdgwarp"
+    sdgpitch = pF "sdgpitch"
+    sdgroll = pF "sdgroll"
+    sdgrolltime = pF "sdgrolltime"
+    sdgrollcurve = pF "sdgrollcurve"
+    sdgspace = pF "sdgspace"
+    sdgtime = pF "sdgtime"
+    -- the Amen's sixteenths by number: 0-15 its first bar, 16-31 the second,
+    -- 32-47 the third (the one with the crash at the end)
+    amenAt p = splice 48 p $ s "breaks152" # cut 1
+    amen = amenAt "<[0 .. 15] [16 .. 31] [32 .. 47]>"
+
+-- the break, plain: three bars, then again
+d1 $ amen
+
+-- the oldest edit: write the numbers yourself. [4 4] plays the first snare
+-- twice in its step, [12*4] rolls the second one, [14 14] doubles a ghost
+d1 $ amenAt "0 1 2 3 [4 4] 5 6 7 8 9 10 11 [12*4] 13 [14 14] 15"
+
+-- ply: every event becomes n in its own space, so the whole bar stutters
+d1 $ ply "<1 2 1 [1 4]>" $ amen
+
+-- within works on a piece of the cycle: only the last beat
+d1 $ within (0.75, 1) (ply "<2 4 8 [4 16]>") $ amen
+
+-- a roll that fades: plyWith changes each repeat from the one before
+-- (4 :: Pattern Int tells Tidal the 4 is a whole number of repeats)
+d1 $ within (0.75, 1) (plyWith (4 :: Pattern Int) (|* gain 0.85)) $ amen
+
+-- a roll that rises: each repeat a little faster, so higher
+d1 $ within (0.75, 1) (plyWith (4 :: Pattern Int) (|* speed 1.15)) $ amen
+
+-- and one that falls, the tape slowing down
+d1 $ within (0.5, 1) (plyWith (4 :: Pattern Int) (|* speed 0.82)) $ amen
+
+-- now and then, at random, a fill nobody planned
+d1 $ someCyclesBy 0.4 (within (0.5, 1) (ply "2 4 3 8")) $ amen
+
+-- linger repeats the start of the bar: a beat, half a beat, two beats, a
+-- single slice sixteen times - the machine gun
+d1 $ every 2 (linger "<0.25 0.125 0.5 0.0625>") $ amen
+
+-- bite cuts the bar into 8 and plays the pieces in a new order, repeats squeezed
+-- into their step but at the break's own pitch
+d1 $ bite 8 "0 1 [2 2] 3 4 [5 5 5] 6 [7*4]" $ amen
+
+-- chew is the same cut, but a piece squeezed into less time plays faster and
+-- higher, as on a sampler - hear how [7*4] rises compared with bite
+d1 $ chew 8 "0 1 [2 2] 3 4 [5 5 5] 6 [7*4]" $ amen
+
+-- a negative speed plays a slice backwards: the second beat reversed every third bar
+d1 $ every 3 (within (0.25, 0.5) (|* speed (-1))) $ amen
+
+-- hurry 0.5 is half the tempo and half the speed: the break drops an octave
+-- into half time for the last two of every eight bars
+d1 $ whenmod 8 6 (hurry 0.5) $ amen
+
+-- echoes that fall in the gaps: stutWith says what happens to each copy (an
+-- octave and a fifth up, here); cut 0 lets the copies ring over each other
+d1 $ within (0.5, 1) (stutWith 3 (1/24) (|* speed 1.5)) $ amen # cut 0
+
+-- the warp player keeps the pitch while the speed changes, so here the roll
+-- rises in sdgpitch alone: every repeat higher, none of them shorter
+d1 $ within (0.75, 1) (plyWith (4 :: Pattern Int) (|* sdgpitch 1.12)) $ amen # sdgwarp 1 # sdgpitch 1 # gain 0.9
+
+-- the roll module stutters a hit by itself, faster and faster, after the
+-- slice has started (cut 0, or the next slice would stop the roll)
+d1 $ sometimesBy 0.12 (# (sdgroll 6 # sdgrolltime 0.03 # sdgrollcurve 0.8 # cut 0)) $ amen
+
+-- a stutter through the comb, which turns a repeat into a note
+d1 $ within (0.75, 1) ((# sdgres 0.7) . (# sdgcomb "<0.2 0.3 0.45>") . ply 8) $ amen
+
+-- and through the orbit's echo, a dotted eighth at 165: every event carries it
+d1 $ within (0.5, 1) (ply "4 2") $ amen # sdgspace 0.35 # sdgtime 0.273
+
+-- the jungle edit, all at once: four bars of numbers by hand, the second beat
+-- reversed every fourth bar, the last bar of eight rolled at the end
+d1 $ whenmod 8 7 (within (0.5, 1) (ply 4)) $ every 4 (within (0.25, 0.5) (|* speed (-1)))
+   $ amenAt "<[0 .. 15] [0 1 [2 2] 3 4 5 [6 6] 7 [32 33] 34 [12 12] 13 [44 45 46 47] 14 [36 37] 15] [16 .. 31] [0 1 0 1 [4 4 4] 5 6 7 8 9 [10 10] 11 [12*4] [12*8] 14 15]>"
+
+-- a reese under it, so the stutter has something long to fall against
+d2 $ slow 2 $ note "e2 ~ ~ ~ ~ ~ [~ g2] ~ c2 ~ ~ ~ ~ ~ d2 ~" # s "sdgreese" # legato 1 # gain 0.85
+
+-- and a pad, two bars a chord
+d3 $ slow 2 $ note "<e'min9 c'maj9>" # s "sdgpad" # legato 1 # gain 0.75
+
+hush

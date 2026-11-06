@@ -16,14 +16,15 @@
 //   sdgnoise     0.005 to 1 s       how long the noise gate stays open
 //   sdgtone      0 to 1             dark to bright, the eq's top end and the noise
 //
-// presets, by n: 0 slam, 1 dive, 2 clank, 3 gated, 4 crunch, 5 boom. note tunes it in
-// semitones; legato or sustain shorten it, like a choke. it is louder than its peak
-// suggests: the limiter leaves only a few dB between peak and body.
+// presets, by n: 0 slam, 1 dive, 2 clank, 3 gated, 4 crunch, 5 boom, 6 sub drop,
+// 7 industrial, 8 hardstyle, 9 soft thud. note tunes it in semitones; legato or sustain
+// shorten it, like a choke. it is louder than its peak suggests: the limiter leaves
+// only a few dB between peak and body.
 //
 //   d1 $ s "sdgslam ~ ~ sdgslam ~ ~ sdgslam ~" # note "-2"
 //   d1 $ s "sdgslam:1" # pF "sdgbend" "<0.3 0.8>" # pF "sdgmetal" 0.6
 //
-// examples/tidal/18-drums-sophie.tidal plays it.
+// examples/tidal/lessons/18-drums-hyperreal.tidal plays it.
 (
 var name = \sdgslam;
 SynthDef(name, { |out, sustain = 3.2, pan = 0.5, freq = 261.6256, accelerate = 0,
@@ -79,17 +80,21 @@ SynthDef(name, { |out, sustain = 3.2, pan = 0.5, freq = 261.6256, accelerate = 0
 // presets: the sound library's events for this synth. useSynthDefSustain makes an
 // event last the def's sustain, not one step; note: 0 keeps n from also transposing.
 [
-	(sdgfreq: 45, sdgdecay: 0.35, sdgpunch: 30, sdgbend: 0.15),                       // 0 slam
-	(sdgfreq: 38, sdgdecay: 0.9, sdgpunch: 36, sdgbend: 0.7, sdgclick: 0.3,
+	(presetName: "slam", sdgfreq: 45, sdgdecay: 0.35, sdgpunch: 30, sdgbend: 0.15),                       // 0 slam
+	(presetName: "dive", sdgfreq: 38, sdgdecay: 0.9, sdgpunch: 36, sdgbend: 0.7, sdgclick: 0.3,
 		sdgdrive: 0.3, sdgwavefold: 0, sdgmetal: 0.1, sdgsnap: 0.1),                // 1 dive
-	(sdgfreq: 52, sdgdecay: 0.2, sdgpunch: 24, sdgbend: 0.05, sdgmetal: 1,
+	(presetName: "clank", sdgfreq: 52, sdgdecay: 0.2, sdgpunch: 24, sdgbend: 0.05, sdgmetal: 1,
 		sdgcolor: 0.65, sdgdrive: 0.7, sdgsnap: 0.3, sdgnoise: 0.03),                // 2 clank
-	(sdgfreq: 48, sdgdecay: 0.12, sdgpunch: 26, sdgbend: 0.04, sdgdrive: 0.85,
+	(presetName: "gated", sdgfreq: 48, sdgdecay: 0.12, sdgpunch: 26, sdgbend: 0.04, sdgdrive: 0.85,
 		sdgmetal: 0.15, sdgsnap: 0.8, sdgnoise: 0.12, sdgtone: 0.7),                 // 3 gated
-	(sdgfreq: 55, sdgdecay: 0.3, sdgpunch: 28, sdgbend: 0.1, sdgdrive: 1,
+	(presetName: "crunch", sdgfreq: 55, sdgdecay: 0.3, sdgpunch: 28, sdgbend: 0.1, sdgdrive: 1,
 		sdgwavefold: 0.8, sdgmetal: 0.4, sdgcolor: 0.3, sdgsnap: 0.4, sdgtone: 0.8),  // 4 crunch
-	(sdgfreq: 41, sdgdecay: 1.4, sdgpunch: 24, sdgbend: 0.12, sdgclick: 0.7,
-		sdgdrive: 0.5, sdgwavefold: 0, sdgmetal: 0, sdgsnap: 0.15, sdgtone: 0.4)     // 5 boom
+	(presetName: "boom", sdgfreq: 41, sdgdecay: 1.4, sdgpunch: 24, sdgbend: 0.12, sdgclick: 0.7,
+		sdgdrive: 0.5, sdgwavefold: 0, sdgmetal: 0, sdgsnap: 0.15, sdgtone: 0.4),     // 5 boom
+	(presetName: "sub drop", sdgfreq: 30, sdgdecay: 1.2, sdgpunch: 48, sdgbend: 1.2, sdgclick: 0.1, sdgdrive: 0.2, sdgwavefold: 0, sdgmetal: 0, sdgsnap: 0, sdgtone: 0.3),	// 6 sub drop
+	(presetName: "industrial", sdgfreq: 50, sdgdecay: 0.25, sdgpunch: 30, sdgbend: 0.06, sdgclick: 0.8, sdgdrive: 0.9, sdgwavefold: 0.5, sdgmetal: 0.8, sdgcolor: 0.9, sdgsnap: 0.5, sdgnoise: 0.08, sdgtone: 0.75),	// 7 industrial
+	(presetName: "hardstyle", sdgfreq: 50, sdgdecay: 0.5, sdgpunch: 34, sdgbend: 0.12, sdgclick: 0.6, sdgdrive: 1, sdgwavefold: 0.3, sdgmetal: 0, sdgsnap: 0.1, sdgtone: 0.6),	// 8 hardstyle
+	(presetName: "soft thud", sdgfreq: 48, sdgdecay: 0.25, sdgpunch: 18, sdgbend: 0.06, sdgclick: 0.2, sdgdrive: 0.2, sdgwavefold: 0, sdgmetal: 0, sdgsnap: 0.05, sdgtone: 0.3)	// 9 soft thud
 ].do { |preset, i|
 	~dirt.soundLibrary.addSynth(name, (instrument: name, note: 0) ++ preset,
 		appendToExisting: i > 0, useSynthDefSustain: true)

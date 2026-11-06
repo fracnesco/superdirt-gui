@@ -1,0 +1,45 @@
+TITLE:: SDGGroup
+summary:: a group track as in Ableton: orbits summed, a chain of effects, sends to the returns, a fader
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SDGBusTrack, Classes/SDGMaster, Classes/SDGReturn, Classes/SuperDirtGUI
+
+DESCRIPTION::
+Orbits go into a group instead of the master, and what they sum to runs through a chain
+of effects, sends to the returns, a fader with mute and solo, and out to the master.
+Everything but the members is link::Classes/SDGBusTrack::.
+
+code::
+g = ~sdg.addGroup([0, 1, 2]);             // drums: orbits 0, 1 and 2
+~sdg.addBusInsert(g, \compressor);        // one compressor on all three
+~sdg.setOrbitDest(3, g.name);             // orbit 3 joins it
+~sdg.setOrbitDest(3, \master);            // and leaves
+g.solo = true;                            // hear its orbits and nothing else
+g.solo = false;
+~sdg.removeGroup(g);                      // its orbits go to the master again
+::
+
+An orbit joins by writing to it: its monitor's output bus is the group's in bus
+(link::Classes/SuperDirtGUI#-setOrbitDest::), so everything of the orbit, effects and
+fader included, is in what the group gets. The orbit's own sends to the returns stay;
+the group's are on what the group plays, after its effects. Soloing a group solos its
+orbits; soloing an orbit of a group keeps the group on, with the orbit alone in it.
+
+CLASSMETHODS::
+
+METHOD:: new
+Made by link::Classes/SuperDirtGUI#-addGroup::, not by hand.
+ARGUMENT:: sdg
+the link::Classes/SuperDirtGUI::.
+ARGUMENT:: name
+its name, a Symbol.
+
+INSTANCEMETHODS::
+
+METHOD:: name
+RETURNS:: its name: code::\g1::, code::\g2:: ...
+
+METHOD:: shortName
+RETURNS:: what a person calls it: "group 1".
+
+METHOD:: members
+RETURNS:: the indices of the orbits that go into it.
