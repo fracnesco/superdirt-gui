@@ -16,6 +16,7 @@ is skipped, and the rest works the same.
 | optional quark | BusManager | names the orbit busses, an output menu on each strip | a number box only |
 | optional quark | BusRecorder | **recorder**: a file per orbit and return | the button is disabled |
 | optional quark | DigitDrag | number boxes drag by the digit under the pointer | ordinary number boxes |
+| optional quark | ServerPanel | the server window, frequency scope, level meters and node tree in the same palette | SuperCollider's own server window and scopes |
 | optional quark | ParaEQ, Compressor, Insight | the eq, compressor and meter inserts | those kinds are greyed out in the insert menu |
 | optional quark | Growl, Tunnel, Smear, Cloud, Stammer, Sympathy, Spiral | more kinds of insert | not listed |
 | optional quark | Modality-toolkit | MIDI controllers on the mixer (`~sdg.midi`, in development) | no controllers; Tidal `cF` mappings still work |
@@ -165,13 +166,15 @@ evaluate `d1 $ s "sdgkick*4"`. The orbit 0 meter in the window moves.
 
 ### Quarks
 
-Each is one line, then a recompile. Install the ones you want, then recompile
-once for all of them:
+[install-quarks.scd](../install-quarks.scd) installs all of them in one block,
+then checks what you have. By hand, each is one line, then a recompile. Install
+the ones you want, then recompile once for all of them:
 
 ```supercollider
 Quarks.install("https://github.com/fracnesco/sc-bus-manager.git");   // BusManager
 Quarks.install("https://github.com/fracnesco/sc-recorder.git");      // BusRecorder
 Quarks.install("https://github.com/fracnesco/sc-digit-drag.git");    // DigitDrag
+Quarks.install("https://github.com/fracnesco/sc-server-panel.git");  // ServerPanel
 Quarks.install("https://github.com/fracnesco/sc-eq.git");            // ParaEQ
 Quarks.install("https://github.com/fracnesco/sc-compressor.git");    // Compressor (pulls ParaEQ)
 Quarks.install("https://github.com/fracnesco/supercollider-insight-meter.git");   // Insight

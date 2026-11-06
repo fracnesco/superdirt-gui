@@ -1,5 +1,4 @@
-// superdirt-gui-demo.scd - a workshop startup, one block at a time.
-// this is an editor document: evaluate the blocks in order, never .load it.
+// superdirt-gui-demo.scd - a workshop startup
 
 // ---- 1. server, superdirt, samples, orbits, then the add-on
 (

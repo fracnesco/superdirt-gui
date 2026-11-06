@@ -721,6 +721,7 @@ mouse wheel where it says two fingers.
 | [examples/grooves/](examples/grooves/) | a Tidal study in rhythm on the library - the Egyptian maqsum at jungle speed, chopped like the Amen, in the manner of ABADIR - with variations, a section that pushes it, and lines that drift by themselves; the Haskell functions that change a running pattern in place, crossfade scenes as an Octatrack does, and pick sample players are in `examples/tidal/functions/` |
 | [examples/pdef/](examples/pdef/) | the same sounds sequenced from SuperCollider with Pdefs and no Tidal: an `\sdg` event type that keeps a Pbind's beats, cycles and levels in line with Tidal's, then first beats, synths and scales, a step-grid drum machine, acid with slides, effects and the mixer from code, live changes, polyrhythm and euclid, chance and Markov chains, sliced breaks, a piece in sections; its README sets Tidal and Pbind side by side |
 | [install.scd](install.scd) | symlinks the repository into the extensions folder |
+| [install-quarks.scd](install-quarks.scd) | installs every optional quark (BusManager, BusRecorder, DigitDrag, ServerPanel, the inserts, Modality) in one go, and checks what you have |
 | [superdirt-gui.quark](superdirt-gui.quark) | the quark manifest, named after the repository so `Quarks` can find it |
 
 ## More
