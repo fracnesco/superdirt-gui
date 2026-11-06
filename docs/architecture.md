@@ -160,7 +160,7 @@ run time, never compiled against, so its absence costs a menu entry and nothing 
 | DigitDrag | number boxes drag by the digit under the pointer | ordinary number boxes |
 | ParaEQ, Compressor, Insight, VSTPlugin | the four standard kinds of insert | the kind is greyed out in the menu |
 | Modality-toolkit | MIDI and HID controllers on the mixer (`~sdg.midi`) | no controllers; Tidal `cF` mappings still work |
-| anything subclassing `FxParamUnit` (Growl, Tunnel, Smear, Cloud, Stammer, Sympathy, Spiral) | more kinds of insert, found at class init, named by nothing here | not listed |
+| anything subclassing `FxParamUnit` (Growl, Tunnel, Smear, Cloud, Stammer, Sympathy, Spiral; Hall, Plate, Coil, Shimmer from `sc-reverbs`) | more kinds of insert, found at class init, named by nothing here | not listed |
 | sc3-plugins | `sdghole`, `sdgecho`, `sdgjverb`, `sdgroom`, `sdgshimmer` | those files are skipped with one line in the post window |
 | mi-UGens | `sdgmiverb`, `sdgclouds`, `sdgrings`, `sdgwarps` | the same |
 

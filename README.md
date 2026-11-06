@@ -466,12 +466,13 @@ return A, then B, and a send knob for it on every orbit, from nothing to
 ```supercollider
 a = ~sdg.addReturn;
 ~sdg.addBusInsert(a, \vst, plugin: "ValhallaSupermassive");   // its effects are inserts
-~sdg.addBusInsert(a, \eq);               // after it; or \compressor, \insight, an fx kit effect
+~sdg.addBusInsert(a, \eq);               // after it; or \compressor, \insight, an fx kit effect, \hall
 ~sdg.setSend(0, a, 0.5);                 // orbit 0 into it
 ```
 
 A return's strip has **+ effect** for its chain of effects - the same kinds as an
-orbit's inserts: eq, compressor, insight, the sc fx kit effects and VST plugins - send
+orbit's inserts: eq, compressor, insight, the sc fx kit effects, the four reverbs (Hall,
+Plate, Coil, Shimmer from `sc-reverbs`) and VST plugins - send
 knobs, a fader, mute, solo, the limiter and its output. SuperDirt's own reverb and
 delay stay on the orbits, where Tidal's parameters drive them: no event reaches a return.
 
