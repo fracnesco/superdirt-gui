@@ -1,6 +1,6 @@
 // =====================================================================
 // SDGReturn - a return track, the way Ableton has them: every orbit has a
-// send knob to it, and every group; what comes back runs through a chain of
+// send knob to it; what comes back runs through a chain of
 // effects (inserts: eq, compressor, insight, an sc fx kit effect, a VST
 // plugin), a fader, mute and solo, and out to the master. Returns send to each
 // other as well, and to themselves, which is where feedback comes from.
@@ -19,12 +19,11 @@
 //
 // Where it runs. An orbit's send is a global effect in the orbit's chain,
 // right before the fader, so it hears the effects and inserts and comes back
-// with the orbit from every rebuild. A group's send is a synth of the group,
-// which runs before any return. The return itself is not in any orbit: it runs
-// after the groups (see SDGBusTrack), so everything sent to it this block is
-// there to read.
+// with the orbit from every rebuild. The return itself is not in any orbit: it
+// runs after SuperDirt's group (see SDGBusTrack), so everything sent to it this
+// block is there to read.
 //
-//   orbits, groups                  ... sends
+//   orbits                          ... sends
 //   heads                           each return's: its sends in + last block's feedback
 //   return A                        inserts, sends, out
 //   return B                        ...
@@ -39,7 +38,7 @@
 // fed back. The feedback input saturates softly from +6 dB (and bad values
 // become silence), so a loop with gain above 1 screams instead of running away.
 //
-// Its effects are inserts only, as on an orbit or a group: SuperDirt's global
+// Its effects are inserts only, as on an orbit: SuperDirt's global
 // effects (reverb, delay) are an orbit's, set by Tidal's parameters, and no
 // event comes to a return. A reverb on a return is a VST plugin or an sc fx kit
 // effect (Cloud, Smear ...).

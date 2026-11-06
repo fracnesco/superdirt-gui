@@ -33,9 +33,8 @@ lives in its synth, and a return track, because it belongs to no orbit. See
 | `SDGBufRate`, `SDGBufPhase` | the players' rate and read pointer, the arithmetic of SuperDirt's `dirt_sample` taken out | nothing |
 | `SDGTrack` | one global effect of one orbit as a track | its two busses, send, return, level, pre and post inserts |
 | `SDGInsert`, `SDGInsertTarget` | an insert, and what its ParaEQ or Compressor drives | the effect or synth, its object, a VST plugin's last state |
-| `SDGBusTrack` | what a return, group and the master share | its in and tap busses, its insert chain, sends, out synth |
+| `SDGBusTrack` | what a return and the master share | its in and tap busses, its insert chain, sends, out synth |
 | `SDGReturn` | a return track | feedback and line busses, its head, a send per orbit, a link to every return |
-| `SDGGroup` | a group track | the orbits routed into its in bus, a link to every return |
 | `SDGMaster` | the master track | everything not routed direct; writes to the hardware |
 | `SDGSession` | the mixer under a name | what the last load had to leave out, the window's part of the last session |
 | `SDGWindow` | the control window | only what is on screen: the mixer state is `SuperDirtGUI`'s, and it follows. The explorer's model, its sort and which banks are open |
@@ -142,7 +141,7 @@ orbit that has an effect is left alone.
 | **a file saved** | That file only, as above. |
 | **the window closed** | Its meters, listeners and poll stop. Everything on the server stays and goes on playing; `~sdg.gui` shows it again. |
 | **`~sdg.free`** | Returns, inserts, tracks, modules, players, global effects and the fader out, the tap busses freed, the window closed, the MIDI mappings and the Tidal log stopped. SynthDefs stay on the server: they do no harm, and Tidal may still be playing them. Modality's MKtls stay too: they are Modality's. |
-| **cmd-period** | SuperDirt makes its orbits again on `ServerTree`, with every effect in `globalEffects` and the state it held, so tracks and ordinary inserts come back by themselves. A hook registered after SuperDirt's makes VST inserts' synths again, reopens each plugin with its last state, and restarts the returns, groups and master. The language side comes back through `CmdPeriod`: `SuperDirtGUI` restarts the background analysis and notifies `\cmdPeriod`, on which the window starts its meter and library routines again and drops any refresh that was on its way; the sample editor, the MIDI, sync and Tidal-log windows register themselves. The meter and playhead `OSCFunc`s are fixed. Nothing of the mixer's state is touched. |
+| **cmd-period** | SuperDirt makes its orbits again on `ServerTree`, with every effect in `globalEffects` and the state it held, so tracks and ordinary inserts come back by themselves. A hook registered after SuperDirt's makes VST inserts' synths again, reopens each plugin with its last state, and restarts the returns and master. The language side comes back through `CmdPeriod`: `SuperDirtGUI` restarts the background analysis and notifies `\cmdPeriod`, on which the window starts its meter and library routines again and drops any refresh that was on its way; the sample editor, the MIDI, sync and Tidal-log windows register themselves. The meter and playhead `OSCFunc`s are fixed. Nothing of the mixer's state is touched. |
 | **a sample bank** | Stays in SuperDirt's library. `free` does not unload it. |
 
 A session on disk and the files in the four folders are yours; nothing here

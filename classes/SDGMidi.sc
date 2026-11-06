@@ -210,7 +210,14 @@ SDGMidi {
 	// Answers the SDGMidiMap. address is an SDGMidiTarget's; lo and hi are in the
 	// target's own units (nil: its whole range)
 	map { |ktl, element, address, lo, hi, curve, invert, takeover, mode|
-		var target = SDGMidiTarget(sdg, address), m;
+		var target, m;
+		// a kind there is no longer (a file from a version with group tracks): skipped,
+		// so the mappings after it still land
+		if (SDGMidiTarget.kinds[address.asArray.first.asSymbol].isNil) {
+			"SuperDirtGUI midi: no such target %, mapping skipped".format(address.asCompileString).warn;
+			^nil
+		};
+		target = SDGMidiTarget(sdg, address);
 		ktl = ktl.asSymbol;
 		element = element.asSymbol;
 		// one element for a target, one target for an element: what it moved before is let go

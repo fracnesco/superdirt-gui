@@ -1,10 +1,10 @@
 TITLE:: SDGMaster
 summary:: the master track: everything not sent direct, a mastering chain, a fader, the hardware output
 categories:: Libraries>SuperDirtGUI
-related:: Classes/SDGBusTrack, Classes/SDGGroup, Classes/SDGReturn, Classes/SuperDirtGUI
+related:: Classes/SDGBusTrack, Classes/SDGReturn, Classes/SuperDirtGUI
 
 DESCRIPTION::
-Every orbit, group and return writes to the master unless it is sent straight to a
+Every orbit and return writes to the master unless it is sent straight to a
 hardware bus, and the master writes to the hardware - where orbit 0 wrote before there
 was a master (link::Classes/SuperDirtGUI#-hardwareOut::). Everything it does is
 link::Classes/SDGBusTrack::; it has no sends, mute or solo, and always goes direct.

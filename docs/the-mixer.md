@@ -125,7 +125,7 @@ not send it. That is why saving a session asks every plugin afresh.
 ## Return tracks
 
 ```supercollider
-a = ~sdg.addReturn;                       // return A: a send knob on every orbit and group
+a = ~sdg.addReturn;                       // return A: a send knob on every orbit
 ~sdg.addBusInsert(a, \eq);                // its effects are inserts, one chain
 ~sdg.setSend(0, a, 0.5);                  // orbit 0 into it, 0 to 1
 a.level = 0.7;                            // what comes back
@@ -138,14 +138,13 @@ plugin - in one chain (2026-11-06; before, a return held one global effect betwe
 post inserts). SuperDirt's own reverb and delay stay on the orbits, where Tidal drives them.
 
 An orbit's send is a global effect in the orbit's chain, right before the fader, so it
-hears the effects and inserts and comes back with the orbit from every rebuild. A group's
-send is a synth of the group. The return itself belongs to no orbit. It runs in a group
-after SuperDirt's and the groups', so everything sent in this block is there to read:
+hears the effects and inserts and comes back with the orbit from every rebuild. The
+return itself belongs to no orbit. It runs in a group after SuperDirt's, so everything
+sent in this block is there to read:
 
 ```
- SuperDirt's group       ... inserts, sends, fader, rms, monitor (into a group or the master)
+ SuperDirt's group       ... inserts, sends, fader, rms, monitor (into the master)
  the add-on's group
-   groups                each group: inserts, sends, out (in place on its inBus)
    heads                 each return: its sends in + last block's feedback, onto lineBus
    return A              inserts, links, out
    return B              ...
@@ -154,33 +153,28 @@ after SuperDirt's and the groups', so everything sent in this block is there to 
 
 | bus | holds |
 |-----|-------|
-| `inBus` | what the orbits and groups send in this block |
+| `inBus` | what the orbits send in this block |
 | `fbBus` | what returns sent it in the last block |
 | `lineBus` | the return's signal, processed in place all along |
 | `tapBus` | its output after the fader, for the recorder |
 
 No event reaches a return, so an insert's `DirtPause` would pause it after 4 s of silence
 with nothing to wake it: a routine resumes them once a second. A return is always on, uses
-CPU when nothing plays, and never cuts a tail. Groups and the master the same.
+CPU when nothing plays, and never cuts a tail. The master the same.
 
-## Groups and the master
+## The master
 
 ```supercollider
-g = ~sdg.addGroup([0, 1]);                // orbits 0 and 1 into a group
-~sdg.addBusInsert(g, \compressor);
-~sdg.setGroupSend(g, \A, 0.3);
-~sdg.setOrbitDest(2, g.name);             // \master, \direct (with a bus) or a group's name
 ~sdg.addBusInsert(~sdg.master, \eq);
+~sdg.setOrbitDest(2, \direct, 2);        // \master, or \direct with a hardware bus
 ```
 
-An orbit's route is the add-on's: `setOrbitDest` sets the orbit's `outBus` to its group's
-or the master's `inBus`, or to a hardware bus for `\direct`, rebuilding the orbit only when
-the bus changes. The master is made once the orbits exist (`SuperDirtGUI.useMaster`,
-true by default) and writes where orbit 0 wrote; an orbit that wrote elsewhere stays direct.
-Solo: an orbit or a group soloed silences the orbits and groups that are not (a group's
-orbits count as soloed with it, and a group stays on while one of its orbits is soloed),
-and cuts their sends; a soloed return also stops the direct sound. `free` routes every orbit
-back to the hardware.
+An orbit's route is the add-on's: `setOrbitDest` sets the orbit's `outBus` to the
+master's `inBus`, or to a hardware bus for `\direct`, rebuilding the orbit only when the
+bus changes. The master is made once the orbits exist (`SuperDirtGUI.useMaster`, true by
+default) and writes where orbit 0 wrote; an orbit that wrote elsewhere stays direct.
+Solo: an orbit soloed silences the orbits that are not and cuts their sends; a soloed
+return also stops the direct sound. `free` routes every orbit back to the hardware.
 
 ### Feedback
 

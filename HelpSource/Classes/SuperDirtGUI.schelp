@@ -616,7 +616,7 @@ ARGUMENT:: orbit
 a link::Classes/DirtOrbit::.
 
 METHOD:: setOutBus
-Send an orbit straight to a hardware bus, past its group and the master: the same as
+Send an orbit straight to a hardware bus, past the master: the same as
 code::setOrbitDest(i, \direct, bus)::.
 ARGUMENT:: i
 the orbit's index.
@@ -624,21 +624,21 @@ ARGUMENT:: bus
 a bus index or a Bus.
 
 METHOD:: setOrbitDest
-Where an orbit goes: the master, a group, or straight to a hardware bus. Its monitor's
+Where an orbit goes: the master, or straight to a hardware bus. Its monitor's
 output bus changes - code::DirtOrbit:outBus_::, which rebuilds the orbit, with its
 effects released so that sleeping ones are freed and its inserts put back in place -
 only when the bus it comes to changes. The window's output menu uses it.
 ARGUMENT:: i
 the orbit's index.
 ARGUMENT:: dest
-code::\master::, code::\direct::, a group's name or the link::Classes/SDGGroup::.
+code::\master:: or code::\direct::.
 ARGUMENT:: bus
 for code::\direct::, the hardware bus; nil keeps the one it had.
 
 METHOD:: orbitDest
 ARGUMENT:: i
 the orbit's index.
-RETURNS:: where it goes: code::\master::, code::\direct:: or a group's name.
+RETURNS:: where it goes: code::\master:: or code::\direct::.
 
 METHOD:: directBusOf
 ARGUMENT:: i
@@ -828,7 +828,7 @@ its letter, as a Symbol or String.
 RETURNS:: the link::Classes/SDGReturn::, or nil.
 
 METHOD:: addReturn
-A return track with a send from every orbit and group, and to and from every return,
+A return track with a send from every orbit, and to and from every return,
 all at nothing. Nothing that plays restarts. Its effects are inserts: link::#-addBusInsert::.
 ARGUMENT:: letter
 its letter; the next one free by default.
@@ -840,7 +840,7 @@ ARGUMENT:: ret
 the link::Classes/SDGReturn::.
 
 METHOD:: addBusInsert
-An insert at a position in the one chain of a return, a group or the master.
+An insert at a position in the one chain of a return or the master.
 ARGUMENT:: track
 the link::Classes/SDGBusTrack::.
 ARGUMENT:: kind
@@ -850,46 +850,6 @@ its position; the end by default.
 ARGUMENT:: plugin
 a VST insert's plugin: a name or a file path.
 RETURNS:: the link::Classes/SDGInsert::, or nil.
-
-METHOD:: groups
-RETURNS:: the group tracks (link::Classes/SDGGroup::).
-
-METHOD:: groupAt
-ARGUMENT:: name
-its name, e.g. code::\g1::.
-RETURNS:: the link::Classes/SDGGroup::, or nil.
-
-METHOD:: addGroup
-A group track, with orbits in it. Nothing that plays restarts but those orbits.
-ARGUMENT:: orbitIndices
-the orbits that go into it, an Array of indices.
-ARGUMENT:: name
-its name; the next free code::\g1::, code::\g2:: ... by default.
-RETURNS:: the link::Classes/SDGGroup::, or nil.
-
-METHOD:: removeGroup
-A group out, with its inserts and sends; its orbits go to the master.
-ARGUMENT:: group
-the link::Classes/SDGGroup::, or its name.
-
-METHOD:: groupOf
-ARGUMENT:: i
-the orbit's index.
-RETURNS:: the link::Classes/SDGGroup:: it goes into, or nil.
-
-METHOD:: membersOf
-ARGUMENT:: group
-the link::Classes/SDGGroup::, or its name.
-RETURNS:: the indices of the orbits that go into it.
-
-METHOD:: setGroupSend
-A group's send to a return.
-ARGUMENT:: group
-the link::Classes/SDGGroup::, or its name.
-ARGUMENT:: ret
-the link::Classes/SDGReturn::, or its letter.
-ARGUMENT:: amp
-the level, 0 to 1.
 
 METHOD:: master
 RETURNS:: the master track (link::Classes/SDGMaster::), nil when link::#*useMaster:: is false.
@@ -902,11 +862,11 @@ METHOD:: removeMaster
 The master out, with its inserts: what went to it writes to the hardware again.
 
 METHOD:: busTracks
-RETURNS:: every group, return and the master, in the order they run.
+RETURNS:: every return and the master, in the order they run.
 
 METHOD:: copyInserts
 Keep inserts, with every setting - a plugin with its state, read back a moment later -
-to paste on any orbit, effect track, group, return or the master.
+to paste on any orbit, effect track, return or the master.
 ARGUMENT:: list
 an Array of link::Classes/SDGInsert::s.
 RETURNS:: what was kept, as their sessionData.
@@ -971,19 +931,16 @@ ARGUMENT:: bool
 true or false.
 
 METHOD:: returnGroup
-RETURNS:: the link::Classes/Group:: every group, return and the master run in, right after SuperDirt's; nil before the first.
-
-METHOD:: groupsGroup
-RETURNS:: the link::Classes/Group:: at its head where the groups run.
+RETURNS:: the link::Classes/Group:: every return and the master run in, right after SuperDirt's; nil before the first.
 
 METHOD:: returnHeads
-RETURNS:: the link::Classes/Group:: after it where every return's feedback is read, before any return writes.
+RETURNS:: the link::Classes/Group:: at its head where every return's feedback is read, before any return writes.
 
 METHOD:: masterGroup
 RETURNS:: the link::Classes/Group:: at its tail where the master runs.
 
 METHOD:: orderBusses
-Walk the nodes of every group, return and the master into the order of their chains. Nothing restarts.
+Walk the nodes of every return and the master into the order of their chains. Nothing restarts.
 
 METHOD:: orderReturns
 The same as link::#-orderBusses::.

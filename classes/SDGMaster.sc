@@ -1,5 +1,5 @@
 // =====================================================================
-// SDGMaster - the master track: every orbit, group and return writes to it
+// SDGMaster - the master track: every orbit and return writes to it
 // unless it is sent straight to a hardware bus, and it writes to the hardware
 // - where orbit 0 wrote before there was a master. A chain of effects for a
 // mastering chain, a fader, a meter, the output guard.

@@ -460,7 +460,7 @@ v = ~sdg.addInsert(0, \vst, plugin: "ValhallaSupermassive");   // a VST plugin, 
 ### Return tracks
 
 **+ return**, on the right of the orbit strips, adds a return track, as in Ableton:
-return A, then B, and a send knob for it on every orbit and group, from nothing to
+return A, then B, and a send knob for it on every orbit, from nothing to
 0 dB. One reverb can then serve all your orbits.
 
 ```supercollider
@@ -492,25 +492,19 @@ b = ~sdg.addReturn;
 ~sdg.setReturnSend(b, a, 0.4);
 ```
 
-### Groups and the master
+### The master
 
-**+ group**, after the orbit strips, makes a group with the selected orbit in it. An
-orbit's output menu (under its limiter) says where it goes: **master**, a group, or
-**direct** to the hardware bus in the box beside it; a right click on its name does the
-same. A group sums its orbits and has its own effects, sends to the returns, fader,
-mute and solo. Soloing a group solos its orbits.
-
-Everything that is not sent direct ends in the **master**, the last strip on the
-right: a chain of effects for mastering, a fader, a limiter, and the hardware bus it
-writes to - where orbit 0 wrote before. With nothing on it, it changes nothing.
+An orbit's output menu (under its limiter) says where it goes: **master**, or
+**direct** to the hardware bus in the box beside it. Everything that is not sent direct
+ends in the **master**, the last strip on the right: a chain of effects for mastering,
+a fader, a limiter, and the hardware bus it writes to - where orbit 0 wrote before.
+With nothing on it, it changes nothing.
 
 ```supercollider
-g = ~sdg.addGroup([0, 1]);               // orbits 0 and 1
-~sdg.addBusInsert(g, \compressor);       // on both together
-~sdg.setGroupSend(g, \A, 0.3);           // the group into return A
-~sdg.setOrbitDest(2, g.name);            // orbit 2 joins; \master or \direct to leave
 ~sdg.addBusInsert(~sdg.master, \eq);     // the mastering chain
 ~sdg.master.level = 0.9;
+~sdg.setOrbitDest(2, \direct, 2);        // orbit 2 past the master, to hardware 2-3
+~sdg.setOrbitDest(2, \master);           // and back
 ```
 
 `SuperDirtGUI.useMaster = false` before `SuperDirtGUI(~dirt)` leaves the orbits writing
@@ -523,7 +517,7 @@ solo. **›** unfolds it. Sessions keep what is folded.
 
 A right click on an effect (an insert button) copies it, or its whole chain, with
 every setting - a plugin with its state. **+ insert**, **+ effect** and the right click
-on another effect paste it, on any orbit, effect track, group, return or the master. A
+on another effect paste it, on any orbit, effect track, return or the master. A
 right click on an effect track's name copies the track; **paste** under the tracks, or
 a right click on an orbit's name, puts it on another orbit.
 
@@ -534,9 +528,9 @@ a right click on an orbit's name, puts it on another orbit.
 ~sdg.pasteTrack(3);
 ```
 
-Returns, groups and the master are always on, so they use CPU even when nothing plays,
-and keep tails ringing. The recorder writes a file per return as well. Sessions save
-returns, groups, the master, every send and route.
+Returns and the master are always on, so they use CPU even when nothing plays, and
+keep tails ringing. The recorder writes a file per return as well. Sessions save
+returns, the master, every send and route.
 
 ### Sessions
 
@@ -672,9 +666,8 @@ mouse wheel where it says two fingers.
 | [classes/SDGSynthPresets.sc](classes/SDGSynthPresets.sc) | a synth's presets as changed in the window, kept on this machine outside the repo |
 | [classes/SDGSession.sc](classes/SDGSession.sc) | the whole mixer saved under a name and brought back, VST plugin states included |
 | [classes/SDGTrack.sc](classes/SDGTrack.sc) | a global effect of an orbit as a track: inserts before and after it, a fader on what it adds |
-| [classes/SDGBusTrack.sc](classes/SDGBusTrack.sc) | what returns, groups and the master share: a chain of effects, sends, fader, mute, solo, output |
-| [classes/SDGReturn.sc](classes/SDGReturn.sc) | a return track: sends from every orbit and group, a chain of effects, sends to other returns for feedback |
-| [classes/SDGGroup.sc](classes/SDGGroup.sc) | a group track: orbits summed, a chain of effects, sends to the returns |
+| [classes/SDGBusTrack.sc](classes/SDGBusTrack.sc) | what returns and the master share: a chain of effects, sends, fader, mute, solo, output |
+| [classes/SDGReturn.sc](classes/SDGReturn.sc) | a return track: sends from every orbit, a chain of effects, sends to other returns for feedback |
 | [classes/SDGMaster.sc](classes/SDGMaster.sc) | the master track: everything not sent direct, a mastering chain, the hardware output |
 | [classes/SDGInsert.sc](classes/SDGInsert.sc) | an insert on an orbit - an eq, a compressor, an insight or a VST plugin - and the target its ParaEQ or Compressor drives |
 | [classes/SDGHintBar.sc](classes/SDGHintBar.sc) | the strip along the bottom of both windows that says what the pointer is over |

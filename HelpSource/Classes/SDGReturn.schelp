@@ -1,12 +1,12 @@
 TITLE:: SDGReturn
-summary:: a return track as in Ableton: a send knob on every orbit and group, a chain of effects, a fader, and sends to other returns for feedback
+summary:: a return track as in Ableton: a send knob on every orbit, a chain of effects, a fader, and sends to other returns for feedback
 categories:: Libraries>SuperDirtGUI
-related:: Classes/SuperDirtGUI, Classes/SDGBusTrack, Classes/SDGGroup, Classes/SDGMaster, Classes/SDGInsert, Classes/SDGWindow
+related:: Classes/SuperDirtGUI, Classes/SDGBusTrack, Classes/SDGMaster, Classes/SDGInsert, Classes/SDGWindow
 
 DESCRIPTION::
-A return is one track that any orbit or group can send to, so one reverb serves them
-all. The link::Classes/SuperDirtGUI:: makes it, and the window shows it as a strip on
-the right, before the master. Everything it shares with groups and the master - the
+A return is one track that any orbit can send to, so one reverb serves them all.
+The link::Classes/SuperDirtGUI:: makes it, and the window shows it as a strip on
+the right, before the master. Everything it shares with the master - the
 chain of effects, fader, mute, solo, output - is link::Classes/SDGBusTrack::.
 
 code::
@@ -29,13 +29,11 @@ return is a VST plugin or an sc fx kit effect.
 subsection:: The signal
 
 An orbit's send sits in the orbit's chain, right before its fader: it hears the
-effects and inserts, and it comes back with the orbit from every rebuild. A group's
-send is a synth of the group, which runs before the returns. The returns run after
-SuperDirt's group and the groups, so everything sent this block is there to read.
+effects and inserts, and it comes back with the orbit from every rebuild. The
+returns run after SuperDirt's group, so everything sent this block is there to read.
 
 code::
 // orbit:  ... inserts, sends, fader, rms, monitor
-// groups: inserts, sends, out
 // heads:  each return's sends in, and last block's feedback
 // return: inserts, sends to returns, out
 // master
@@ -50,8 +48,8 @@ Taken from Ableton:
 list::
 ## link::Classes/SDGBusTrack#-preFader:: says whether what goes into this return is taken before or after the source's fader. It is post fader by default.
 ## A muted source sends nothing, pre fader or not.
-## A soloed orbit or group keeps its returns audible, and the other orbits' and groups' sends stop.
-## A soloed return stops the orbits' and groups' direct sound and every other return, while what is sent to it goes on.
+## A soloed orbit keeps its returns audible, and the other orbits' sends stop.
+## A soloed return stops the orbits' direct sound and every other return, while what is sent to it goes on.
 ::
 
 subsection:: Feedback

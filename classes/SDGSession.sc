@@ -112,7 +112,6 @@ SDGSession {
 			window: sdg.controlWindow !? (_.sessionState) ?? { windowState },
 			returnFeedback: sdg.returnFeedback,
 			returns: sdg.returns.collect { |ret| ret.sessionData },
-			groups: sdg.groups.collect { |group| group.sessionData },
 			master: sdg.master !? { |m| m.sessionData },
 			orbits: orbits.collect { |orbit, i| this.prOrbitData(orbit, i) }
 		)
@@ -213,7 +212,7 @@ SDGSession {
 			out = out ++ (orbit[\inserts] ? []);
 			(orbit[\tracks] ? []).do { |t| out = out ++ (t[\pre] ? []) ++ (t[\post] ? []) };
 		};
-		((data[\returns] ? []) ++ (data[\groups] ? []) ++ (data[\master] !? { |m| [m] } ? [])).do { |r|
+		((data[\returns] ? []) ++ (data[\master] !? { |m| [m] } ? [])).do { |r|
 			out = out ++ (r[\pre] ? []) ++ (r[\inserts] ? []) ++ (r[\post] ? [])
 		};
 		^out
@@ -222,12 +221,11 @@ SDGSession {
 	// an orbit or a return at a time, for a session that can be read and compared
 	prText { |argName, data|
 		var lines = { |list| list.collect { |x| "\t" ++ x.asCompileString }.join(",\n") };
-		^"// SuperDirtGUI session %, saved %\n(\nversion: %,\nnumChannels: %,\nwindow: %,\nreturnFeedback: %,\nreturns: [\n%\n],\ngroups: [\n%\n],\nmaster: %,\norbits: [\n%\n]\n)\n".format(
+		^"// SuperDirtGUI session %, saved %\n(\nversion: %,\nnumChannels: %,\nwindow: %,\nreturnFeedback: %,\nreturns: [\n%\n],\nmaster: %,\norbits: [\n%\n]\n)\n".format(
 			argName.asCompileString, Date.localtime.asString,
 			data[\version], data[\numChannels], data[\window].asCompileString,
 			data[\returnFeedback] ? false,
 			lines.(data[\returns] ? []),
-			lines.(data[\groups] ? []),
 			data[\master].asCompileString,
 			lines.(data[\orbits]))
 	}
@@ -366,12 +364,14 @@ SDGSession {
 				data[\numChannels], sdg.dirt.numChannels));
 		};
 		this.prApplyReturns(data[\returns] ? [], data[\returnFeedback] ? false, dir);
-		this.prApplyGroups(data[\groups] ? [], dir);
+		(data[\groups] ? []).do { |d|
+			problems = problems.add("group %: there are no group tracks now - its orbits go to the master".format(d[\name]))
+		};
 		this.prApplyMaster(data[\master] ? (), dir);
 		saved.size.min(orbits.size).do { |i| this.prApplyOrbit(orbits[i], i, saved[i], dir) };
 	}
 
-	// The returns first, so the orbits' and groups' sends have something to go to. One
+	// The returns first, so the orbits' sends have something to go to. One
 	// the session also has stays and its inserts are made again; the others go. A
 	// session from before there were returns has none, so none are left.
 	prApplyReturns { |saved, feedback, dir|
@@ -403,27 +403,6 @@ SDGSession {
 		sdg.returnFeedback = feedback;
 	}
 
-	// After the returns, before the orbits that go into them. A session from before
-	// there were groups has none, so none are left; their orbits go to the master.
-	prApplyGroups { |saved, dir|
-		var wanted = saved.collect { |d| d[\name] };
-		sdg.groups.copy.do { |group|
-			if(wanted.includes(group.name)) {
-				group.inserts.do { |x| sdg.removeInsert(x) }
-			} {
-				sdg.removeGroup(group)
-			}
-		};
-		saved.do { |d|
-			var group = sdg.groupAt(d[\name]) ?? { sdg.addGroup([], d[\name]) };
-			group !? {
-				this.prApplyBus(group, d, dir);
-				sdg.returns.do { |ret| sdg.setGroupSend(group, ret, 0) };
-				(d[\sends] ? []).pairsDo { |letter, value| sdg.setGroupSend(group, letter, value) };
-			}
-		};
-	}
-
 	// A session from before there was a master leaves it clean, at 0 dB.
 	prApplyMaster { |d, dir|
 		var m = sdg.master;
@@ -438,7 +417,7 @@ SDGSession {
 		(d[\inserts] ? []).do { |x| this.prAddInsert(nil, x, m, \chain, dir) };
 	}
 
-	// what a return and a group have in common
+	// what the bus tracks have in common
 	prApplyBus { |track, d, dir|
 		d[\level] !? { |v| track.level = v };
 		track.mute = d[\mute] ? false;
@@ -465,7 +444,8 @@ SDGSession {
 		d[\limitertype] !? { |v| sdg.setOrbitParam(i, \limitertype, v) };
 		// a session from before there was a master: its output bus says where
 		if(d[\dest].notNil) {
-			sdg.setOrbitDest(i, if(d[\dest] == \master or: { d[\dest] == \direct } or: { sdg.groupAt(d[\dest]).notNil }) { d[\dest] } { \master },
+			// a group's name, from a session with group tracks: the master
+			sdg.setOrbitDest(i, if(d[\dest] == \direct) { \direct } { \master },
 				d[\directBus])
 		} {
 			d[\outBus] !? { |v|

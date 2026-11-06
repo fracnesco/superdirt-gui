@@ -13,15 +13,11 @@
 //              (via SuperDirt's dirt_rms global effect, 20 replies a
 //              second), an output fader with mute and solo (via the orbitAmp
 //              control of the add-on's global_sdgfader effect), the limiter
-//              mode of the monitor, and where the orbit goes: the master, a
-//              group, or direct to the hardware bus in the box beside it (and a
-//              dropdown of BusManager names when that quark is installed). A send
-//              knob per return track, over the meters. A right click on its name:
-//              fold it, put it in a group, copy and paste inserts.
-//   groups     after the orbits, a strip per group track (SDGGroup): the orbits
-//              that go into it summed, its effects (inserts), sends to the
-//              returns, fader, mute, solo, limiter and output. + group makes one
-//              with the selected orbit in it.
+//              mode of the monitor, and where the orbit goes: the master, or
+//              direct to the hardware bus in the box beside it (and a dropdown
+//              of BusManager names when that quark is installed). A send knob
+//              per return track, over the meters. A right click on its name:
+//              fold it, copy and paste inserts.
 //   returns    on the right, as in Ableton, a strip per return track (SDGReturn):
 //              its effects (inserts), sends to the returns, fader, mute, solo,
 //              pre/post of what is sent into it, limiter and output. + return adds
@@ -116,10 +112,10 @@ SDGWindow {
 
 	var <sdg, <dirt, <window, <hints;		// dirt is sdg.dirt, the SuperDirt
 	var <selectedOrbitIndex = 0, selectedEffectName;
-	var <selectedBus;				// a return, group or the master on show on the effects tab, in the orbit's place
-	var groupHolder, groupContent, busScroll, busHolder, busContent;	// where the group strips and the returns and master go
-	var <busViews;					// the group, return and master strips: one Event of views each
-	var <collapsed;					// the names of the strips folded thin: "orbit 2", "return A", "group 1", "master"
+	var <selectedBus;				// a return or the master on show on the effects tab, in the orbit's place
+	var busScroll, busHolder, busContent;	// where the returns and master go
+	var <busViews;					// the return and master strips: one Event of views each
+	var <collapsed;					// the names of the strips folded thin: "orbit 2", "return A", "master"
 	var busManager;					// the BusManager class if installed, else nil
 	var <strips;					// one Event of views per orbit
 	var parentSnapshots;			// pristine defaultParentEvent values, for clearing parameters
@@ -645,16 +641,14 @@ SDGWindow {
 
 	// -------------------------------------------------------------- orbit strips
 
-	// The orbits and their groups scroll, on the left; the returns and the master
-	// stay on the right, as in Ableton
+	// The orbits scroll, on the left; the returns and the master stay on the
+	// right, as in Ableton
 	makeStripArea {
 		// vertical as well: a strip with many inserts grows taller than the window
 		var scroll = ScrollView().autohidesScrollers_(true).hasBorder_(false).background_(colBg);
 		var canvas = View().background_(colBg);
 		strips = dirt.orbits.collect { |orbit, i| this.makeStrip(orbit, i) };
-		groupHolder = View().background_(colBg);
-		groupHolder.layout = HLayout().margins_(0).spacing_(0);
-		canvas.layout = HLayout(*(strips.collect(_[\view]) ++ [groupHolder, nil]))
+		canvas.layout = HLayout(*(strips.collect(_[\view]) ++ [nil]))
 			.margins_(0).spacing_(5);
 		scroll.canvas = canvas;
 		// one strip at least: the right panel may take the rest, and the strips scroll
@@ -747,7 +741,7 @@ SDGWindow {
 			};
 		};
 
-		hints.attach(label, "orbit % - where d% plays; selects it for the effects tab, and the explorer plays into it - right click: group, copy, paste, fold".format(i, i + 1));
+		hints.attach(label, "orbit % - where d% plays; selects it for the effects tab, and the explorer plays into it - right click: copy, paste, fold".format(i, i + 1));
 		hints.attach(addInsert, "add an insert to orbit % - an eq, a compressor or an insight, after the ones above, before the fader".format(i));
 		hints.attach(meters, "peak and rms of each channel leaving the orbit, after its inserts and fader - a tick every 5 dB");
 		hints.attach(peak, "the highest peak since you last clicked here, in dB - red once it reached 0");
@@ -755,7 +749,7 @@ SDGWindow {
 		hints.attach(mute, "silence this orbit");
 		hints.attach(solo, "silence every other orbit");
 		hints.attach(lim, "how the monitor guards the output: nothing, a limiter, or a hard clip");
-		hints.attach(destMenu, "where this orbit goes: the master, a group, or direct to the hardware bus beside it");
+		hints.attach(destMenu, "where this orbit goes: the master, or direct to the hardware bus beside it");
 		hints.attach(outBox, "the hardware bus this orbit writes to when it goes direct - typing one sends it there");
 		outMenu !? { hints.attach(outMenu, "direct to a bus, by BusManager name") };
 
@@ -835,7 +829,7 @@ SDGWindow {
 
 	isCollapsed { |key| ^collapsed.includes(key.asString) }
 
-	// fold a strip thin, or unfold it, by its name: "orbit 2", "return A", "group 1", "master"
+	// fold a strip thin, or unfold it, by its name: "orbit 2", "return A", "master"
 	setCollapsed { |key, bool = true|
 		key = key.asString;
 		if(bool) { collapsed.add(key) } { collapsed.remove(key) };
@@ -854,14 +848,9 @@ SDGWindow {
 	// ---------------------------------------------------------------- routing
 
 	// what an orbit's output menu offers, and the routes they stand for
-	prDestItems { ^[\master] ++ sdg.groups.collect(_.name) ++ [\direct] }
+	prDestItems { ^[\master, \direct] }
 
-	prDestLabel { |dest|
-		^case
-		{ dest == \master } { "master" }
-		{ dest == \direct } { "direct" }
-		{ sdg.groupAt(dest) !? (_.shortName) ? dest.asString }
-	}
+	prDestLabel { |dest| ^dest.asString }
 
 	// the orbits' and bus tracks' output menus and bus numbers to where they go
 	refreshRouting {
@@ -886,7 +875,7 @@ SDGWindow {
 
 	// right click on an orbit's name
 	prShowOrbitMenu { |i|
-		var group = sdg.groupOf(i), clip = sdg.insertClipboard ? [], track = sdg.trackClipboard;
+		var clip = sdg.insertClipboard ? [], track = sdg.trackClipboard;
 		menu !? (_.destroy);
 		menu = Menu(*([
 			MenuAction("orbit %".format(i)).enabled_(false),
@@ -894,13 +883,6 @@ SDGWindow {
 			MenuAction(if(this.isCollapsed("orbit " ++ i)) { "unfold" } { "fold thin" }, {
 				this.setCollapsed("orbit " ++ i, this.isCollapsed("orbit " ++ i).not)
 			}),
-			MenuAction.separator,
-			MenuAction("new group with orbit %".format(i), { sdg.addGroup([i]) })
-		] ++ sdg.groups.reject { |g| g === group }.collect { |g|
-			MenuAction("into %".format(g.shortName), { sdg.setOrbitDest(i, g.name) })
-		} ++ [
-			MenuAction("out of %".format(group !? (_.shortName) ? "its group"), { sdg.setOrbitDest(i, \master) })
-				.enabled_(group.notNil),
 			MenuAction.separator,
 			MenuAction("copy its inserts (%)".format(sdg.insertsOf(i).size), { sdg.copyInserts(sdg.insertsOf(i)) })
 				.enabled_(sdg.insertsOf(i).notEmpty),
@@ -984,15 +966,14 @@ SDGWindow {
 	*busColour { |track|
 		^case
 		{ track.isKindOf(SDGMaster) } { Color(0.28, 0.23, 0.17) }
-		{ track.isKindOf(SDGGroup) } { Color(0.19, 0.26, 0.21) }
 		{ Color(0.20, 0.24, 0.27) }
 	}
 
-	// A return's, a group's or the master's strip: as an orbit's, with sends to the
-	// returns (none on the master), and its output to the master or the hardware
+	// A return's or the master's strip: as an orbit's, with sends to the returns
+	// (none on the master), and its output to the master or the hardware
 	makeBusStrip { |track|
 		var ampSpec = paramSpecs[\orbitAmp];
-		var isMaster = track.isKindOf(SDGMaster), isReturn = track.isKindOf(SDGReturn), isGroup = track.isKindOf(SDGGroup);
+		var isMaster = track.isKindOf(SDGMaster), isReturn = track.isKindOf(SDGReturn);
 		var key = track.shortName, colour = this.class.busColour(track);
 		var view = View().fixedWidth_(92).background_(colour);
 		var label = Button().fixedHeight_(22).states_([
@@ -1003,23 +984,12 @@ SDGWindow {
 		var fold = this.prFoldButton(key);
 		var insertHolder = View().layout_(VLayout(*(track.inserts.collect { |x| this.prInsertButton(x) } ++ [nil])).margins_(0).spacing_(2));
 		var addFx = Button().fixedHeight_(18).font_(smallFont).states_([["+ effect", colDim, Color.grey(0.21)]]);
-		var sends = case
-		{ isReturn } {
+		var sends = if(isReturn) {
 			track.targets.collect { |to|
 				this.prSendKnob(to, track.returnLevel(to), sdg.returnFeedback, { |amp| sdg.setReturnSend(track, to, amp) },
 					"how much of return % goes to return %, a block later - needs feedback on".format(track.letter, to.letter))
 			}
-		}
-		{ isGroup } {
-			track.targets.collect { |to|
-				var cell = this.prSendKnob(to, track.returnLevel(to), true, { |amp| sdg.setGroupSend(track, to, amp) },
-					"how much of % goes to return %, %".format(track.shortName, to.letter,
-						if(to.preFader) { "before its fader" } { "after its fader" }));
-				this.prMidiAttach(cell[\knob], [\groupSend, track.name, to.letter]);
-				cell
-			}
-		}
-		{ [] };
+		} { [] };
 		var meters = { LevelIndicator().fixedWidth_(11).minHeight_(150)
 			.drawsPeak_(true).warning_(0.85).critical_(0.95)
 			.numTicks_(13).numMajorTicks_(3) } ! dirt.numChannels;
@@ -1034,7 +1004,7 @@ SDGWindow {
 			])
 		} {
 			StaticText().fixedHeight_(16).font_(smallFont).stringColor_(colDim).align_(\center)
-				.string_(if(isGroup) { this.prMembersString(track) } { "everything" })
+				.string_("everything")
 		};
 		var lim = PopUpMenu().fixedHeight_(20).items_(["raw", "limit", "clip"]).value_(track.limitertype);
 		var destMenu = if(isMaster.not) { PopUpMenu().fixedHeight_(20).font_(smallFont).items_(["master", "direct"]) };
@@ -1045,45 +1015,32 @@ SDGWindow {
 		label.action = { this.selectBus(track) };
 		rm !? {
 			// these go with the strip they are in, so not from inside their own action
-			rm.action = { { if(isReturn) { sdg.removeReturn(track) } { sdg.removeGroup(track) } }.defer };
+			rm.action = { { sdg.removeReturn(track) }.defer };
 		};
 		addFx.action = { this.prShowAddInsertMenu(nil, track, \chain) };
 		fader.action = { |sl| track.level = ampSpec.map(sl.value) };
 		mute !? { mute.action = { |b| track.mute = b.value == 1 } };
 		solo !? { solo.action = { |b| track.solo = b.value == 1 } };
-		case
-		{ isReturn } {
+		if(isReturn) {
 			this.prMidiAttach(fader, [\returnLevel, track.letter]);
 			this.prMidiAttach(mute, [\returnMute, track.letter]);
 			this.prMidiAttach(solo, [\returnSolo, track.letter]);
 			second.action = { |b| track.preFader = b.value == 1 };
-		}
-		{ isGroup } {
-			this.prMidiAttach(fader, [\groupLevel, track.name]);
-			this.prMidiAttach(mute, [\groupMute, track.name]);
-			this.prMidiAttach(solo, [\groupSolo, track.name]);
-		}
-		{ this.prMidiAttach(fader, [\masterLevel]) };
+		} {
+			this.prMidiAttach(fader, [\masterLevel])
+		};
 		lim.action = { |m| track.limitertype = m.value };
 		destMenu !? { destMenu.action = { |m| { track.route(if(m.value == 1) { \direct } { \master }) }.defer } };
 		outBox.action = { |b| { track.route(\direct, b.value.asInteger.max(0)) }.defer };
 
 		hints.attach(label, "% - its effects on the effects tab".format(track.shortName));
-		rm !? { hints.attach(rm, if(isReturn) {
-			"take % out, with its effects and every send to it".format(track.shortName)
-		} {
-			"take % out, with its effects - its orbits go to the master".format(track.shortName)
-		}) };
+		rm !? { hints.attach(rm, "take % out, with its effects and every send to it".format(track.shortName)) };
 		hints.attach(addFx, "an effect at the end of the chain - an eq, a compressor, an insight, an fx kit effect or a VST plugin");
 		hints.attach(meters, "what % plays, after its fader".format(track.shortName));
 		hints.attach([fader, faderText], if(isMaster) { "the level of everything" } { "the level of what % plays".format(track.shortName) });
 		mute !? { hints.attach(mute, "silence %".format(track.shortName)) };
-		solo !? { hints.attach(solo, if(isReturn) {
-			"hear only this - the orbits' direct sound stops, what they send here goes on"
-		} { "hear only this group's orbits" }) };
-		case
-		{ isReturn } { hints.attach(second, "whether what is sent into this return is taken before or after the source's fader") }
-		{ isGroup } { hints.attach(second, "the orbits that go into it - choose the group in an orbit's output menu, or right click the orbit's name") };
+		solo !? { hints.attach(solo, "hear only this - the orbits' direct sound stops, what they send here goes on") };
+		if(isReturn) { hints.attach(second, "whether what is sent into this return is taken before or after the source's fader") };
 		hints.attach(lim, "how the output is guarded: nothing, a limiter, or a hard clip%".format(if(isReturn) { " - a feedback loop can get loud" } { "" }));
 		destMenu !? { hints.attach(destMenu, "where % goes: the master, or direct to the hardware bus beside it".format(track.shortName)) };
 		hints.attach([outLabel, outBox].reject(_.isNil), if(isMaster) { "the hardware bus everything goes to" } {
@@ -1115,14 +1072,8 @@ SDGWindow {
 			mute !? { { |b| track.mute = b.value == 1 } }, solo !? { { |b| track.solo = b.value == 1 } });
 		views = (head: head, track: track, label: label, insertHolder: insertHolder, sendKnobs: sends, meters: meters,
 			fader: fader, faderText: faderText, mute: mute, solo: solo, prePost: if(isReturn) { second },
-			members: if(isGroup) { second }, lim: lim, destMenu: destMenu, outBox: outBox);
+			lim: lim, destMenu: destMenu, outBox: outBox);
 		^this.prWrapStrip(views, view, thin, key, 92)
-	}
-
-	// "orbits 0 1 2"
-	prMembersString { |group|
-		var list = group.members;
-		^if(list.isEmpty) { "no orbits" } { "orbit% %".format(if(list.size > 1) { "s" } { "" }, list.join(" ")) }
 	}
 
 	// + return, and the switch that lets returns send to each other
@@ -1134,42 +1085,27 @@ SDGWindow {
 		]).value_(sdg.returnFeedback.binaryValue);
 		add.action = { { sdg.addReturn }.defer };
 		feedback.action = { |b| { sdg.returnFeedback = b.value == 1 }.defer };
-		hints.attach(add, "a new return track, with a send knob on every orbit and group");
+		hints.attach(add, "a new return track, with a send knob on every orbit");
 		hints.attach(feedback, "lets returns send to each other and to themselves, by their knobs - a loop can get loud, keep the limiter on");
 		^View().fixedWidth_(76).layout_(VLayout(add, feedback, nil).margins_(0).spacing_(4))
 	}
 
-	// + group: a new group with the selected orbit in it
-	prMakeGroupButton {
-		var add = Button().fixedWidth_(76).fixedHeight_(22).states_([["+ group", colText, Color.grey(0.26)]]);
-		add.action = { { sdg.addGroup(if(selectedBus.isNil) { [selectedOrbitIndex] } { [] }) }.defer };
-		hints.attach(add, "a new group track with the selected orbit in it - more go in by their output menu, or a right click on their name");
-		^View().fixedWidth_(76).layout_(VLayout(add, nil).margins_(0).spacing_(4))
-	}
-
-	// the group, return and master strips made again, and the send knobs of every orbit
+	// the return and master strips made again, and the send knobs of every orbit
 	prBussesChanged {
-		var list, groupViews, rest;
+		var list;
 		if(this.isOpen.not and: { window.notNil }) { ^this };
 		list = sdg.busTracks;
 		if(selectedBus.notNil and: { list.includes(selectedBus).not }) { selectedBus = nil };
 		busViews.do { |views| if(list.includes(views[\track]).not) { views[\track].metering = false } };
 		busViews = list.collect { |track| this.makeBusStrip(track) };
 		busViews.do { |views| views[\track].metering = true; this.prApplyCollapse(views) };
-		groupViews = busViews.select { |views| views[\track].isKindOf(SDGGroup) };
-		rest = busViews.reject { |views| views[\track].isKindOf(SDGGroup) };
-		groupContent !? { groupContent.remove };
-		groupContent = View().background_(colBg);
-		groupContent.layout = HLayout(*(groupViews.collect(_[\view]) ++ [this.prMakeGroupButton]))
-			.margins_(0).spacing_(5);
-		groupHolder.layout.add(groupContent);
 		busContent !? { busContent.remove };
 		busContent = View().background_(colBg);
 		// the returns, their buttons, the master: on the right as in Ableton
 		busContent.layout = HLayout(*(
-			rest.reject { |views| views[\track].isKindOf(SDGMaster) }.collect(_[\view])
+			busViews.reject { |views| views[\track].isKindOf(SDGMaster) }.collect(_[\view])
 			++ [this.prMakeReturnButtons]
-			++ rest.select { |views| views[\track].isKindOf(SDGMaster) }.collect(_[\view])
+			++ busViews.select { |views| views[\track].isKindOf(SDGMaster) }.collect(_[\view])
 		)).margins_(0).spacing_(5);
 		busHolder.layout.add(busContent);
 		strips.size.do { |i| this.rebuildStripSends(i) };
@@ -1186,13 +1122,13 @@ SDGWindow {
 	prFitBusArea {
 		var widths;
 		if(busScroll.isNil) { ^this };
-		widths = busViews.reject { |views| views[\track].isKindOf(SDGGroup) }.collect { |views|
+		widths = busViews.collect { |views|
 			if(this.isCollapsed(views[\key])) { this.class.thinWidth } { views[\width] }
 		} ++ [76];
 		busScroll.fixedWidth = widths.sum + (5 * (widths.size - 1)) + 16;
 	}
 
-	// a return's, group's or the master's effects on the effects tab, in the place of
+	// a return's or the master's effects on the effects tab, in the place of
 	// the selected orbit's. A click on an orbit's name brings that back
 	selectBus { |track|
 		selectedBus = track;
@@ -1244,7 +1180,7 @@ SDGWindow {
 	}
 
 	// Strips side by side keep their faders level, however many inserts each has: every
-	// strip leaves room for the longest list, orbits, groups, returns and the master
+	// strip leaves room for the longest list, orbits, returns and the master
 	// alike, so the part above the sends is one height for all. Track strips:
 	// rebuildTrackStrips
 	prAlignStrips {
@@ -1459,7 +1395,7 @@ SDGWindow {
 	// the insert lists of one orbit, or of every orbit when i is nil
 	prInsertsChanged { |i|
 		if(this.isOpen.not) { ^this };
-		// nil: an insert of a return, group or the master, whose strip shows it
+		// nil: an insert of a return or the master, whose strip shows it
 		if(i.isNil) { this.prBussesChanged } { this.rebuildStripInserts(i) };
 		if(i.isNil or: { i == selectedOrbitIndex }) {
 			this.rebuildInsertRows;

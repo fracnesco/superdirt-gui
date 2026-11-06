@@ -1,30 +1,28 @@
 // =====================================================================
-// SDGBusTrack - what a return (SDGReturn), a group (SDGGroup) and the master
-// (SDGMaster) have in common: a track of a desk that is not an orbit. Audio
+// SDGBusTrack - what a return (SDGReturn) and the master (SDGMaster) have in
+// common: a track of a desk that is not an orbit. Audio
 // comes in on a bus, runs through a chain of effects - inserts, the same
 // objects as on an orbit: eq, compressor, insight, an sc fx kit effect, a VST
 // plugin - then sends to the returns, a fader with mute and solo, a meter,
 // and out: to the master, or straight to a hardware bus.
 //
-//   g = ~sdg.addGroup([0, 1]);             // orbits 0 and 1 into a group
-//   ~sdg.addBusInsert(g, \compressor);     // glue them
-//   g.level = 0.8;
+//   a = ~sdg.addReturn;                    // return A
+//   ~sdg.addBusInsert(a, \compressor);
+//   a.level = 0.8;
 //   ~sdg.master.level = 0.9;               // everything
 //   ~sdg.addBusInsert(~sdg.master, \vst, plugin: "FabFilter Pro-L 2");
-//   g.route(\direct, 2);                   // the group to hardware 2-3, past the master
+//   a.route(\direct, 2);                   // the return to hardware 2-3, past the master
 //
 // Where it runs. Nothing of a bus track is in an orbit: its synths are in the
 // add-on's group after SuperDirt's, in the order the signal takes:
 //
-//   orbits (SuperDirt's group)   each ends in its monitor, writing to its group or the master
-//   groups                       inserts, sends, out
+//   orbits (SuperDirt's group)   each ends in its monitor, writing to the master
 //   returns' heads               see SDGReturn
 //   returns                      inserts, sends, out
 //   master                       inserts, out to the hardware
 //
-// A group's and the master's chain works in place on its in bus: everything
-// that writes to it has run by then. A send from a group reaches a return in
-// the same block, as an orbit's does.
+// The master's chain works in place on its in bus: everything that writes to
+// it has run by then.
 //
 // Sleep. An insert's DirtPause pauses its synth after 4 s of silence and only an
 // event wakes it, and no event comes here: SuperDirtGUI's tick resumes them once

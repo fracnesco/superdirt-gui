@@ -385,7 +385,7 @@ SDGMidiWindow {
 		^if (this.class.isAmp(m.target)) { SDGWindow.faderString(v) } { this.class.num(v) }
 	}
 
-	*isAmp { |target| ^#[\fader, \trackLevel, \returnLevel, \send, \groupLevel, \groupSend, \masterLevel].includes(target.kind) }
+	*isAmp { |target| ^#[\fader, \trackLevel, \returnLevel, \send, \masterLevel].includes(target.kind) }
 
 	// the curve menu's word for a curve
 	*menuKey { |c|

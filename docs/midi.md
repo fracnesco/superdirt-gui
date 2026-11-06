@@ -35,8 +35,6 @@ A target is named by an address that stays the same across rebuilds, reloads and
 | `[\trackLevel, 0, \global_sdgecho]` | the fader of that effect's track |
 | `[\send, 0, \A]` | orbit 0's send to return A |
 | `[\returnLevel, \A]`, `[\returnMute, \A]`, `[\returnSolo, \A]` | return A's strip |
-| `[\groupLevel, \g1]`, `[\groupMute, \g1]`, `[\groupSolo, \g1]` | group 1's strip |
-| `[\groupSend, \g1, \A]` | group 1's send to return A |
 | `[\masterLevel]` | the master's fader |
 | `[\returnParam, \A, \room]` | gone: returns hold inserts only now. An old mapping to one waits forever |
 | `[\play]` | the explorer's **play**: the sound selected in the window, so only while it is open |

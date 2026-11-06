@@ -12,8 +12,6 @@
 //   [\send, 0, \A]                                orbit 0's send to return A
 //   [\returnLevel, \A]  [\returnMute, \A]  [\returnSolo, \A]
 //   [\returnParam, \A, param]                     gone: returns hold inserts only now
-//   [\groupLevel, \g1]  [\groupMute, \g1]  [\groupSolo, \g1]
-//   [\groupSend, \g1, \A]                         group 1's send to return A
 //   [\masterLevel]                                 the master's fader
 //   [\play]                                       the explorer's play button
 //   [\tidal, \name]                               Tidal's cF "name", through its port 6010
@@ -42,10 +40,6 @@ SDGMidiTarget {
 			\returnMute -> (args: #[\return], toggle: true),
 			\returnSolo -> (args: #[\return], toggle: true),
 			\returnParam -> (args: #[\return, \param]),
-			\groupLevel -> (args: #[\group]),
-			\groupMute -> (args: #[\group], toggle: true),
-			\groupSolo -> (args: #[\group], toggle: true),
-			\groupSend -> (args: #[\group, \return]),
 			\masterLevel -> (args: #[]),
 			\play -> (args: #[], trigger: true),
 			\tidal -> (args: #[\name])
@@ -75,8 +69,7 @@ SDGMidiTarget {
 	dirt { ^sdg.dirt }
 	orbitIndex { ^if (kinds[this.kind][\args].first == \orbit) { address[1] } }
 	orbit { ^this.orbitIndex !? { |i| (this.dirt.orbits ? [])[i] } }
-	ret { ^switch(this.kind, \send, { sdg.returnAt(address[2]) }, \groupSend, { sdg.returnAt(address[2]) }, { if (kinds[this.kind][\args].first == \return) { sdg.returnAt(address[1]) } }) }
-	group { ^if (kinds[this.kind][\args].first == \group) { sdg.groupAt(address[1]) } }
+	ret { ^switch(this.kind, \send, { sdg.returnAt(address[2]) }, { if (kinds[this.kind][\args].first == \return) { sdg.returnAt(address[1]) } }) }
 
 	// the GlobalDirtEffect a parameter belongs to, or nil
 	fx {
@@ -99,8 +92,6 @@ SDGMidiTarget {
 			\returnParam, { this.fx.notNil },
 			\trackLevel, { this.track.notNil },
 			\send, { this.orbit.notNil and: { this.ret.notNil } },
-			\groupLevel, { this.group.notNil }, \groupMute, { this.group.notNil }, \groupSolo, { this.group.notNil },
-			\groupSend, { this.group.notNil and: { this.ret.notNil } },
 			\masterLevel, { sdg.master.notNil },
 			{ this.ret.notNil })
 	}
@@ -111,8 +102,8 @@ SDGMidiTarget {
 	spec {
 		^case
 		{ this.isToggle or: { this.isTrigger } } { ControlSpec(0, 1, \lin, 1, 0) }
-		{ #[\fader, \trackLevel, \returnLevel, \groupLevel, \masterLevel].includes(this.kind) } { SDGWindow.paramSpecs[\orbitAmp] }
-		{ #[\send, \groupSend].includes(this.kind) } { SDGWindow.sendSpec }
+		{ #[\fader, \trackLevel, \returnLevel, \masterLevel].includes(this.kind) } { SDGWindow.paramSpecs[\orbitAmp] }
+		{ this.kind == \send } { SDGWindow.sendSpec }
 		// none of its own: a mapping's lo and hi are the range, and nothing clips them
 		{ this.kind == \tidal } { ControlSpec(-1e6, 1e6, \lin, 0, 0) }
 		{ this.fx !? { |fx| sdg.effectParamSpecOf(fx, this.param) } ?? { ControlSpec(0, 1) } }
@@ -136,10 +127,6 @@ SDGMidiTarget {
 			\returnLevel, { this.ret.level },
 			\returnMute, { this.ret.mute.binaryValue },
 			\returnSolo, { this.ret.solo.binaryValue },
-			\groupLevel, { this.group.level },
-			\groupMute, { this.group.mute.binaryValue },
-			\groupSolo, { this.group.solo.binaryValue },
-			\groupSend, { this.group.returnLevel(this.ret) },
 			\masterLevel, { sdg.master.level },
 			\tidal, { sdg.midi.tidalValues[address[1]] },
 			\play, { 0 })
@@ -159,10 +146,6 @@ SDGMidiTarget {
 			\returnLevel, { this.ret.level = x },
 			\returnMute, { this.ret.mute = x > 0.5 },
 			\returnSolo, { this.ret.solo = x > 0.5 },
-			\groupLevel, { this.group.level = x },
-			\groupMute, { this.group.mute = x > 0.5 },
-			\groupSolo, { this.group.solo = x > 0.5 },
-			\groupSend, { sdg.setGroupSend(this.group, this.ret, x) },
 			\masterLevel, { sdg.master.level = x },
 			\tidal, { sdg.midi.sendTidal(address[1], x) },
 			\play, { if (x > 0.5) { this.trigger } })
@@ -190,10 +173,6 @@ SDGMidiTarget {
 			\returnMute, { "return % mute".format(address[1]) },
 			\returnSolo, { "return % solo".format(address[1]) },
 			\returnParam, { "return % %".format(address[1], address[2]) },
-			\groupLevel, { "group % level".format(address[1].asString.drop(1)) },
-			\groupMute, { "group % mute".format(address[1].asString.drop(1)) },
-			\groupSolo, { "group % solo".format(address[1].asString.drop(1)) },
-			\groupSend, { "group % send %".format(address[1].asString.drop(1), address[2]) },
 			\masterLevel, { "master level" },
 			\play, { "play" },
 			\tidal, { "tidal cF \"%\"".format(address[1]) })
