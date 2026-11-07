@@ -1,11 +1,5 @@
--- SuperDirtGUI from Tidal - 22: pointillistic trance, after Lorenzo Senni
+-- SuperDirtGUI from Tidal - 22: pointillistic trance
 --
--- Senni takes the trance of the late 90s apart and keeps only one piece of it:
--- the supersaw arpeggio, and the build-up. No kick under it, no bassline, no
--- drop - the build is the whole track. What is left he works like a pointillist
--- painter: short stabs, gates that change every bar, little cells of notes that
--- do not fit the bar and so wrap around it, two arpeggios against each other,
--- silences where the drop should be.
 --
 -- All of it here is sdgsupersaw (synths/sdgsupersaw.scd), and a few other voices
 -- of synths/ in the last blocks. The knobs it uses:
@@ -35,7 +29,7 @@ let sdgcut = pF "sdgcut"
 -- one chord, sixteen times a bar, short. Nothing under it. A filter that each
 -- stab opens and that shuts before the next one is what makes it a stab
 d1 $ struct "t*16" $ note "<a'min9 f'maj9 c'maj9 e'min9>" # s "sdgsupersaw"
-   # legato 0.35 # sdgcut 900 # sdgenv 0.5 # sdgdecay 0.07 # room 0.3 # size 0.8
+   # legato 0.135 # sdgcut 900 # sdgenv 0.5 # sdgdecay 0.07 # room 0.3 # size 0.8
 
 -- the gate is the instrument: which of the sixteen steps sound changes each bar
 d3 $ struct "<t(7,16) t(9,16,2) t(5,16,3) t(11,16,1)>" $ note "<a'min9 f'maj9 c'maj9 e'min9>"

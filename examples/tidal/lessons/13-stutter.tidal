@@ -1,7 +1,6 @@
 -- SuperDirtGUI from Tidal - 13: stuttery beats, on the Amen
 --
--- A stutter is a piece of sound played again before it has finished. The break
--- everyone stutters is the Amen: Dirt-Samples has it as breaks152, three bars at
+-- the Amen: Dirt-Samples has it as breaks152, three bars at
 -- 152 bpm. splice cuts it into 48 sixteenths and fits each into its step, so the
 -- break follows the tempo (a little faster and higher at 165), and cut 1 makes
 -- every slice stop the one before it - that is what turns a repeat into a

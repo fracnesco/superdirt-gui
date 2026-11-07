@@ -22,7 +22,7 @@ d1 $ note (arp "up" "<a'min7'8 f'maj7'8 c'maj7'8 g'dom7'8>") # s "sdgacid"
    # legato 0.5 # sdgcut 500 # sdgq 0.35 # sdgenv 0.5 # sdgdecay 0.12
 
 -- twice as fast, and another shape each bar
-d1 $ note (arp "<up updown converge pinkyup>" "<a'min7'8 f'maj7'8 c'maj7'8 g'dom7'8>*2")
+d1 $ note (arp "<up updown converge>" "<a'min7'8 f'maj7'8 c'maj7'8 g'dom7'8>*2")
    # s "sdgacid" # legato 0.5 # sdgcut (range 300 1600 $ slow 8 sine) # sdgq 0.4
    # sdgenv 0.5 # sdgdecay 0.1 # sdgaccent "1 0 0 1 0 0 1 0"
    # sdgspace 0.3 # sdgtime 0.351
