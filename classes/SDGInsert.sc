@@ -60,7 +60,7 @@
 SDGInsert {
 
 	classvar <kinds;			// kind -> (label:, className:, controlName:)
-	classvar fxKinds;
+	classvar fxKinds, reverbKinds;
 	classvar counter = 0;
 
 	var <sdg, <orbitIndex, <kind;
@@ -79,21 +79,32 @@ SDGInsert {
 		// the effects built on FxParamUnit (sc fx kit), each an extension of its own:
 		// whichever are installed are kinds too, found here rather than named. They
 		// have tails, so the insert stays awake for as long as its output sounds
+		// the reverbs (sc reverbs: Hall, Plate, Coil, Shimmer) are told apart by their
+		// display, ReverbView, so the menu can list them under "reverb"
 		fxKinds = [];
+		reverbKinds = [];
 		\FxParamUnit.asClass !? { |base|
 			base.allSubclasses.sort { |a, b| a.name < b.name }.do { |cls|
+				var display = cls.displayClass;
 				kinds[cls.insertKind] = (label: cls.insertLabel, className: cls.name,
 					controlName: cls.controlName, tail: true);
-				fxKinds = fxKinds.add(cls.insertKind);
+				if(display.notNil and: { display.name == \ReverbView }) {
+					reverbKinds = reverbKinds.add(cls.insertKind)
+				} {
+					fxKinds = fxKinds.add(cls.insertKind)
+				};
 			};
 		};
 	}
 
 	// the kinds in the order a menu lists them
-	*kindNames { ^#[\eq, \compressor, \insight, \vst] ++ fxKinds }
+	*kindNames { ^#[\eq, \compressor, \insight, \vst] ++ fxKinds ++ reverbKinds }
 
-	// the kinds that come from sc fx kit (FxParamUnit), in menu order
+	// the kinds that come from sc fx kit (FxParamUnit) but are not reverbs, in menu order
 	*fxKindNames { ^fxKinds.copy }
+
+	// the reverb kinds (sc reverbs), in menu order
+	*reverbKindNames { ^reverbKinds.copy }
 
 	*kindLabel { |kind| ^kinds[kind.asSymbol] !? { |k| k[\label] } }
 

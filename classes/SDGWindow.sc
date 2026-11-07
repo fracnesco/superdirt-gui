@@ -1283,9 +1283,11 @@ SDGWindow {
 				.enabled_(SDGInsert.available(kind))
 		};
 		var fxKinds = SDGInsert.fxKindNames;
+		var reverbKinds = SDGInsert.reverbKindNames;
 		var clip = sdg.insertClipboard ? [];
 		menu !? (_.destroy);
-		// the sc fx kit effects (Growl, Tunnel ...) go in an "fx" submenu
+		// the sc fx kit effects (Growl, Tunnel ...) go in an "fx" submenu, the
+		// reverbs (Hall, Plate, Coil, Shimmer) in a "reverb" submenu next to it
 		menu = Menu(*([
 			MenuAction(case
 				{ track.isKindOf(SDGBusTrack) } { "add an effect to %".format(track.where) }
@@ -1295,8 +1297,9 @@ SDGWindow {
 		] ++ if(clip.notEmpty) { [
 			MenuAction(this.prPasteLabel, { sdg.pasteInserts(i, track, place) }),
 			MenuAction.separator
-		] } { [] } ++ SDGInsert.kindNames.reject { |kind| fxKinds.includes(kind) }.collect(item)
-		++ if(fxKinds.notEmpty) { [Menu(*fxKinds.collect(item)).title_("fx")] } { [] }));
+		] } { [] } ++ SDGInsert.kindNames.reject { |kind| fxKinds.includes(kind) or: { reverbKinds.includes(kind) } }.collect(item)
+		++ if(fxKinds.notEmpty) { [Menu(*fxKinds.collect(item)).title_("fx")] } { [] }
+		++ if(reverbKinds.notEmpty) { [Menu(*reverbKinds.collect(item)).title_("reverb")] } { [] }));
 		menu.front;
 	}
 

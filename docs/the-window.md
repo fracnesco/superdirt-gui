@@ -35,7 +35,7 @@ One per orbit, named after it: orbit 0 is where `d1` plays. Top to bottom:
 | the name | click | selects the orbit for the effects tab |
 | an insert's button | click | opens its window |
 | | right click | a menu: open, bypass or switch on, move up, move down, remove; on a VST insert also its generic controls and *remember its state now* |
-| **+ insert** | click | a menu of the kinds. One whose extension is missing is greyed out. It adds the insert after the ones above, before the fader, and opens its window |
+| **+ insert** | click | a menu of the kinds, the sc fx kit effects under **fx** and the reverbs under **reverb**. One whose extension is missing is greyed out. It adds the insert after the ones above, before the fader, and opens its window |
 | a send knob per return | drag | this orbit's send to that return, nothing to 0 dB |
 | the meters | | peak and rms per channel, a tick every 5 dB, after the inserts and fader |
 | the peak readout | click | clears it. The highest peak since the last click, in dB, red once it reached 0 |

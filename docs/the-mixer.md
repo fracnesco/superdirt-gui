@@ -90,6 +90,7 @@ v = ~sdg.addInsert(0, \vst, plugin: "ValhallaSupermassive");
 | `\insight` | Insight | only reads: copies dry + effect to a bus of its own that an Insight watches; nothing to bypass |
 | `\vst` | VSTPlugin | the same as an eq through `VSTPlugin.ar`, on a synth of its own |
 | any `FxParamUnit` subclass | sc fx kit (Growl and the rest) | as an eq, but it stays awake while its output sounds, so a tail outlives `DirtPause`'s grace |
+| `\hall`, `\plate`, `\coil`, `\shimmer` | sc-reverbs | `FxParamUnit` subclasses too, listed under **reverb** in the add menu rather than **fx** |
 
 An insert is a global effect of SuperDirt's own kind, named `sdgins_<kind>`, so SuperDirt
 keeps it through every rebuild and cmd-period. On an orbit it sums the two busses into the

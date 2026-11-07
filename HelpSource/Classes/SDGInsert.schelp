@@ -105,7 +105,16 @@ nothing to bypass.
 CLASSMETHODS::
 
 METHOD:: kindNames
-code::[\eq, \compressor, \insight, \vst]::, in the order a menu lists them.
+code::[\eq, \compressor, \insight, \vst]::, then the installed link::Classes/FxParamUnit::
+subclasses, then the reverbs, in the order a menu lists them.
+
+METHOD:: fxKindNames
+The kinds that are link::Classes/FxParamUnit:: subclasses but not reverbs (Growl, Tunnel
+and the rest), the window's strong::fx:: submenu.
+
+METHOD:: reverbKindNames
+The reverb kinds (Hall, Plate, Coil, Shimmer of sc-reverbs, told apart by their display,
+ReverbView), the window's strong::reverb:: submenu.
 
 METHOD:: kinds
 The kinds, as an IdentityDictionary from kind to an Event with code::label::,
