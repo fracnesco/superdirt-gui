@@ -26,6 +26,7 @@
 
 (
 var quarks = [
+	"https://github.com/fracnesco/superdirt-gui.git",                 // SuperDirtGUI
 	"https://github.com/fracnesco/sc-bus-manager.git",                // BusManager
 	"https://github.com/fracnesco/sc-recorder.git",                   // BusRecorder
 	"https://github.com/fracnesco/sc-digit-drag.git",                 // DigitDrag
