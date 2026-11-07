@@ -42,6 +42,7 @@
 import Sound.Tidal.Context
 
 import System.IO (hSetEncoding, stdout, utf8)
+
 hSetEncoding stdout utf8
 
 -- 1. Tidal, to SuperDirt and to TouchDesigner --------------------------------
@@ -326,8 +327,15 @@ let -- synths (s "sdgacid", s "sdgpad" ...)
 
 -- 4. the functions -------------------------------------------------------------
 
+-- One line per paragraph, here and below: with a space in this file's path
+-- (Application Support, superdirt gui) Pulsar/Atom feed it paragraph by
+-- paragraph inside :{ :}, where an import after an import, or a : command,
+-- is an error.
+
 import qualified System.Environment as SDGEnv
+
 import qualified System.IO as SDGIO
+
 import qualified Control.Exception as SDGEx
 
 :{
@@ -367,9 +375,13 @@ let -- this folder (the one boot.hs is in), if the boot cannot find it:
 :}
 
 :def! sdgload sdgLoad
+
 :sdgload running
+
 :sdgload scenes
+
 :sdgload readers
+
 :sdgload report
 
 :set prompt "tidal> "
