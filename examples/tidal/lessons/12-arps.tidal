@@ -19,16 +19,19 @@ let sdgshape = pF "sdgshape"
 
 -- a pluck, up through four chords
 d1 $ note (arp "up" "<a'min7'8 f'maj7'8 c'maj7'8 g'dom7'8>") # s "sdgacid"
-   # legato 0.5 # sdgcut 500 # sdgq 0.35 # sdgenv 0.5 # sdgdecay 0.12
+   # legato 1 # sdgcut 500 # sdgq 0.35 # sdgenv 0.5 # sdgdecay 0.12
 
 -- twice as fast, and another shape each bar
 d1 $ note (arp "<up updown converge>" "<a'min7'8 f'maj7'8 c'maj7'8 g'dom7'8>*2")
-   # s "sdgacid" # legato 0.5 # sdgcut (range 300 1600 $ slow 8 sine) # sdgq 0.4
-   # sdgenv 0.5 # sdgdecay 0.1 # sdgaccent "1 0 0 1 0 0 1 0"
-   # sdgspace 0.3 # sdgtime 0.351
+   # s "sdgacid" # sdgcut (range 300 1600 $ slow 8 sine) # sdgq 0.4
+   # sdgenv (range 0.01 0.2 $ slow 54 tri) # sdgdecay 0.1 # sdgaccent "1 0 0 1 0 0 1 0"
+   # sdgspace 0 # sdgtime 0.351
+   # legato (range 0.05 0.6 $ slow 64 $ tri)
 
 -- the left ear plays it, the right ear plays it backwards and a bit behind
-d1 $ juxBy 0.8 (rev . (0.125 ~>)) $ note (arp "up" "<a'min9'8 f'maj9'8>*2")
+d1
+-- $ stutWith 8 (1/16) (|+ note 3) $ slow 4
+$ juxBy 0.8 (rev . (0.125 ~>)) $ note (arp "up" "<a'min9'8 f'maj9'8>*2")
    # s "sdgacid" # sdgwave 1 # legato 0.4 # sdgcut 700 # sdgq 0.3 # sdgenv 0.45 # sdgdecay 0.09
 
 -- eleven hits on a grid of sixteen, each reading the arpeggio where it lands
@@ -40,8 +43,10 @@ d2 $ off 0.1875 (|+ note 12) $ note (arp "<up down>" "<a'min7'4 e'min7'4>") + 12
    # s "sdgsine" # sdgshape 0.15 # legato 2 # gain 0.8 # pan (slow 5 sine)
 
 -- echoes that climb: three copies, a fifth above the one before
-d2 $ stutWith 3 (3/16) (|+ note 7) $ note (arp "up" "<a'min'3 f'maj'3>") + 12
-   # s "sdgsine" # sdgshape 0.1 # legato 1.5 # gain 0.75
+d2
+$ stutWith 8 (1/16) (|+ note 3)
+$ note (arp "up" "<a'min'3 f'maj'3>") + 12
+# s "sdgsine" # sdgshape 0.1 # legato 1.5 # gain 0.75
 
 -- a slow chord underneath, rolled like a hand across strings
 d3 $ slow 2 $ rolledBy 0.25 $ note ("<a'min9 f'maj9>" - 12) # s "sdgacid" # legato 1.1

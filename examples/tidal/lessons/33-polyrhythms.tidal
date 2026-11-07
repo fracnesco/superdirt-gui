@@ -25,6 +25,42 @@ let sdgdecay = pF "sdgdecay"
     sdgspace = pF "sdgspace"
     sdgtime = pF "sdgtime"
 
+
+
+d1 => orbit 0
+d2 => orbit 1
+d3 => orbit 2
+d4 => orbit 3
+d5 => orbit 4
+d6 => orbit 5
+d7 => orbit 6
+d8 => orbit 7
+d9 => orbit 0
+d10 => orbit 1
+d11 => orbit 2
+
+
+d2 $ trigger $ sound "bd(3,8)"
+
+
+d1 $ fast 1$ s "bd(3,11)" # orbit 0
+
+d9 $ s "bd*8" # orbit 2
+
+d2 $ qtrigger $ sound "bd hh hh hh"
+
+
+d1 $ s "hh*8"
+
+
+d1 $ s "s"
+
+  d2 $ s "sdgslam(7,13)" # n (irand 10) # legato 0.2
+
+  d2 $ s "sdgkick(3,13,<0 3 2>)"
+
+  d3 $ ply 2$ degradeBy 0.2 $ s "sdghat(11,13)" # n (irand 9) # legato (range 0.1 0.2 $ slow 32 perlin)
+
 -- d1, the floor: the 808 kick on the first and seventh of twelve - the two
 -- dotted quarters of the bar - soft, no beater
 d1 $ s "sdgkick ~ ~ ~ ~ ~ sdgkick ~ ~ ~ ~ ~" # sdgdecay 0.5 # sdgpunch 6 # sdgclick 0 # gain 0.95

@@ -26,22 +26,27 @@ let sdgcut = pF "sdgcut"
     sdgratio = pF "sdgratio"
     sdgindex = pF "sdgindex"
 
--- one chord, sixteen times a bar, short. Nothing under it. A filter that each
--- stab opens and that shuts before the next one is what makes it a stab
-d1 $ struct "t*16" $ note "<a'min9 f'maj9 c'maj9 e'min9>" # s "sdgsupersaw"
-   # legato 0.135 # sdgcut 900 # sdgenv 0.5 # sdgdecay 0.07 # room 0.3 # size 0.8
 
--- the gate is the instrument: which of the sixteen steps sound changes each bar
-d3 $ struct "<t(7,16) t(9,16,2) t(5,16,3) t(11,16,1)>" $ note "<a'min9 f'maj9 c'maj9 e'min9>"
-   # s "sdgsupersaw" # legato 0.35 # sdgcut 900 # sdgenv 0.5 # sdgdecay 0.07 # room 0.3 # size 0.8
+let chords = "<a'min9 c'maj9 g'maj9 e'min9>"
+in
 
--- the same gate rotating by one step every bar, so the accent never sits still
-d2 $ (iter 4) $ struct "t(7,16)" $ note "<a'min9 f'maj9 c'maj9 e'min9>"
-   # s "sdgsupersaw" # legato 0.3 # sdgcut 900 # sdgenv 0.55 # sdgdecay 0.06
-   # gain "1 0.9 0.95 0.85" # room 0.3 # size 0.8
+do
+  -- one chord, sixteen times a bar, short. Nothing under it. A filter that each
+  -- stab opens and that shuts before the next one is what makes it a stab
+  d1 $ degradeBy 0 $ struct "t*16" $ note chords # s "sdgsupersaw"
+     # legato (rangex 0.1 0.9 $ slow 32 $ tri)
+     # sdgcut (range 80 1000 $ slow 64 $ tri)
+     # sdgenv 0.5 # sdgdecay 0.07 # room 0.3 # size 0.8
+  -- the gate is the instrument: which of the sixteen steps sound changes each bar
+  d3 $ struct "<t(7,16) t(9,16,2) t(5,16,3) t(11,16,1)>" $ note chords
+     # s "sdgsupersaw" # legato 0.35 # sdgcut 900 # sdgenv 0.5 # sdgdecay 0.07 # room 0.3 # size 0.8
+  -- the same gate rotating by one step every bar, so the accent never sits still
+  d2 $ (iter 4) $ struct "t(7,16)" $ note chords
+     # s "sdgsupersaw" # legato 0.3 # sdgcut 900 # sdgenv 0.55 # sdgdecay 0.06
+     # gain "1 0.9 0.95 0.85" # room 0.3 # size 0.8
 
 
-
+d1 silence
 
 
 -- the arpeggio: a cell of seven notes played on a grid of sixteen. Seven does
@@ -98,7 +103,7 @@ d1 $ note (fast (16/7) "0 3 7 12 15 19 24" + "<-3 -7 0 -5>") # s "sdgsupersaw"
 d2 $ (iter 4) $ struct "t(7,16)" $ note ("<a'min9 f'maj9 c'maj9 e'min9>" + 12) # s "sdgsupersaw"
    # legato 0.3 # sdgcut 1000 # sdgenv 0.5 # sdgdecay 0.06 # sdgwidth 1 # gain 0.85 # room 0.4 # size 0.85
 
-d4 $ note ("<a'min9 f'maj9 c'maj9 e'min9>" - 12) # s "sdgpad" # legato 0.4 # sdgcut 700 # gain 0.8
+d8 $ note ("<a'min9 f'maj9 c'maj9 e'min9>" - 12) # s "sdgpad" # legato 0.4 # sdgcut 700 # gain 0.8
 
 d4 $ s "~ sdghat:3 ~ sdghat:3" # gain 0.8 # sdgdecay "<0.05 0.08>"
 

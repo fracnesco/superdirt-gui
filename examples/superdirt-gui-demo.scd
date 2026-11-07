@@ -11,7 +11,7 @@ s.waitForBoot {
 	~dirt = SuperDirt(2, s);       // two output channels
 	~dirt.loadSoundFiles;          // Dirt-Samples
 	s.sync;
-	~dirt.start(57120, 0 ! 4);    // twelve orbits, d1 .. d12, all on channels 1-2
+	~dirt.start(57120, 0 ! 8);    // twelve orbits, d1 .. d12, all on channels 1-2
 	s.sync;
 	~sdg = SuperDirtGUI(~dirt);    // synths/, modules/, players/, effects/ into ~dirt
 	"SuperDirtGUI: ready - %".format(~sdg).postln;

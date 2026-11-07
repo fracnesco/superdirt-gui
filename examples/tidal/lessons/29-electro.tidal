@@ -21,9 +21,19 @@ let sdgdecay = pF "sdgdecay"
     sdgspace = pF "sdgspace"
     sdgtime = pF "sdgtime"
 
+
+do
+  d1 $ fast 2 $ s "sdgkick sdgclap"
+  d2 $ fast 8 $ s "sdghat" # n 0
+
+
+
 -- d1, the kick: the 808 in the electro places - one, the "and" of one, three,
 -- the "and" of three, and every other bar one more before four
 d1 $ s "sdgkick ~ ~ sdgkick ~ ~ sdgkick ~ ~ ~ sdgkick ~ <sdgkick ~> ~ ~ ~" # sdgdecay 0.6 # sdgpunch 14
+
+
+
 
 -- d2, the hats: the 808 closed hat on the sixteenths, the open one on the
 -- third sixteenth of one and three, the pedal (:1) before four; cut 1 chokes
