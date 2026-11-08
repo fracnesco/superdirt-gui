@@ -193,7 +193,7 @@ SDGSampleEditor {
 	}
 
 	prGainRow {
-		gainKnob = SDGWindow.makeKnob(28, true)
+		gainKnob = SDGWindow.makeKnob(28, true, { gainSpec.unmap(0) })
 			.action_({ |v| edit.gainDb_(gainSpec.map(v.value)) });
 		gainBox = NumberBox().fixedWidth_(56).decimals_(1).align_(\center)
 			.action_({ |v| edit.gainDb_(v.value) });
@@ -252,7 +252,7 @@ SDGSampleEditor {
 			.action_({ |m| slicer !? { slicer.mode = SDGSlicer.modes[m.value] }; this.prRefreshSlicer });
 		sliceDivMenu = PopUpMenu().fixedWidth_(72).items_(SDGSlicer.divisions.collect(_[1])).value_(4)
 			.action_({ |m| this.prDivisionChanged });
-		sensKnob = SDGWindow.makeKnob(26).value_(0.5)
+		sensKnob = SDGWindow.makeKnob(26, false, 0.5).value_(0.5)
 			.action_({ |k| sensBox.value = k.value.round(0.01); slicer !? { slicer.sensitivity = k.value } });
 		sensBox = NumberBox().fixedWidth_(44).decimals_(2).clipLo_(0).clipHi_(1).step_(0.01).value_(0.5)
 			.action_({ |b| sensKnob.value = b.value; slicer !? { slicer.sensitivity = b.value } });

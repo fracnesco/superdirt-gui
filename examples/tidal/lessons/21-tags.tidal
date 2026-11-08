@@ -18,8 +18,10 @@ let sdgtag = pS "sdgtag"
     sdgbpm = pF "sdgbpm"
     sdgkey = pS "sdgkey"
 
+
 -- a different short drum on every step, never one with a pitch
-d1 $ s "sdgany*8" # sdgtag "percussive.short" # sdgnot "melodic" # legato 1
+d1 $ s "sdgany*32" # sdgtag "percussive.short" # sdgnot "melodic"
+# legato (range 0.1 0.2 $ slow 8 sine) # begin (range 0 0.15 $ perlin)
 
 -- the same, but held: n chooses, so the pattern repeats
 d1 $ s "sdgany*8" # sdgtag "percussive.short" # sdgnot "melodic"
@@ -27,8 +29,8 @@ d1 $ s "sdgany*8" # sdgtag "percussive.short" # sdgnot "melodic"
 
 -- kicks and hats, wherever they are in the library
 d1 $ stack [
-    s "sdgany(3,8)" # sdgtag "kick" # n 0,
-    s "sdgany*8" # sdgtag "hat" # n (irand 4) # gain 0.8
+    s "sdgany(3,8)" # sdgtag "kick",
+    s "sdgany*8" # sdgtag "hat" # gain 0.8
   ]
 
 -- a loop near 120 bpm - or 60, or 240: halves and doubles count - stretched
@@ -36,6 +38,12 @@ d1 $ stack [
 setcps (120/60/4)
 
 d2 $ s "sdgany" # sdgtag "loop" # sdgbpm 120 # n 0 # legato 1 # unit "c"
+
+shift+commmand+H
+
+hush
+
+panic
 
 -- notes and chords in A minor (or one-shots on an A)
 d3 $ s "sdgany(5,8)" # sdgtag "melodic" # sdgkey "am"
@@ -51,3 +59,14 @@ d4 $ s "808*2" # sdgtag "long.dark"
 d4 $ s "sdgany*4" # sdgtag "melodic" # sdgnot "key-unsure"
 
 hush
+
+d1
+$ jux (rev)
+$ s "sdgany*32" # sdgtag "bright" # legato 0.1
+
+-- random OR on each event: kick OR snare
+d1 $ s "sdgany*8" # sdgtag "kick|snare"
+-- alternate cycle by cycle
+d1 $ s "sdgany*8" # sdgtag "<kick snare>"
+-- (kick AND short) OR (hat AND bright)
+d1 $ s "sdgany*8" # sdgtag "kick.short|hat.bright"

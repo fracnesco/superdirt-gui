@@ -185,11 +185,22 @@ SDGWindow {
 	}
 
 	// the knob of every parameter, here and in the sample editor: dragged up and down
-	// (the default follows the pointer round the dial), half a percent a pixel
-	*makeKnob { |size = 36, centered = false|
-		^Knob().fixedWidth_(size).fixedHeight_(size)
+	// (the default follows the pointer round the dial), half a percent a pixel.
+	// default is where a double click puts it, through its action: a value of the
+	// knob (0..1) or a function answering one, asked at the click; nil: no reset
+	*makeKnob { |size = 36, centered = false, default|
+		var knob = Knob().fixedWidth_(size).fixedHeight_(size)
 			.mode_(\vert).step_(0.005).centered_(centered)
-			.color_([Color.grey(0.32), colAccent, Color.grey(0.16), colText])
+			.color_([Color.grey(0.32), colAccent, Color.grey(0.16), colText]);
+		// true keeps the double click from the knob; nil passes any other click on
+		knob.mouseDownAction = { |v, x, y, mods, button, clickCount|
+			var unit;
+			if(clickCount == 2 and: { (button ? 0) == 0 }) {
+				unit = default.value;
+				if(unit.isNumber) { v.valueAction = unit.clip(0, 1); true }
+			}
+		};
+		^knob
 	}
 
 	// orbit effects that are plumbing, not for the effect list: SuperDirt's rms
@@ -923,7 +934,7 @@ SDGWindow {
 	// its Event; what it holds shows through refreshMixer
 	prSendKnob { |ret, value, enabled, action, hint|
 		var spec = this.class.sendSpec;
-		var knob = this.class.makeKnob(24).value_(spec.unmap(value));
+		var knob = this.class.makeKnob(24, false, spec.unmap(spec.default)).value_(spec.unmap(value));
 		var text = StaticText().fixedHeight_(12).string_(ret.letter.asString).align_(\center).font_(smallFont)
 			.stringColor_(if(enabled) { colAccent } { colDim });
 		knob.enabled = enabled;
@@ -2005,7 +2016,8 @@ SDGWindow {
 	makeParamCell { |orbit, fx, param|
 		var spec = this.specFor(fx, param);
 		var value = this.currentValue(orbit, fx, param);
-		var knob = this.class.makeKnob;
+		// a double click: the SynthDef's default (x: what it was before the window)
+		var knob = this.class.makeKnob(36, false, { spec.unmap(this.descDefault(fx, param) ? spec.default) });
 		var box = NumberBox().decimals_(3);
 		var clear = Button().fixedWidth_(16).fixedHeight_(18).font_(smallFont)
 			.states_([["x", colDim, Color.grey(0.26)]]);
@@ -2097,17 +2109,19 @@ SDGWindow {
 	// click on it waits for the controller instead of moving it; a right click gives
 	// its MIDI menu. Without Modality nothing changes. Answers the view.
 	prMidiAttach { |view, address|
-		var entry;
+		var entry, own;
 		if(SDGMidi.isAvailable.not) { ^view };
 		entry = (view: view, address: address, style: this.prMidiStyle(view));
 		// an Array: add answers the grown one
 		midiViews = midiViews.reject { |e| e[\view].isClosed }.add(entry);
-		// true keeps the click from the view; nil passes it on
-		view.mouseDownAction = { |v, x, y, mods, button|
+		// true keeps the click from the view; anything else goes to what the view
+		// had (a knob's double click back to its default, makeKnob)
+		own = view.mouseDownAction;
+		view.mouseDownAction = { |v, x, y, mods, button, clickCount|
 			case
 			{ midiLearning } { this.prMidiArm(address); true }
 			{ (button ? 0) == 1 } { { this.prShowMidiMenu(address) }.defer(0.05); true }
-			{ nil }
+			{ own.value(v, x, y, mods, button, clickCount) }
 		};
 		this.prMidiPaint(entry);
 		^view
@@ -2339,7 +2353,7 @@ SDGWindow {
 
 	makeTrigCell { |key|
 		var spec = trigSpecs[key];
-		var knob = this.class.makeKnob(36, key == \pan);
+		var knob = this.class.makeKnob(36, key == \pan, spec.unmap(spec.default));
 		var box = NumberBox().decimals_(3);
 		knob.value = spec.unmap(trigParams[key]);
 		box.value = trigParams[key];
@@ -3701,7 +3715,9 @@ SDGWindow {
 
 	prPreviewCell { |key|
 		var m = preview, spec = m[\specs][key];
-		var knob = this.class.makeKnob(36, spec.minval < 0 and: { spec.maxval > 0 });
+		// a double click: the preset's value, as reset does for all of them
+		var knob = this.class.makeKnob(36, spec.minval < 0 and: { spec.maxval > 0 },
+			{ m[\start][key] !? { |v| spec.unmap(v) } });
 		var box = NumberBox().decimals_(3);
 		knob.value = spec.unmap(m[\values][key]);
 		box.value = m[\values][key];
@@ -3723,7 +3739,7 @@ SDGWindow {
 
 	prPreviewLengthCell {
 		var m = preview, spec = this.class.previewLengthSpec;
-		var knob = this.class.makeKnob(36);
+		var knob = this.class.makeKnob(36, false, { m[\startSustain] !? { |v| spec.unmap(v) } });
 		var box = NumberBox().decimals_(3);
 		knob.value = spec.unmap(m[\sustain]);
 		box.value = m[\sustain];

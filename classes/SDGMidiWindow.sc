@@ -139,8 +139,9 @@ SDGMidiWindow {
 		titleText = StaticText().font_(Font(Font.defaultSansFace, 12, true)).stringColor_(SDGWindow.colAccent);
 
 		// the range, in the target's own units
-		loKnob = SDGWindow.makeKnob(32);
-		hiKnob = SDGWindow.makeKnob(32);
+		// a double click: the target's whole range
+		loKnob = SDGWindow.makeKnob(32, false, 0);
+		hiKnob = SDGWindow.makeKnob(32, false, 1);
 		loBox = NumberBox().decimals_(3).font_(font).fixedWidth_(70).normalColor_(colText);
 		hiBox = NumberBox().decimals_(3).font_(font).fixedWidth_(70).normalColor_(colText);
 		loDb = StaticText().stringColor_(colDim).font_(smallFont).fixedWidth_(56);
