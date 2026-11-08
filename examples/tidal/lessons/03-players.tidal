@@ -14,26 +14,14 @@
 let sdgwarp = pF "sdgwarp"
     player = pS "player"
 
-
-
-d1 $ s "hh*8" # sdgfold 0.1 # begin 0.1
-
 -- at half speed SuperDirt plays it an octave down...
-d1 $ s "numbers:2" # speed 1 # sdgcloud 100 #sdggrain 0.01 # sdgpitch 4
-
-# sdgsmear 1 # sdghold 0.5
-
-
-# sdgfold "< 0.3>" # begin "<0 0.2 0.3>"
-
-d1 $ s "numbers:2" # orbit 0
+d1 $ s "numbers:1" # speed 0.5
 
 -- ...and the warp player keeps the pitch
-once $ s "numbers:1" # speed 0.05 # sdgwarp 1 # sdgpitch 2 # room 0.9 # size 0.95
+d1 $ s "numbers:1" # speed 0.5 # sdgwarp 1
 
 -- the same, by name
-once $ s "numbers:1" # sdgfreeze 0.2 # sdghold 4
-
+d1 $ s "numbers:1" # speed 0.5 # player "sdgwarp"
 
 -- some events warped, the others SuperDirt's own
 d1 $ sometimes (# sdgwarp 1) $ s "numbers*4" # n "<0 3 5 7>" # speed 0.6
@@ -44,10 +32,8 @@ d1 $ every 2 (# player "sdgwarp") $ s "numbers:2*2" # speed 0.5
 d1 $ while "1 0 1 1" (# sdgwarp 1) $ s "numbers*4" # n "0 1 2 3" # speed 0.5
 
 -- two layers, two players
-d1
-$ sometimesBy 0.4 (# sdgfold (1/3))
-$ stack [
-  chop 8 $ loopAt 1 $ s "breaks152" # legato 0.1,
+d1 $ stack [
+  s "breaks152" # sdgwarp 1 # speed 0.5 # gain 0.9,
   s "bd*4"
   ]
 
