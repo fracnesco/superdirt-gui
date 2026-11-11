@@ -1,5 +1,7 @@
 // modules/sdgboom.scd - a tuned sub under every hit, like an 808's.
 //
+// category: resonator
+//
 // it listens for the hits in the event's sound and answers each with a sine
 // at sdgboomfreq, as loud as the hit and dying in sdgboomdecay seconds. it
 // starts half an octave up and falls onto its note in 20 ms, which is the

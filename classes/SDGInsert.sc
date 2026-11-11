@@ -71,10 +71,10 @@ SDGInsert {
 
 	*initClass {
 		kinds = IdentityDictionary[
-			\eq -> (label: "EQ", className: \ParaEQ, controlName: \eq),
-			\compressor -> (label: "Comp", className: \Compressor, controlName: \comp),
-			\insight -> (label: "Insight", className: \Insight),
-			\vst -> (label: "VST", className: \VSTPluginController)
+			\eq -> (label: "EQ", className: \ParaEQ, controlName: \eq, category: \filter),
+			\compressor -> (label: "Comp", className: \Compressor, controlName: \comp, category: \dynamics),
+			\insight -> (label: "Insight", className: \Insight, category: \utility),
+			\vst -> (label: "VST", className: \VSTPluginController, category: \plugin)
 		];
 		// the effects built on FxParamUnit (sc fx kit), each an extension of its own:
 		// whichever are installed are kinds too, found here rather than named. They
@@ -86,9 +86,11 @@ SDGInsert {
 		\FxParamUnit.asClass !? { |base|
 			base.allSubclasses.sort { |a, b| a.name < b.name }.do { |cls|
 				var display = cls.displayClass;
+				var isReverb = display.notNil and: { display.name == \ReverbView };
 				kinds[cls.insertKind] = (label: cls.insertLabel, className: cls.name,
-					controlName: cls.controlName, tail: true);
-				if(display.notNil and: { display.name == \ReverbView }) {
+					controlName: cls.controlName, tail: true,
+					category: this.prUnitCategory(cls, isReverb));
+				if(isReverb) {
 					reverbKinds = reverbKinds.add(cls.insertKind)
 				} {
 					fxKinds = fxKinds.add(cls.insertKind)
@@ -107,6 +109,22 @@ SDGInsert {
 	*reverbKindNames { ^reverbKinds.copy }
 
 	*kindLabel { |kind| ^kinds[kind.asSymbol] !? { |k| k[\label] } }
+
+	// the kind's heading in the add menus, one of SuperDirtGUI.effectCategories
+	*kindCategory { |kind| ^SuperDirtGUI.effectCategory(kinds[kind.asSymbol] !? { |k| k[\category] }) }
+
+	// an FxParamUnit's category: its own *insertCategory if it has one, else the
+	// ones known here, a ReverbView display, or \other
+	*prUnitCategory { |cls, isReverb|
+		var known = IdentityDictionary[
+			\growl -> \distortion, \tunnel -> \delay, \smear -> \spectral, \cloud -> \granular,
+			\stammer -> \repeat, \sympathy -> \resonator, \spiral -> \pitch
+		];
+		^(if(cls.class.findRespondingMethodFor(\insertCategory).notNil) { cls.insertCategory })
+			?? { known[cls.insertKind] }
+			?? { if(isReverb) { \reverb } }
+			? \other
+	}
 
 	// whether the extension a kind needs is installed
 	*available { |kind|

@@ -125,7 +125,7 @@ SDGWindow {
 	var effectHeader, trackScroll, trackCanvas, addMenu, addCandidates, addRow;
 	var <trackViews;				// one Event of views per track of the selected orbit
 	var trackMeterData, trackFunc;	// track id -> [stamp, numbers], and what fills it
-	var insertListHolder, insertRowsView, insertAddMenu, vstWindow;
+	var insertListHolder, insertRowsView, vstWindow;
 	var paramHolder, paramContentView;
 	var rightColumn, panelDrag, <panelHandle;	// the right panel, where a drag of its handle started, the handle
 	var <tree, searchField, soundInfo, countText, <explorerModel, <selected;
@@ -1287,30 +1287,57 @@ SDGWindow {
 		menu.front;
 	}
 
-	// track and place: on a track, before or after its effect
+	// track and place: on a track, before or after its effect. The kinds under
+	// their categories' submenus (SDGInsert.kindCategory)
 	prShowAddInsertMenu { |i, track, place|
 		var item = { |kind|
 			MenuAction(this.class.insertKindName(kind), { this.addInsert(i, kind, track, place) })
 				.enabled_(SDGInsert.available(kind))
 		};
-		var fxKinds = SDGInsert.fxKindNames;
-		var reverbKinds = SDGInsert.reverbKindNames;
 		var clip = sdg.insertClipboard ? [];
 		menu !? (_.destroy);
-		// the sc fx kit effects (Growl, Tunnel ...) go in an "fx" submenu, the
-		// reverbs (Hall, Plate, Coil, Shimmer) in a "reverb" submenu next to it
 		menu = Menu(*([
 			MenuAction(case
 				{ track.isKindOf(SDGBusTrack) } { "add an effect to %".format(track.where) }
 				{ track.notNil } { "add an insert %, orbit %".format(if(place == \pre) { "before " } { "after " } ++ track.shortName, i) }
-				{ "add an insert to orbit %".format(i) }).enabled_(false),
-			MenuAction.separator
+				{ "add an insert to orbit %".format(i) }).enabled_(false)
 		] ++ if(clip.notEmpty) { [
-			MenuAction(this.prPasteLabel, { sdg.pasteInserts(i, track, place) }),
-			MenuAction.separator
-		] } { [] } ++ SDGInsert.kindNames.reject { |kind| fxKinds.includes(kind) or: { reverbKinds.includes(kind) } }.collect(item)
-		++ if(fxKinds.notEmpty) { [Menu(*fxKinds.collect(item)).title_("fx")] } { [] }
-		++ if(reverbKinds.notEmpty) { [Menu(*reverbKinds.collect(item)).title_("reverb")] } { [] }));
+			MenuAction.separator,
+			MenuAction(this.prPasteLabel, { sdg.pasteInserts(i, track, place) })
+		] } { [] } ++ this.class.categorisedActions(SDGInsert.kindNames, { |kind| SDGInsert.kindCategory(kind) }, item)));
+		menu.front;
+	}
+
+	// names grouped by category, in SuperDirtGUI.effectCategories order: an Array of
+	// category -> [names], empty categories left out, each group in the names' order
+	*categorised { |names, categoryFunc|
+		var cats = names.collect { |name| SuperDirtGUI.effectCategory(categoryFunc.value(name)) };
+		^SuperDirtGUI.effectCategories.collect { |a|
+			a.key -> names.select { |name, k| cats[k] == a.key }
+		}.reject { |a| a.value.isEmpty }
+	}
+
+	// a menu's actions for those names: a separator, then a submenu per category
+	// (hovering it opens its names beside the menu), an action per name, made by
+	// itemFunc. A category whose names are all disabled is disabled too
+	*categorisedActions { |names, categoryFunc, itemFunc|
+		^[MenuAction.separator] ++ this.categorised(names, categoryFunc).collect { |a|
+			var items = a.value.collect(itemFunc);
+			Menu(*items).title_(SuperDirtGUI.categoryLabel(a.key)).asMenuAction
+				.enabled_(items.any(_.enabled))
+		}
+	}
+
+	// the global effects that can go on the orbit, under their categories; a
+	// choice calls action with the name
+	prShowEffectMenu { |title, names, action|
+		menu !? (_.destroy);
+		menu = Menu(*([MenuAction(title).enabled_(false)]
+			++ if(names.isEmpty) { [MenuAction("(no other effect defs)").enabled_(false)] } {
+				this.class.categorisedActions(names, { |name| sdg.globalEffectCategory(name) }, { |name|
+					MenuAction(this.class.effectShortName(name), { action.value(name) })
+				})
+			}));
 		menu.front;
 	}
 
@@ -1675,11 +1702,13 @@ SDGWindow {
 		trackScroll = ScrollView().autohidesScrollers_(true).hasBorder_(false)
 			.background_(colPanel).fixedHeight_(350);
 
-		addMenu = PopUpMenu();
-		addBtn = Button().fixedWidth_(50).states_([["add", colText, Color.grey(0.26)]]);
-		addBtn.action = {
-			if(addCandidates.notNil and: { addCandidates.notEmpty } and: { selectedBus.isNil }) {
-				this.addEffect(this.selectedOrbit, addCandidates[addMenu.value ? 0])
+		addMenu = Button().states_([["add effect track...", colText, Color.grey(0.26)]]);
+		addMenu.action = {
+			var orbit = this.selectedOrbit;
+			if(selectedBus.isNil) {
+				this.refreshAddMenu;
+				this.prShowEffectMenu("add an effect track to orbit %".format(selectedOrbitIndex), addCandidates,
+					{ |name| { this.addEffect(orbit, name) }.defer })
 			};
 		};
 		pasteBtn = Button().fixedWidth_(50).states_([["paste", colText, Color.grey(0.26)]]);
@@ -1692,10 +1721,9 @@ SDGWindow {
 			}
 			{ selectedEffectName = copied[\name]; this.rebuildEffectSection };
 		};
-		hints.attach(addMenu, "every SynthDef that follows the global effect convention and is not in this orbit yet");
-		hints.attach(addBtn, "the chosen effect on a new track, after the others");
+		hints.attach(addMenu, "a global effect on a new track, after the others: every SynthDef that follows the convention and is not in this orbit yet, by category");
 		hints.attach(pasteBtn, "the effect track you copied (right click its name), with its parameters, level and inserts, on this orbit");
-		addRow = View().layout_(HLayout(addMenu, addBtn, pasteBtn).margins_(0).spacing_(4));
+		addRow = View().layout_(HLayout(addMenu, pasteBtn).margins_(0).spacing_(4));
 
 		paramHolder = View();
 		paramHolder.layout = VLayout().margins_(0).spacing_(0);
@@ -1714,28 +1742,20 @@ SDGWindow {
 	// the selected orbit's inserts, under its global effects: a row each, in
 	// the order the signal takes, and a menu to add one
 	makeInsertSection {
-		var addBtn, available = SDGInsert.kindNames;
+		var addBtn = Button().states_([["add insert...", colText, Color.grey(0.26)]]);
 		insertListHolder = View();
 		insertListHolder.layout = VLayout().margins_(0).spacing_(0);
-		insertAddMenu = PopUpMenu().items_(available.collect { |kind| this.class.insertKindName(kind) });
-		addBtn = Button().fixedWidth_(50).states_([["add", colText, Color.grey(0.26)]]);
 		addBtn.action = {
-			var kind = available[insertAddMenu.value ? 0];
-			if(SDGInsert.available(kind)) {
-				if(selectedBus.notNil) {
-					this.addInsert(nil, kind, selectedBus, \chain)
-				} {
-					this.addInsert(selectedOrbitIndex, kind)
-				}
+			if(selectedBus.notNil) {
+				this.prShowAddInsertMenu(nil, selectedBus, \chain)
 			} {
-				hints.note("% is not installed - see its repository's install.scd".format(this.class.insertKindName(kind)))
+				this.prShowAddInsertMenu(selectedOrbitIndex)
 			}
 		};
-		hints.attach(insertAddMenu, "the kinds of insert - those whose extension is installed can be added");
-		hints.attach(addBtn, "put the chosen insert on the orbit, after its other inserts, and open its window");
+		hints.attach(addBtn, "an insert after the others, by category, and its window opened - those whose extension is installed can be added");
 		^View().layout_(VLayout(
 			insertListHolder,
-			HLayout(insertAddMenu, addBtn)
+			HLayout(addBtn)
 		).margins_(0).spacing_(6))
 	}
 
@@ -1826,10 +1846,9 @@ SDGWindow {
 			[track.shortName, colText, Color.grey(0.3)],
 			[track.shortName, Color.black, colAccent]
 		]).value_(selectedNow.binaryValue);
-		// the first entry names the menu, so choosing any effect is always a change
 		var names = this.class.effectCandidates(sdg, track.orbit);
-		var loadMenu = PopUpMenu().font_(smallFont).fixedHeight_(18)
-			.items_(["load effect…"] ++ names.collect(_.asString));
+		var loadMenu = Button().font_(smallFont).fixedHeight_(18)
+			.states_([["load effect…", colText, Color.grey(0.26)]]);
 		var onBtn = Button().fixedHeight_(18).font_(smallFont).states_([
 			["off", colDim, Color.grey(0.26)],
 			["on", Color.black, colOn]
@@ -1852,10 +1871,10 @@ SDGWindow {
 			if((button ? 0) == 1) { { this.prShowTrackMenu(track) }.defer(0.05) };
 			nil
 		};
-		loadMenu.action = { |m|
-			var name = if(m.value > 0) { names[m.value - 1] };
-			// the menu goes with the strip it is in, so not from inside its own action
-			name !? { { this.loadTrackEffect(track, name) }.defer };
+		loadMenu.action = {
+			// the button goes with the strip it is in, so not from inside the menu's action
+			this.prShowEffectMenu("in place of % on orbit %".format(track.shortName, track.orbitIndex), names,
+				{ |name| { this.loadTrackEffect(track, name) }.defer })
 		};
 		onBtn.action = { |b|
 			track.fx !? { |fx|
@@ -1945,11 +1964,6 @@ SDGWindow {
 
 	refreshAddMenu {
 		addCandidates = this.class.effectCandidates(sdg, this.selectedOrbit);
-		addMenu.items = if(addCandidates.isEmpty) {
-			["(no other effect defs)"]
-		} {
-			addCandidates.collect(_.asString)
-		};
 	}
 
 	// the named effect on a new track of the orbit
@@ -3339,6 +3353,10 @@ SDGWindow {
 		nameWidth = params.collect { |p| p[\name].asString.size }.maxItem ? 0;
 		rangeWidth = params.collect { |p| p[\range].size }.maxItem ? 0;
 		text = if(notes[\description].isEmpty) { "no description in the file" } { notes[\description] };
+		// an effect's heading in the add menus, from its "// category:" line
+		if(#[\modules, \effects].includes(loadedKind)) {
+			text = text ++ "\n\ncategory: " ++ SuperDirtGUI.categoryLabel(notes[\category])
+		};
 		text = text ++ "\n\n";
 		text = text ++ if(params.isEmpty) { "no parameters of its own" } { "parameters and ranges\n" };
 		params.do { |p|

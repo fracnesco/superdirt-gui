@@ -1,5 +1,7 @@
 // effects/sdgjverb.scd - JPverb as a hall: long, smooth, with separate decay for lows, mids and highs.
 //
+// category: reverb
+//
 // requires: JPverb, JPverbRaw (sc3-plugins)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

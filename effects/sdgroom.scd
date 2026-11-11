@@ -1,5 +1,7 @@
 // effects/sdgroom.scd - JPverb as a small room: short and close, a sense of place more than a tail.
 //
+// category: reverb
+//
 // requires: JPverb, JPverbRaw (sc3-plugins)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

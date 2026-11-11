@@ -1,5 +1,7 @@
 // effects/example-global.scd - a global effect: an echo, one per orbit, always there.
 //
+// category: delay
+//
 // a global effect runs once per orbit for as long as the orbit lives, reading
 // the orbit's dry signal and adding to its effect bus, like SuperDirt's own
 // dirt_delay. the SynthDef is named "global_<name>" ++ the channel count. the

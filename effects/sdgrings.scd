@@ -1,5 +1,7 @@
 // effects/sdgrings.scd - MiRings, Mutable Instruments' resonator: whatever comes in rings at a pitch, as a bar or a string.
 //
+// category: resonator
+//
 // requires: MiRings (mi-UGens)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

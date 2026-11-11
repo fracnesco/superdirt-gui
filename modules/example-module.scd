@@ -1,5 +1,7 @@
 // modules/example-module.scd - a module: a comb filter on each event that asks for it.
 //
+// category: filter
+//
 // a module is a function SuperDirt calls for every event whose test passes,
 // after the sound itself has been started. this one adds a comb filter to the
 // event whenever it carries sdgcomb. the SynthDef reads the event's bus (out)

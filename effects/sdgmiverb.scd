@@ -1,6 +1,8 @@
 // effects/sdgmiverb.scd - MiVerb, the reverb of Mutable Instruments' Clouds: bright, grainy, a bit metallic.
 // Time at 1 or more does not die away and drives itself into soft distortion.
 //
+// category: reverb
+//
 // requires: MiVerb (mi-UGens)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

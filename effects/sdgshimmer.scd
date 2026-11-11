@@ -1,5 +1,7 @@
 // effects/sdgshimmer.scd - JPverb with a pitch shifter in its feedback: the tail climbs while it dies.
 //
+// category: reverb
+//
 // requires: JPverb, JPverbRaw (sc3-plugins)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

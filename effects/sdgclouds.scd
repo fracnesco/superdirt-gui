@@ -1,5 +1,7 @@
 // effects/sdgclouds.scd - MiClouds, Mutable Instruments' granular processor: turns what it hears into a texture.
 //
+// category: granular
+//
 // requires: MiClouds (mi-UGens)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

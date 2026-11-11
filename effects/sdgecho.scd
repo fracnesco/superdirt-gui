@@ -1,6 +1,8 @@
 // effects/sdgecho.scd - Greyhole as a delay: separate echoes that blur and darken as they repeat.
 // The same network with the diffusion nearly off and a small size; each pass wavers a little, like tape.
 //
+// category: delay
+//
 // requires: Greyhole, GreyholeRaw (sc3-plugins)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

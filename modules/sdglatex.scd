@@ -1,5 +1,7 @@
 // modules/sdglatex.scd - a squelch on every hit: a resonant filter diving with it.
 //
+// category: filter
+//
 // SOPHIE's latex sounds: a low pass with a sharp resonance whose cutoff falls
 // from high to sdglatexfreq in sdglatextime on every hit it finds, driven into
 // a soft clip. short times (5 to 50 ms) are a rubbery click, longer ones a

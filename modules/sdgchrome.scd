@@ -1,5 +1,7 @@
 // modules/sdgchrome.scd - turns a hit to metal: four short combs, wobbling, squashed.
 //
+// category: resonator
+//
 // SOPHIE's metal came from feeding a short hit into short delays with a lot of
 // feedback and then squashing everything. here four combs ring at sdgchromefreq
 // and at 1.41, 1.73 and 2.24 times it - no two in a harmonic ratio, so it sounds

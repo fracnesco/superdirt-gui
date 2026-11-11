@@ -1,6 +1,8 @@
 // effects/sdghole.scd - Greyhole as a reverb: a big diffuse cloud, slowly moving.
 // Julian Parker's delay network with the diffusion up: the echoes smear into each other.
 //
+// category: reverb
+//
 // requires: Greyhole, GreyholeRaw (sc3-plugins)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

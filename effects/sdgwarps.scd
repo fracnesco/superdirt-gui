@@ -1,6 +1,8 @@
 // effects/sdgwarps.scd - MiWarps, Mutable Instruments' meta-modulator: what comes in modulates its internal oscillator.
 // Ring modulation, wavefolding, a vocoder; it sounds only while something comes in.
 //
+// category: modulation
+//
 // requires: MiWarps (mi-UGens)
 //
 // not in any orbit until you add it: the add menu of the window's effects tab,

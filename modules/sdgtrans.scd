@@ -1,5 +1,7 @@
 // modules/sdgtrans.scd - a transient designer: more or less attack, more or less body.
 //
+// category: dynamics
+//
 // two envelope followers on the event's sound, one fast and one slow to rise;
 // where they differ is the attack, and sdgtrans turns it up or down, up to
 // 15 dB either way. two more, slow and fast to fall, find the body after it,

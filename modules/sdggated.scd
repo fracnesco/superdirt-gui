@@ -1,5 +1,7 @@
 // modules/sdggated.scd - gated reverb: a big room cut off dead after every hit.
 //
+// category: reverb
+//
 // the 80s snare: each hit goes into a dense, bright room, and a gate that the
 // hit opens shuts it sdggatedtime seconds later, in 10 ms. the room is the
 // event's own, so every hit gets its own gate: a long one on the snare and a

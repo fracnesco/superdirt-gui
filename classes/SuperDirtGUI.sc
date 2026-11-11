@@ -372,7 +372,9 @@ SuperDirtGUI {
 		start !? {
 			head.drop(start + 1).do { |line|
 				var cells;
-				if(line.beginsWith("//   ").not) { ^(description: description, params: params, listed: true) };
+				if(line.beginsWith("//   ").not) {
+					^(description: description, params: params, listed: true, category: this.categoryOfText(head))
+				};
 				cells = line.drop(2).stripWhiteSpace.findRegexp("^(\\S+)\\s{2,}(.*?)(?:\\s{2,}(.*))?$");
 				if(cells.size >= 3) {
 					params = params.add((name: cells[1][1].asSymbol, range: cells[2][1],
@@ -380,7 +382,62 @@ SuperDirtGUI {
 				}
 			};
 		};
-		^(description: description, params: params, listed: start.notNil)
+		^(description: description, params: params, listed: start.notNil,
+			category: this.categoryOfText(head))
+	}
+
+	// ----- effect categories
+	//
+	// Every effect the window offers - an insert kind, a global effect, a module -
+	// sits in one category, and the add menus list them in a submenu per category, in
+	// this order. A content file names its own with a "// category: delay" line in
+	// its header; an insert kind has one in SDGInsert's table.
+
+	*effectCategories {
+		^[
+			\dynamics -> "dynamics", \filter -> "eq & filter", \distortion -> "distortion",
+			\delay -> "delay", \reverb -> "reverb", \modulation -> "modulation",
+			\pitch -> "pitch & frequency", \spectral -> "spectral", \granular -> "granular",
+			\resonator -> "resonator", \repeat -> "repeat & glitch", \utility -> "utility",
+			\plugin -> "plugins", \other -> "other"
+		]
+	}
+
+	// a category's symbol: one of effectCategories, \other for anything else
+	*effectCategory { |category|
+		category = (category ? \other).asSymbol;
+		^if(this.effectCategories.any { |a| a.key == category }) { category } { \other }
+	}
+
+	*categoryLabel { |category|
+		category = this.effectCategory(category);
+		^this.effectCategories.detect { |a| a.key == category }.value
+	}
+
+	// the "// category: x" line among a file's header lines, or nil
+	*categoryOfText { |lines|
+		var line = lines.select { |x| x.beginsWith("//") }
+			.detect { |x| x.drop(2).stripWhiteSpace.beginsWith("category:") };
+		^line !? { this.effectCategory(line.drop(line.find("category:") + 9).stripWhiteSpace) }
+	}
+
+	// SuperDirt's own global effects, which have no file of ours
+	*stockEffectCategories {
+		^IdentityDictionary[\dirt_delay -> \delay, \dirt_reverb -> \reverb, \dirt_leslie -> \modulation]
+	}
+
+	// a global effect's category, by its name (global_sdghole): its file's line,
+	// SuperDirt's own, or \other for a def registered from code
+	globalEffectCategory { |name|
+		var file = this.sourceFile(\effects, name);
+		^(file !? { this.class.fileNotes(file)[\category] })
+			?? { this.class.stockEffectCategories[name.asSymbol] } ? \other
+	}
+
+	// a module's category, by its name (sdgroll): its file's line, or \other
+	moduleCategory { |name|
+		var file = this.sourceFile(\modules, name);
+		^(file !? { this.class.fileNotes(file)[\category] }) ? \other
 	}
 
 	// fileNotes of the file a name came from. A file without a parameters section,

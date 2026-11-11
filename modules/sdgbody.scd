@@ -1,5 +1,7 @@
 // modules/sdgbody.scd - the hit strikes a body: a drum shell, a bar, a tube or a bell.
 //
+// category: resonator
+//
 // the event's sound goes into a bank of resonators tuned to the modes of a
 // real object, so a clap rings like a tom, a hat like a struck bar. sdgbodytype
 // picks the object: 0 a membrane (a drum's skin), 1 a free bar (marimba,

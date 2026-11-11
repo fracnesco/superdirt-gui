@@ -1,5 +1,7 @@
 // modules/sdgdive.scd - the hit dives in pitch, like a record stopped by hand.
 //
+// category: pitch
+//
 // the event's sound goes through a delay that grows longer as it plays, so it
 // is read slower and slower: by sdgdivetime seconds it is sdgdive semitones
 // down, and it stays there, stretched, until the delay is full (half a

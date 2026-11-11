@@ -1,5 +1,7 @@
 // modules/sdgroll.scd - a roll from one hit: it plays its own start again, faster and faster.
 //
+// category: repeat
+//
 // Autechre fed a drum machine into a delay that retriggered itself. this keeps
 // the first quarter second of the event's sound and plays it again sdgroll
 // times: the first repeat sdgrolltime cycles after the hit, every next gap
