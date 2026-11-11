@@ -18,8 +18,8 @@ t.setBpm(p, 92); t.setKey(p, "Am");             // by hand
 
 ## What the analysis measures
 
-All of it runs in sclang, in `SDGSampleFeatures`, with no server and no plugin. A file is mixed to
-mono and brought down to about 22 kHz. Only its first 30 seconds are read (`SDGSampleFeatures.maxSeconds`).
+All of it runs in sclang, in `SampleFeatures`, with no server and no plugin. A file is mixed to
+mono and brought down to about 22 kHz. Only its first 30 seconds are read (`SampleFeatures.maxSeconds`).
 
 | measure | how |
 |---------|-----|

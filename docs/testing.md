@@ -82,7 +82,7 @@ through Modality's own code path, so mappings, pickup, curves, buttons and learn
 drive them. Learn mode in the window is checked by sending clicks through the views' `mouseDownAction`, and the MIDI window
 by setting every widget through `valueAction`.
 
-**The window** with `{ g.gui }.defer`, asserting on `g.window`, `win.explorerModel`, `win.selected`, `win.loadedEntries` and `SDGSampleEditor.all`,
+**The window** with `{ g.gui }.defer`, asserting on `g.window`, `win.explorerModel`, `win.selected`, `win.loadedEntries` and `SampleEditor.all`,
 never on widgets, whose getters lie. Strips staying level is proved by the faders' `absoluteBounds`. `SDGWindow.codeEditor` catches a path instead of
 opening a document. `Image.fromWindow(g.window)`, in a later `defer`, gets a picture to look at. **The window flashes on your real screen while this runs.**
 

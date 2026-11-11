@@ -1,7 +1,7 @@
 TITLE:: SuperDirtGUI
 summary:: extra synths, effects, sample players, a mixer window and a sample editor for SuperDirt, loaded into a running instance
 categories:: Libraries>SuperDirtGUI
-related:: Classes/SDGWindow, Classes/SDGInsert, Classes/SDGSession, Classes/SDGSampleEditor, Classes/SDGSamplePlayer, Classes/SuperDirt, Classes/DirtOrbit, Classes/GlobalDirtEffect, Classes/DirtModule
+related:: Classes/SDGWindow, Classes/SDGInsert, Classes/SDGSession, Classes/SampleEditor, Classes/SDGSamplePlayer, Classes/SuperDirt, Classes/DirtOrbit, Classes/GlobalDirtEffect, Classes/DirtModule
 
 DESCRIPTION::
 A loader that reads four folders of plain code::.scd:: files - code::synths/::,
@@ -164,7 +164,23 @@ RETURNS:: a SuperDirtGUI.
 
 METHOD:: current
 The loader made last, or nil after it was freed. link::Classes/SDGWindow:: and
-link::Classes/SDGSampleEditor:: fall back to it.
+the sample editor (through link::#-editorHost::) fall back to it.
+
+METHOD:: editorClass
+code::SampleEditor::, the sc-sample-editor quark's window, looked up by name;
+nil when that quark is not installed (an install updated with
+code::Quarks.update:: from before the editor moved). Then link::#-edit::,
+link::#-editFile:: and the window's edit... post link::#*editorInstallLine::
+and nothing is analysed; everything else works.
+
+METHOD:: editorInstallLine
+The line that installs the editor's quark.
+
+METHOD:: editorMissing
+Post that line as a warning.
+
+METHOD:: editorQuarkURL
+Where that quark is.
 
 METHOD:: registerBusses
 Name every orbit's code::dryBus:: and code::globalEffectBus:: in the
@@ -999,6 +1015,14 @@ The link::Classes/SDGSampleTags:: of the library, made when first asked for.
 Its files are shared by every loader: they live in
 link::Classes/SDGSampleTags#*folder::.
 
+METHOD:: editorHost
+The sample editor's host: a code::SampleEditorDirtHost:: with this loader as
+its owner, so the preview plays through the orbits (after link::#-wakeOrbit::),
+a save goes through link::#-reloadSample::, a bank written through
+link::#-loadSamples::, and the editor reads and writes link::#-tags::. Made
+once, and set as code::SampleEditor.defaultHost:: while this loader is current;
+link::#-free:: takes it away. Nil without the quark.
+
 METHOD:: editorMaxMinutes
 The longest file the sample editor opens, in minutes of stereo at 44.1 kHz
 (the editor counts frames times channels, so a mono file may be twice as
@@ -1029,7 +1053,23 @@ ARGUMENT:: index
 the sample in it.
 ARGUMENT:: orbit
 the orbit index the preview plays through.
-RETURNS:: the link::Classes/SDGSampleEditor::.
+RETURNS:: the code::SampleEditor::, or this loader when the quark is missing.
+
+METHOD:: editFile
+Open the sample editor on a file from anywhere: as the library's sample when
+the library holds it (so a save reloads it), else on the file alone. A file
+dropped on the editor or on the explorer goes through here.
+ARGUMENT:: filePath
+the file.
+ARGUMENT:: orbit
+the orbit index the preview plays through.
+RETURNS:: the code::SampleEditor::, or this loader when the quark is missing.
+
+METHOD:: sampleAtPath
+The library's sample read from a file.
+ARGUMENT:: filePath
+the file.
+RETURNS:: code::[bank, index]::, or nil.
 
 METHOD:: free
 Take our modules, players and global effects out of code::~dirt::, forget the

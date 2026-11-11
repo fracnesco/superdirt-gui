@@ -1,7 +1,7 @@
 TITLE:: SDGWindow
 summary:: the control window of a SuperDirtGUI: orbit strips, global effects, the sound explorer, what was loaded
 categories:: Libraries>SuperDirtGUI
-related:: Classes/SuperDirtGUI, Classes/SDGSampleEditor, Classes/DirtOrbit, Classes/GlobalDirtEffect
+related:: Classes/SuperDirtGUI, Classes/SampleEditor, Classes/DirtOrbit, Classes/GlobalDirtEffect
 
 DESCRIPTION::
 code::~sdg.gui:: makes one, after code::~dirt.start::. One strip per orbit on
@@ -95,7 +95,7 @@ tags, alt-click to leave one out. code::t:: edits the selected sample's tags,
 or adds tags to every sample of a selected bank (link::#-editTagsDialog::). Enter
 or a double click plays the selected sound into the orbit chosen below through
 the code::\dirt:: event type, with the speed, amp and pan knobs; code::e:: or
-edit... opens a sample in link::Classes/SDGSampleEditor::; a right click shows
+edit... opens a sample in link::Classes/SampleEditor::; a right click shows
 the file where it lives, opens it, or copies its path. The code::n:: box is
 what plays: picking a sample sets it, editing it picks a sibling. load folder...
 is link::#-loadFolder:: behind a dialog. The window
@@ -271,7 +271,7 @@ METHOD:: parseSearch
 ARGUMENT:: str
 what is in the search field.
 RETURNS:: an Event: code::words::, code::include:: and code::exclude:: (tags),
-code::bpm::, code::key:: (from link::Classes/SDGSampleFeatures#*parseKey::).
+code::bpm::, code::key:: (from link::Classes/SDGSampleTags#*parseKey::).
 
 METHOD:: durationRange
 ARGUMENT:: durs

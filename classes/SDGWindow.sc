@@ -38,7 +38,7 @@
 //   sound      the sound explorer: every bank in the sound library as a
 //   explorer   folder that opens onto its samples, the synth events under
 //              them, a search over both; a sample plays through the \dirt event
-//              type, and opens in the sample editor (SDGSampleEditor) to be
+//              type, and opens in the sample editor (SampleEditor, the sc-sample-editor quark) to be
 //              trimmed, gained, DC-corrected and saved back into the bank
 //   modules    what the SuperDirtGUI read from its folders - synths, effects
 //              (modules/), players, global effects - a list each, with new... (a
@@ -2293,6 +2293,11 @@ SDGWindow {
 		tree.menuAction = { |row| this.prSelectRow(row); this.prShowMenu };
 		tree.headerAction = { |key| this.sortBy(key) };
 		tree.headerMenuAction = { |key| this.prShowColumnMenu };
+		// from the Finder: a sound file opens in the editor, a folder is read as a bank
+		tree.view.canReceiveDragHandler = {
+			this.class.droppedPaths(View.currentDrag).any { |p| this.class.isSoundFile(p) or: { File.type(p) == \directory } }
+		};
+		tree.view.receiveDragHandler = { this.openDropped(this.class.droppedPaths(View.currentDrag)) };
 		tree.keyAction = { |char, mod, key|
 			case
 			{ key == 16r1000004 or: { key == 16r1000005 } } {
@@ -2318,7 +2323,7 @@ SDGWindow {
 					\created, { "when the file was made" },
 					\number, { "n: the number tidal plays it as; for a bank, how many samples it holds" },
 					\duration, { "seconds; for a bank, all of them together" },
-					{ "the banks of the sound library - open one for its samples; enter plays, e edits, t tags, double click plays, right click for more" }
+					{ "the banks of the sound library - open one for its samples; enter plays, e edits, t tags, double click plays, right click for more - drop a sound file here to edit it, a folder to load it as a bank" }
 				)
 			}
 		};
@@ -2478,7 +2483,7 @@ SDGWindow {
 			{ w.beginsWith("tag:") } { SDGSampleTags.normaliseTag(w.copyToEnd(4)) !? { |t| out[\include] = out[\include].add(t) } }
 			{ w.beginsWith("-tag:") } { SDGSampleTags.normaliseTag(w.copyToEnd(5)) !? { |t| out[\exclude] = out[\exclude].add(t) } }
 			{ w.beginsWith("bpm:") } { out[\bpm] = w.copyToEnd(4).asFloat; if(out[\bpm] <= 0) { out[\bpm] = nil } }
-			{ w.beginsWith("key:") } { out[\key] = SDGSampleFeatures.parseKey(w.copyToEnd(4)) }
+			{ w.beginsWith("key:") } { out[\key] = SDGSampleTags.parseKey(w.copyToEnd(4)) }
 			{ out[\words] = out[\words].add(w) };
 		};
 		^out
@@ -2966,12 +2971,56 @@ SDGWindow {
 		bufs = dirt.soundLibrary.buffers[selected[\name]];
 		if(bufs.isNil or: { bufs.isEmpty }) { ^hints.note("nothing to edit in " ++ selected[\name]) };
 		index = trigNBox.value.asInteger.wrap(0, bufs.size - 1);
+		if(SuperDirtGUI.editorClass.isNil) {
+			SuperDirtGUI.editorMissing;
+			^hints.note("the sample editor is the sc-sample-editor quark now - the post window says how to install it");
+		};
 		try {
-			SDGSampleEditor(sdg, selected[\name], index, trigOrbitMenu.value ? 0);
+			sdg.edit(selected[\name], index, trigOrbitMenu.value ? 0);
 		} { |err|
 			hints.note("could not open %:% - %".format(selected[\name], index, err.errorString));
 			err.reportError;
 		};
+	}
+
+	// what a drop on the explorer brings: folders into the library as banks,
+	// sound files into the editor, through the orbit the editor would play into
+	openDropped { |paths|
+		var folders = paths.select { |p| File.type(p) == \directory };
+		var files = paths.select { |p| this.class.isSoundFile(p) };
+		var names = folders.collect { |f| sdg.loadSamples(f, false) }.flat;
+		if(folders.notEmpty) {
+			hints.note(if(names.isEmpty) { "nothing new in " ++ folders.collect(_.basename).join(", ") } {
+				"loaded " ++ names.join(" ") });
+		};
+		if(files.notEmpty and: { SuperDirtGUI.editorClass.isNil }) {
+			SuperDirtGUI.editorMissing;
+			^hints.note("the sample editor is the sc-sample-editor quark now - the post window says how to install it");
+		};
+		files.do { |p|
+			try { sdg.editFile(p, trigOrbitMenu.value ? 0) } { |err|
+				hints.note("could not open % - %".format(p.basename, err.errorString));
+				err.reportError;
+			}
+		};
+	}
+
+	// the files and folders a drop from the Finder brings: one path as a
+	// String, several as an Array (not [data].flat: that takes a String apart)
+	*droppedPaths { |data|
+		data = if(data.isString) { [data] } { data.asArray };
+		^data.select { |d| d.isString }.collect { |p|
+			p = p.stripWhiteSpace;
+			if(p.beginsWith("file://")) { p = p.drop(7) };
+			p.withoutTrailingSlash
+		}.select { |p| p.notEmpty and: { File.exists(p) } }
+	}
+
+	*isSoundFile { |path|
+		^File.exists(path) and: { File.type(path) != \directory } and: {
+			#["wav", "aif", "aiff", "aifc", "flac", "ogg", "mp3", "caf", "w64", "rf64", "wave"]
+				.includesEqual((path.splitext[1] ? "").toLower)
+		}
 	}
 
 	revealSelected {
@@ -3649,7 +3698,7 @@ SDGWindow {
 		var label = { |str| StaticText().string_(str).stringColor_(colDim).font_(smallFont) };
 		var noteName = { |note|
 			var midi = (note + 60).round.asInteger;
-			SDGSampleFeatures.noteNames[midi % 12].toLower ++ (midi div: 12)
+			SDGSampleTags.noteNames[midi % 12].toLower ++ (midi div: 12)
 		};
 		previewContent !? { previewContent.remove };
 		m[\views] = IdentityDictionary.new;

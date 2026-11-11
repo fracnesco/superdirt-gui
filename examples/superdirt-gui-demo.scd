@@ -65,7 +65,7 @@ s.waitForBoot {
 
 // ---- 7. the sample editor on one sample: trim, gain, dc, fades, save
 ~sdg.edit(\bd, 3);        // bank, index; plays through orbit 0
-// SDGSampleEditor.forPath("~/somewhere/kick.wav", ~sdg);   // a file outside the library
+// ~sdg.editFile("~/somewhere/kick.wav");   // a file outside the library
 
 // ---- 8. your own: new... in the window's modules tab copies an example under a
 //         name you give and opens it in the IDE; save it and the window reads it

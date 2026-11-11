@@ -113,6 +113,7 @@
 SuperDirtGUI {
 
 	classvar <current;
+	classvar <>editorQuarkURL = "https://github.com/fracnesco/sc-sample-editor.git";
 	classvar <>faderEffectName = \global_sdgfader;
 	classvar <>playerModuleName = \sdgplayer;
 	classvar <>anySoundName = \sdgany;	// the sound that means the whole library to the tag picker
@@ -172,6 +173,7 @@ SuperDirtGUI {
 		insertDefs = IdentitySet.new;
 		warnedInstruments = IdentitySet.new;
 		current = this;
+		this.prInstallEditorHost;
 		this.prApplyOrbitWarning;
 		this.prCheckSuperDirtVersion;
 		this.load;
@@ -2203,9 +2205,64 @@ SuperDirtGUI {
 	// the session saved or loaded last, nil before the first
 	sessionName { ^this.session.name }
 
+	// ----- the sample editor (the sc-sample-editor quark, looked up by name)
+
+	// the editor's window class, or nil when the quark is not installed
+	*editorClass { ^\SampleEditor.asClass }
+
+	// what to run when it is missing
+	*editorInstallLine { ^"Quarks.install(\"%\"); thisProcess.recompile;".format(editorQuarkURL) }
+
+	*editorMissing {
+		"SuperDirtGUI: the sample editor is the sc-sample-editor quark now - install it with\n  %"
+			.format(this.editorInstallLine).warn;
+	}
+
+	// The editor's host: plays through our orbits, reads the library's
+	// Buffers, reloads, adds and loads through us, keeps tags in our store.
+	// Made once; SampleEditor.defaultHost while this loader is current.
+	editorHost {
+		var cls = \SampleEditorDirtHost.asClass;
+		if (cls.isNil) { ^nil };
+		^editorHost ?? { editorHost = cls.new(dirt, this) }
+	}
+
+	prInstallEditorHost {
+		var host = this.editorHost;
+		host !? { this.class.editorClass.defaultHost = host };
+		this.prApplyEditorMax;
+	}
+
+	prRemoveEditorHost {
+		var cls = this.class.editorClass;
+		if (cls.notNil and: { editorHost.notNil } and: { cls.defaultHost === editorHost }) { cls.defaultHost = nil };
+		editorHost = nil;
+	}
+
 	// the sample editor on one sample of the library, playing through an orbit
 	edit { |name, index = 0, orbit = 0|
-		^SDGSampleEditor(this, name, index, orbit)
+		var cls = this.class.editorClass;
+		if (cls.isNil) { ^this.class.editorMissing };
+		^cls.sample(name, index, this.editorHost, orbit)
+	}
+
+	// the editor on a file from anywhere - as the library's sample when the
+	// library holds it (so a save is heard at once), else on the file alone
+	editFile { |filePath, orbit = 0|
+		var cls = this.class.editorClass;
+		if (cls.isNil) { ^this.class.editorMissing };
+		^cls.new(filePath, this.editorHost, orbit)
+	}
+
+	// [bank, index] of the library's sample read from a file, or nil
+	sampleAtPath { |filePath|
+		filePath = filePath.asString.standardizePath;
+		dirt.soundLibrary.buffers.keysValuesDo { |name, bufs|
+			bufs.do { |b, i|
+				if(b.path.notNil and: { this.class.samePath(b.path, filePath) }) { ^[name, i] }
+			}
+		};
+		^nil
 	}
 
 	// ----- teardown
@@ -2251,6 +2308,7 @@ SuperDirtGUI {
 		controlWindow !? { |w| { w.close }.defer };
 		controlWindow = nil;
 		if(current === this) { current = nil };
+		this.prRemoveEditorHost;
 		this.changed(\loaded);
 	}
 

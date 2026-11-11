@@ -1,12 +1,13 @@
 TITLE:: SDGSampleTags
 summary:: every sample of the library analysed and tagged: tags, bpm, key, dates, what was set by hand
 categories:: Libraries>SuperDirtGUI
-related:: Classes/SDGSampleFeatures, Classes/SuperDirtGUI, Classes/SDGWindow, Classes/SDGSampleEditor
+related:: Classes/SampleFeatures, Classes/SuperDirtGUI, Classes/SDGWindow, Classes/SampleEditor
 
 DESCRIPTION::
 What the sound explorer sorts and narrows by, and what Tidal picks samples by.
-Every sample of the library is analysed once (link::Classes/SDGSampleFeatures::)
-and gets tags from the numbers; you add tags, take them away, set a bpm or a key,
+Every sample of the library is analysed once (link::Classes/SampleFeatures::,
+of the sc-sample-editor quark, looked up by name: without it nothing is
+analysed) and gets tags from the numbers; you add tags, take them away, set a bpm or a key,
 and those are kept apart from the analysis, so analysing again never loses
 them. Made by link::Classes/SuperDirtGUI#-tags::.
 
@@ -56,6 +57,20 @@ code::\analysis:: (done, total) while the queue runs.
 
 CLASSMETHODS::
 
+METHOD:: features
+code::SampleFeatures::, of the sc-sample-editor quark, or nil when it is not
+installed: then nothing is analysed, and what was set by hand still works.
+
+METHOD:: parseKey
+code::"Am"::, code::"F#"::, code::"eb major"::, code::"C4":: as
+code::(tonic: 0..11, mode: \major, \minor or \note)::, or nil. The same as
+code::SampleFeatures.parseKey::, kept here so key searches work without it.
+ARGUMENT:: str
+the key.
+
+METHOD:: noteNames
+code::["C", "C#" ... "B"]::.
+
 METHOD:: new
 ARGUMENT:: sdg
 the link::Classes/SuperDirtGUI:: whose library it describes. Reads both files.
@@ -90,7 +105,7 @@ RETURNS:: an Array of Symbols.
 METHOD:: recordFrom
 What is kept of the features of a file.
 ARGUMENT:: f
-link::Classes/SDGSampleFeatures#*analyse::'s answer.
+link::Classes/SampleFeatures#*analyse::'s answer.
 ARGUMENT:: path
 the file.
 ARGUMENT:: dates
@@ -121,7 +136,7 @@ METHOD:: keyMatches
 ARGUMENT:: info
 link::#-infoOf::'s answer.
 ARGUMENT:: key
-a String, or an Event from link::Classes/SDGSampleFeatures#*parseKey::.
+a String, or an Event from link::Classes/SDGSampleTags#*parseKey::.
 RETURNS:: true for the same tonic and mode; a note matches every key on its tonic.
 
 METHOD:: fileDates

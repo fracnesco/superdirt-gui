@@ -11,7 +11,9 @@
 //   t.query(bpm: 120);                        // 120, and 60, 240, 30, 480 within 3%
 //   t.allTags;                                // tag -> how many samples have it
 //
-// A sample is known by its path. Its analysis (SDGSampleFeatures) is kept in
+// A sample is known by its path. Its analysis (SampleFeatures, of the
+// sc-sample-editor quark, looked up by name: without it nothing is analysed,
+// and tags, bpm and key set by hand still work) is kept in
 // analysis.tsv with the file's size and modification time, and redone when
 // either changes; what was set by hand - tags added, tags taken away, a bpm, a
 // key - is kept apart in tags.tsv and never thrown away by an analysis. Both
@@ -44,6 +46,34 @@ SDGSampleTags {
 	var <stamp = 0;							// bumped on every change: what query caches look at
 	var saveRecordsPending = false, saveManualPending = false;
 	var queryCache, queryStamp;
+
+	// the analysis, from the sc-sample-editor quark; nil when it is not installed
+	*features { ^\SampleFeatures.asClass }
+
+	*prBreathing { |bool| this.features !? { |f| f.breathing = bool } }
+
+	*noteNames { ^#["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] }
+
+	// "Am", "F#", "eb major", "C4" -> (tonic: 0..11, mode: \major, \minor or \note), or nil
+	// (SampleFeatures has the same: kept here so tags work without that quark)
+	*parseKey { |str|
+		var s = str.asString.toLower.replace(" ", ""), tonic, rest, mode;
+		var base = (c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11);
+		if (s.isEmpty) { ^nil };
+		tonic = base[s[0].asSymbol];
+		if (tonic.isNil) { ^nil };
+		rest = s.copyToEnd(1);
+		case
+		{ rest.beginsWith("#") or: { rest.beginsWith("s") and: { rest.beginsWith("sus").not } } } { tonic = tonic + 1; rest = rest.copyToEnd(1) }
+		{ rest.beginsWith("b") or: { rest.beginsWith("f") } } { tonic = tonic - 1; rest = rest.copyToEnd(1) };
+		mode = case
+		{ rest.isEmpty or: { rest == "maj" } or: { rest == "major" } } { \major }
+		{ rest == "m" or: { rest == "min" } or: { rest == "minor" } } { \minor }
+		{ rest.every(_.isDecDigit) } { \note }
+		{ nil };
+		if (mode.isNil) { ^nil };
+		^(tonic: tonic % 12, mode: mode)
+	}
 
 	*folder { ^folder ?? { Platform.userAppSupportDir +/+ "superdirt-gui-tags" } }
 	*folder_ { |path| folder = path }
@@ -80,7 +110,7 @@ SDGSampleTags {
 	recordOf { |path, check = true|
 		var r = records[this.class.keyOf(path)];
 		if (r.isNil) { ^nil };
-		if (r[\version] != SDGSampleFeatures.version) { ^nil };
+		if (this.class.features.notNil and: { r[\version] != this.class.features.version }) { ^nil };
 		if (check and: { r[\size] != this.class.prSize(path) or: { r[\mtime] != this.class.prMTime(path) } }) { ^nil };
 		^r
 	}
@@ -105,7 +135,7 @@ SDGSampleTags {
 			auto: auto, added: added, removed: removed,
 			created: r[\created], dateAdded: r[\dateAdded] ? m[\firstSeen]
 		);
-		var k = info[\key] !? { |str| SDGSampleFeatures.parseKey(str) };
+		var k = info[\key] !? { |str| this.class.parseKey(str) };
 		info[\tonic] = k !? (_[\tonic]);
 		info[\mode] = k !? (_[\mode]);
 		info[\tags] = this.class.prEffective(auto, added, removed, info);
@@ -190,7 +220,7 @@ SDGSampleTags {
 	// a key by hand, "Am", "F#", "C3"; nil goes back to the analysis's
 	setKey { |path, key|
 		var m = this.prManual(path);
-		if (key.notNil and: { SDGSampleFeatures.parseKey(key).isNil }) {
+		if (key.notNil and: { this.class.parseKey(key).isNil }) {
 			"SDGSampleTags: % is not a key - try Am, F#, Eb or C3".format(key.asCompileString).warn;
 			^this
 		};
@@ -213,7 +243,8 @@ SDGSampleTags {
 		if (path.isNil) { ^nil };
 		if (force.not) { this.recordOf(path) !? { |rec| ^rec } };
 		if (File.exists(path).not) { ^nil };
-		f = try { SDGSampleFeatures.analyse(path) } { |err|
+		if (this.class.features.isNil) { ^nil };
+		f = try { this.class.features.analyse(path) } { |err|
 			"SDGSampleTags: could not analyse % - %".format(path.basename, err.errorString).warn;
 			nil
 		};
@@ -314,7 +345,9 @@ SDGSampleTags {
 	}
 
 	enqueue { |paths, front = false|
-		var fresh = paths.reject { |p| p.isNil or: { this.recordOf(p).notNil } };
+		var fresh;
+		if (this.class.features.isNil) { ^this };	// nothing to analyse with
+		fresh = paths.reject { |p| p.isNil or: { this.recordOf(p).notNil } };
 		if (front) {
 			fresh.reverseDo { |p| queue.remove(p); queue.addFirst(p); queued.add(p) };
 		} {
@@ -333,7 +366,7 @@ SDGSampleTags {
 	// batch it was in the middle of goes back to the front, and it runs again
 	prResume {
 		routine = nil;
-		SDGSampleFeatures.breathing = false;
+		this.class.prBreathing(false);
 		queued.do { |p| if (queue.includes(p).not) { queue.addFirst(p) } };
 		this.prRun;
 	}
@@ -341,7 +374,7 @@ SDGSampleTags {
 	stop {
 		routine !? (_.stop);
 		routine = nil;
-		SDGSampleFeatures.breathing = false;
+		this.class.prBreathing(false);
 		queue.clear;
 		queued.clear;
 		done = 0;
@@ -358,9 +391,9 @@ SDGSampleTags {
 				// the dates of a batch in one call to the system
 				this.class.fileDates(batch).do { |dates, i|
 					var p = batch[i];
-					SDGSampleFeatures.breathing = true;
+					this.class.prBreathing(true);
 					this.analyse(p, false, dates);
-					SDGSampleFeatures.breathing = false;
+					this.class.prBreathing(false);
 					queued.remove(p); // after: a cmd-period in the middle puts it back (prResume)
 					done = done + 1;
 					if ((done % 8) == 0 or: { queue.isEmpty }) { this.changed(\analysis, done, total) };
@@ -403,7 +436,7 @@ SDGSampleTags {
 
 	// a key query: tonic and mode as asked; a note matches every key on its tonic
 	*keyMatches { |info, key|
-		var want = if (key.isKindOf(Event)) { key } { SDGSampleFeatures.parseKey(key) };
+		var want = if (key.isKindOf(Event)) { key } { this.class.parseKey(key) };
 		if (want.isNil or: { info[\tonic].isNil }) { ^false };
 		if (want[\tonic] != info[\tonic]) { ^false };
 		^(want[\mode] == \note) or: { info[\mode] == \note } or: { want[\mode] == info[\mode] }
@@ -417,7 +450,7 @@ SDGSampleTags {
 		if (lib.isNil) { ^out };
 		include = include !? { include.asArray.collect { |t| this.class.normaliseTag(t) }.reject(_.isNil) };
 		exclude = exclude !? { exclude.asArray.collect { |t| this.class.normaliseTag(t) }.reject(_.isNil) };
-		want = key !? { SDGSampleFeatures.parseKey(key) };
+		want = key !? { this.class.parseKey(key) };
 		if (key.notNil and: { want.isNil }) { ^out };
 		sig = [lib.buffers.size, lib.buffers.sum { |a| a.size }];
 		if (queryStamp != [stamp, sig]) { queryCache.clear; queryStamp = [stamp, sig] };

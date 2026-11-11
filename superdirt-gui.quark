@@ -7,5 +7,5 @@
 	license: "MIT",
 	copyright: "Copyright (c) 2026 Francesco Corvi",
 	schelp: "HelpSource",
-	dependencies: ["SuperDirt"]
+	dependencies: ["SuperDirt", "https://github.com/fracnesco/sc-sample-editor.git"]
 )

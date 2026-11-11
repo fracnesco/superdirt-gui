@@ -202,7 +202,7 @@ On 2026-11-03, by a lab that plays exactly what Tidal sends: a SuperDirt and a `
 private server, one `/dirt/play` OSC event at a time, at cps 0.5, gain 1, orbit 0 and pan centre,
 with the orbit's limiter off (`limitertype 0`) so peaks are true. The orbit's output bus is
 recorded to a file, and the file is read in the language: sample peak, true peak (4x interpolated),
-energy per band, length to -60 dB, and loudness with `SDGSampleAnalysis`, the sample editor's own
+energy per band, length to -60 dB, and loudness with `SampleAnalysis`, the sample editor's own
 BS.1770 meter (K-weighting, 400 ms blocks, 100 ms hop, gates). The stock samples were measured the
 same way, file by file, which is where the targets come from. The voices were tuned until preset
 0 sat on its target and every preset inside the tolerance and under a peak ceiling of -7 dBFS

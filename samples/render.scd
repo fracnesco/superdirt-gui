@@ -202,11 +202,11 @@
 			s
 		};
 		peak = chans.collect { |c| c.abs.maxItem }.maxItem;
-		// how loud it is (SDGSampleAnalysis is the sample editor's meter): a short hit is
+		// how loud it is (SampleAnalysis is the sample editor's meter): a short hit is
 		// measured with silence after it, as a 400 ms window hears it on the orbit
 		padded = chans.collect { |c| c ++ Signal.newClear((0.5 * ~renderRate).asInteger) };
-		hops = SDGSampleAnalysis.kHops(padded, ~renderRate);
-		loud = SDGSampleAnalysis.loudness(hops, ~renderRate)[\momentaryMax];
+		hops = SampleAnalysis.kHops(padded, ~renderRate);
+		loud = SampleAnalysis.loudness(hops, ~renderRate)[\momentaryMax];
 		// on the orbit at gain 1 a file is SuperDirt's amp 0.4 times the panner's 0.71, on each
 		// side, mono or stereo: a mono file (one channel heard on two) plays 7.96 dB under its
 		// own loudness, a stereo one 10.97

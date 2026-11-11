@@ -97,10 +97,10 @@ SDGSync {
 	// the tempo they all play at, bpm; nil takes the first sample's own
 	bpm_ { |x| bpm = x !? { x.asFloat.clip(20, 400) }; this.changed(\sync) }
 
-	// the key they all play in: "Am", "F#", "Eb", as SDGSampleFeatures.parseKey
+	// the key they all play in: "Am", "F#", "Eb", as SDGSampleTags.parseKey
 	// reads it; nil takes the first sample with a key, as the tempo leaves it
 	key_ { |str|
-		if (str.notNil and: { SDGSampleFeatures.parseKey(str).isNil }) {
+		if (str.notNil and: { SDGSampleTags.parseKey(str).isNil }) {
 			"SDGSync: % is not a key - try Am, F#, Eb".format(str.asCompileString).warn;
 			^this
 		};
@@ -200,7 +200,7 @@ SDGSync {
 	prTarget { |rows|
 		var first;
 		if (matchKey.not) { ^nil };
-		if (key.notNil) { ^SDGSampleFeatures.parseKey(key) };
+		if (key.notNil) { ^SDGSampleTags.parseKey(key) };
 		first = rows.detect { |r| this.class.isTonal(r[\info]) };
 		if (first.isNil) { ^nil };
 		^(tonic: (first[\info][\tonic] + first[\tempoSt].round).asInteger % 12, mode: first[\info][\mode])
@@ -240,7 +240,7 @@ SDGSync {
 	}
 
 	*keyName { |tonic, mode, given|
-		var name = SDGSampleFeatures.noteNames[tonic.asInteger % 12];
+		var name = SDGSampleTags.noteNames[tonic.asInteger % 12];
 		^case
 		{ mode == \minor } { name ++ "m" }
 		{ mode == \note } { given ? name }

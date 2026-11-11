@@ -20,6 +20,8 @@ normal install and updates on its own.
 Then, from Tidal: `d1 $ s "sdgsine" # n "0 7"`.
 
 It depends on **SuperDirt** — and through it on Vowel and Dirt-Samples — and on
+**SampleEditor** ([sc-sample-editor](https://github.com/fracnesco/sc-sample-editor)),
+the sample editor and the analysis behind the explorer's bpm, key and tags, and on
 nothing else. sc3-plugins are only needed if a content file uses one of them;
 the templates do not. Other extensions are used when they happen to be
 installed and ignored when they are not: **BusManager** names the orbit
@@ -45,7 +47,7 @@ thisProcess.recompile;
 
 `Quarks.install` clones the repository into your `downloaded-quarks` folder and
 puts it on the class path. Because the manifest names SuperDirt as a dependency,
-it installs SuperDirt, Vowel and Dirt-Samples first if you do not have them.
+it installs SuperDirt, Vowel, Dirt-Samples and SampleEditor first if you do not have them.
 Dirt-Samples is several hundred megabytes: do this on a good connection before
 the workshop, not during it. The recompile is what makes the classes exist, and
 is the same thing as `Language -> Recompile Class Library` (ctrl/cmd + shift + L).
@@ -60,6 +62,11 @@ Quarks.gui;                          // see what is installed
 
 The quark goes by the name of the repository, `superdirt-gui`; the class inside
 it is `SuperDirtGUI`.
+
+`Quarks.update` pulls the new version but installs no new dependency. The sample
+editor became a quark of its own in November 2026: if you installed before that,
+install it once, `Quarks.install("https://github.com/fracnesco/sc-sample-editor.git")`,
+then recompile. Without it everything else works, and **edit...** reminds you.
 
 ### Already have SuperDirt?
 
@@ -614,6 +621,14 @@ See [docs/sync.md](docs/sync.md) and
 
 ## The sample editor
 
+The editor is its own quark, [sc-sample-editor](https://github.com/fracnesco/sc-sample-editor)
+(class `SampleEditor`), installed with SuperDirtGUI. It works without SuperDirt too;
+here SuperDirtGUI gives it a host that plays through the orbits and keeps the
+tags, so nothing needs setting up. An install from before the editor moved, updated
+with `Quarks.update`, does not have it: **edit...** then says so in the post window,
+with the line to run - `install.scd` has it too. Until then the explorer shows no
+analysis, and tags, bpm and key set by hand still work.
+
 `~sdg.edit(\bd, 3)`, or **edit...** in the explorer, opens one sample of the
 library: the waveform, one lane per channel, with the trim markers on the top
 strip and the fade handles on the bottom. Drag the markers or type
@@ -629,6 +644,17 @@ it at once under the same name and number. **revert** puts the `.bak` back.
 **save as...** writes a new file; into the bank's own folder and it is appended
 to the bank as its last index.
 
+A file from anywhere opens too: drop it from the Finder on the editor (or on the
+sound explorer), pick it with **open...**, or `~sdg.editFile("~/x.wav")`. Dropped
+on an editor where nothing was changed yet, it takes that window's place;
+otherwise it opens beside it. A folder dropped on the explorer is loaded as a
+bank. **to bank...** writes the trim - S to E, with the gain, DC and fades as
+set - as a new file into a bank's folder (Dirt-Samples the first time, a new
+name makes a new bank) and loads it, so Tidal plays it at once: drag S and E
+over a part, **to bank...**, return, the next part. Files are named after the
+bank with the next number (`vox_00.wav`, `vox_01.wav`); a flac, ogg or mp3 is
+written as WAV, the only kinds SuperDirt reads.
+
 Above the wave is what the analysis says about the file: its bpm, key and
 tags, to change there. With a bpm the beat grid is drawn over the wave: halve
 or double it, put its first beat on the first attack with **to 1st hit**, or
@@ -638,7 +664,10 @@ cuts as they move; shift + click adds or takes away one. **export slices...**
 asks for a place (the Finder's dialog, at Dirt-Samples the first time) and a
 name, writes every slice to a new folder of that name, each file named after it
 with its index (`brk_00.wav` is `n 0`), and loads it as a bank. The file itself
-is never touched by that.
+is never touched by that. **keep**, under the slicer, exports only the slices
+loud enough (dB under the loudest slice) and within a length range; cmd + click
+puts a slice in or out by hand. Dropped slices are greyed on the wave and left
+out, and the kept ones are numbered from 0 without gaps.
 
 Keys: space plays and stops, `0` shows the whole file, `-` and `=` zoom, `f`
 zooms to the trim, `g` shows the grid, left and right slide, cmd-s saves. cmd + two fingers up and
@@ -654,13 +683,7 @@ mouse wheel where it says two fingers.
 | [classes/SDGSamplePlayer.sc](classes/SDGSamplePlayer.sc) | one way of reading a sample, as a registry entry: name, test, one SynthDef per channel count |
 | [classes/SDGUGens.sc](classes/SDGUGens.sc) | `SDGBufRate` and `SDGBufPhase`, the sample players' rate and read pointer |
 | [classes/SDGWindow.sc](classes/SDGWindow.sc) | the control window: strips, effects, sound explorer, modules |
-| [classes/SDGSampleEditor.sc](classes/SDGSampleEditor.sc) | the sample editor window and its preview synth |
-| [classes/SDGSampleEdit.sc](classes/SDGSampleEdit.sc) | the editor's model: the file in the language, trim, gain, DC, fades, save, revert |
-| [classes/SDGSampleAnalysis.sc](classes/SDGSampleAnalysis.sc) | the numbers: peak, rms, crest, DC, BS.1770 loudness, in the language |
-| [classes/SDGWaveView.sc](classes/SDGWaveView.sc) | the editor's waveform view, with the beat grid and the slicer's cuts |
-| [classes/SDGSampleFeatures.sc](classes/SDGSampleFeatures.sc) | what a sample sounds like as numbers: envelope, onsets, tempo, key, in the language |
 | [classes/SDGSampleTags.sc](classes/SDGSampleTags.sc) | every sample's tags, bpm and key: the analysis queue, what was set by hand, the queries Tidal's picks use |
-| [classes/SDGSlicer.sc](classes/SDGSlicer.sc) | a sample cut on the grid or on its attacks, written as a bank of its own |
 | [classes/SDGExplorerView.sc](classes/SDGExplorerView.sc) | the sound explorer's list: columns, sorting, banks that open |
 | [classes/SDGSync.sc](classes/SDGSync.sc) | long samples on one tempo and in one key: the plan, the Tidal code, the preview |
 | [classes/SDGSyncWindow.sc](classes/SDGSyncWindow.sc) | the sync window |

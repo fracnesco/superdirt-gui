@@ -22,7 +22,7 @@ SDGSyncWindow {
 	*new { |sync| ^super.newCopyArgs(sync).init }
 
 	// what the key menu offers after auto: the twelve major keys, then the minor ones
-	*keyChoices { ^SDGSampleFeatures.noteNames ++ SDGSampleFeatures.noteNames.collect { |n| n ++ "m" } }
+	*keyChoices { ^SDGSampleTags.noteNames ++ SDGSampleTags.noteNames.collect { |n| n ++ "m" } }
 
 	*chopLabels {
 		^SDGSync.chopChoices.collect { |n|
@@ -211,7 +211,7 @@ SDGSyncWindow {
 		tempoCheck.value = sync.matchTempo;
 		keyCheck.value = sync.matchKey;
 		keyMenu.value = sync.key !? { |k|
-			var p = SDGSampleFeatures.parseKey(k);
+			var p = SDGSampleTags.parseKey(k);
 			p !? { 1 + p[\tonic] + if (p[\mode] == \minor) { 12 } { 0 } }
 		} ? 0;
 		keyMenu.enabled = sync.matchKey;

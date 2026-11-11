@@ -40,13 +40,9 @@ lives in its synth, and a return track, because it belongs to no orbit. See
 | `SDGWindow` | the control window | only what is on screen: the mixer state is `SuperDirtGUI`'s, and it follows. The explorer's model, its sort and which banks are open |
 | `SDGExplorerView` | the explorer's list: header, rows, scroll bar | the rows it was handed, the selected row |
 | `SDGSampleTags` | every sample's analysis and what was set by hand, the queries, the tag picker's matches | two files in the support directory, the analysis queue |
-| `SDGSampleFeatures` | the analysis: envelope, onsets, tempo, key | nothing |
-| `SDGSlicer` | the editor's slicer | the cuts, those made by hand |
 | `SDGSync`, `SDGSyncWindow` | long samples on one tempo and in one key, as Tidal code; its window | the samples and the settings, the preview's routines (stopped by `free`) |
 | `SDGHintBar` | the strip along the bottom of both windows | the text |
-| `SDGSampleEditor`, `SDGWaveView` | the editor window and its waveform | the preview synth, the zoom |
-| `SDGSampleEdit` | the editor's model: the file in the language, the settings on top of it | the file as Signals, the trim, gain, DC, fades, the beat grid, the features |
-| `SDGSampleAnalysis` | the numbers | nothing |
+| `SampleEditor`, `SampleEdit`, `SampleCutter`, `SampleFeatures` ... | the sample editor and the analysis: the [sc-sample-editor](https://github.com/fracnesco/sc-sample-editor) quark, looked up by name (`SuperDirtGUI.editorClass`, `SDGSampleTags.features`) | the `editorHost` this loader makes (a `SampleEditorDirtHost` with it as owner), set as `SampleEditor.defaultHost` while it runs |
 | `SDGMidi` | controllers on the mixer, through the Modality toolkit, and Tidal's `cF` controls: `~sdg.midi` | the mappings, the controllers they use, what learn is waiting for |
 | `SDGMidiMap`, `SDGMidiTarget` | one element of one controller moving one thing; that thing, by an address that survives rebuilds and sessions | the range, curve, takeover and button mode; nothing |
 | `SDGMidiWindow` | the controllers and the mappings, one at a time in depth | nothing of its own |

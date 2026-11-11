@@ -10,6 +10,10 @@
 // has to be on the machine, and a few of them take a moment.
 //
 // What they are:
+//   SampleEditor  the sample editor, and the analysis behind the explorer's
+//                 bpm, key and tags (SuperDirtGUI depends on it, so a fresh
+//                 install has it; an older install updated with
+//                 Quarks.update does not - this line puts it in)
 //   BusManager    names the orbit busses, an output menu on each strip
 //   BusRecorder   the recorder button: a file per orbit and return
 //   DigitDrag     number boxes drag by the digit under the pointer
@@ -27,6 +31,7 @@
 (
 var quarks = [
 	"https://github.com/fracnesco/superdirt-gui.git",                 // SuperDirtGUI
+	"https://github.com/fracnesco/sc-sample-editor.git",              // SampleEditor
 	"https://github.com/fracnesco/sc-bus-manager.git",                // BusManager
 	"https://github.com/fracnesco/sc-recorder.git",                   // BusRecorder
 	"https://github.com/fracnesco/sc-digit-drag.git",                 // DigitDrag
@@ -79,6 +84,7 @@ var have = { |names| names.every { |n| n.asSymbol.asClass.notNil } };
 [
 	["SuperDirt (required)", [\SuperDirt]],
 	["SuperDirtGUI (required)", [\SuperDirtGUI]],
+	["SampleEditor", [\SampleEditor, \SampleFeatures]],
 	["BusManager", [\BusManager]],
 	["BusRecorder", [\BusRecorder]],
 	["DigitDrag", [\DigitDrag]],

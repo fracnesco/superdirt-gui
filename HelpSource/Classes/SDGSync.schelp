@@ -112,7 +112,7 @@ METHOD:: bpm
 The tempo they play at; nil takes the first sample's own. See link::#-targetBpm::.
 
 METHOD:: key
-The key they play in, a link::Classes/String:: as link::Classes/SDGSampleFeatures#*parseKey:: reads
+The key they play in, a link::Classes/String:: as link::Classes/SDGSampleTags#*parseKey:: reads
 it: code::"Am"::, code::"F#"::, code::"Eb"::. nil takes the first melodic sample's key, as its
 tempo leaves it. A string that is not a key is refused with a warning.
 
