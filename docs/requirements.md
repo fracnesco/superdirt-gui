@@ -20,6 +20,7 @@ is skipped, and the rest works the same.
 | optional quark | ParaEQ, Compressor, Insight | the eq, compressor and meter inserts | those kinds are greyed out in the insert menu |
 | optional quark | Growl, Tunnel, Smear, Cloud, Stammer, Sympathy, Spiral | more kinds of insert | not listed |
 | optional quark | Reverbs (Hall, Plate, Coil, Shimmer) | four reverb inserts: a hall, a plate, a spring, a shimmer | not listed |
+| optional quark | Imager | a stereo imager insert: width, stereoize and recover in up to four bands | not listed |
 | optional quark | Modality-toolkit | MIDI controllers on the mixer (`~sdg.midi`, in development) | no controllers; Tidal `cF` mappings still work |
 | optional plugin | VSTPlugin | VST inserts | the kind is greyed out |
 | optional plugin | sc3-plugins | `sdghole`, `sdgecho`, `sdgjverb`, `sdgroom`, `sdgshimmer` | those five files are skipped, one line each in the post window |
@@ -183,7 +184,7 @@ Quarks.install("Modality-toolkit");                                  // MIDI con
 thisProcess.recompile;
 ```
 
-The seven creative inserts and the four reverbs are built on FxKit, which is
+The seven creative inserts, the four reverbs and the imager are built on FxKit, which is
 built on ParaEQ. Each manifest pulls the other two in:
 
 ```supercollider
@@ -195,6 +196,7 @@ Quarks.install("https://github.com/fracnesco/sc-stammer.git");
 Quarks.install("https://github.com/fracnesco/sc-sympathy.git");
 Quarks.install("https://github.com/fracnesco/sc-spiral.git");
 Quarks.install("https://github.com/fracnesco/sc-reverbs.git");   // Hall, Plate, Coil, Shimmer
+Quarks.install("https://github.com/fracnesco/sc-imager.git");    // Imager
 thisProcess.recompile;
 ```
 

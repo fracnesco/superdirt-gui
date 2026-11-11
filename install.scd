@@ -22,6 +22,7 @@
 //   FxKit and Growl, Tunnel, Smear, Cloud, Stammer, Sympathy, Spiral
 //                 the creative inserts (each pulls FxKit and ParaEQ in)
 //   Reverbs       four reverb inserts: Hall, Plate, Coil, Shimmer (on FxKit too)
+//   Imager        a stereo imager insert in up to four bands (on FxKit too)
 //   Modality-toolkit   MIDI controllers on the mixer (~sdg.midi)
 //
 // Not quarks, so not here: VSTPlugin, sc3-plugins and mi-UGens are server
@@ -48,6 +49,7 @@ var quarks = [
 	"https://github.com/fracnesco/sc-sympathy.git",
 	"https://github.com/fracnesco/sc-spiral.git",
 	"https://github.com/fracnesco/sc-reverbs.git",                     // Hall, Plate, Coil, Shimmer
+	"https://github.com/fracnesco/sc-imager.git",                      // Imager
 	"Modality-toolkit"                                                // MIDI controllers
 ];
 var failed = [];
@@ -94,6 +96,7 @@ var have = { |names| names.every { |n| n.asSymbol.asClass.notNil } };
 	["Insight", [\Insight]],
 	["FxKit inserts", [\FxParamUnit, \Growl, \Tunnel, \Smear, \Cloud, \Stammer, \Sympathy, \Spiral]],
 	["Reverb inserts", [\Hall, \Plate, \Coil, \Shimmer]],
+	["Imager insert", [\Imager]],
 	["Modality", [\MKtl]],
 	["VSTPlugin (plugin)", [\VSTPlugin]],
 	["sc3-plugins (plugin)", [\Greyhole, \JPverb]],
