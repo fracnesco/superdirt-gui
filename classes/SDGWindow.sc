@@ -1160,6 +1160,14 @@ SDGWindow {
 	// --------------------------------------------------------------- inserts
 
 	// the colour of an insert's button, by kind
+	// an insert's slot while it listens to Tidal
+	*tidalColour { ^Color(0.50, 0.74, 0.50) }
+
+	// what an insert's slot is drawn in: soft green while it listens, else its kind's colour
+	*insertSlotColour { |insert|
+		^if(insert.listening) { this.tidalColour } { this.insertColour(insert.kind) }
+	}
+
 	*insertColour { |kind|
 		^switch(kind,
 			\eq, { Color(0.22, 0.34, 0.50) },
@@ -1222,12 +1230,20 @@ SDGWindow {
 			VLayout(*(list.collect { |x| this.prInsertButton(x) } ++ [nil])).margins_(0).spacing_(2))
 	}
 
+	// what an insert's button says: its label, bracketed when bypassed, ~ and its
+	// Tidal name while it listens
+	*insertButtonText { |insert|
+		var text = insert.shortLabel;
+		if(insert.listening) { text = text ++ " ~" ++ insert.tidalName };
+		^if(insert.enabled) { text } { "(" ++ text ++ ")" }
+	}
+
 	prInsertButton { |insert|
 		var on = insert.enabled;
 		var b = Button().fixedHeight_(18).font_(smallFont).states_([[
-			if(on) { insert.shortLabel } { "(" ++ insert.shortLabel ++ ")" },
-			if(on) { colText } { colDim },
-			if(on) { this.class.insertColour(insert.kind) } { Color.grey(0.2) }
+			this.class.insertButtonText(insert),
+			case { on.not } { colDim } { insert.listening } { Color.black } { colText },
+			if(on) { this.class.insertSlotColour(insert) } { Color.grey(0.2) }
 		]]);
 		b.action = { this.prOpenInsert(insert) };
 		// a right press shows the menu; answers nil, so the button still sees it
@@ -1243,8 +1259,63 @@ SDGWindow {
 				insert.track !? { |t| "% of orbit %'s %".format(if(insert.place == \pre) { "before" } { "after" }, insert.orbitIndex, t.shortName) }
 					?? { "orbit %".format(insert.orbitIndex) }
 			},
-			if(on) { "" } { ", bypassed" }));
+			if(on) { "" } { ", bypassed" })
+			++ if(insert.listening) { " - listening to tidal as %".format(insert.tidalName) } { "" });
 		^b
+	}
+
+	// The Tidal name of an insert, asked for. A wrong one says why, and the
+	// dialog stays.
+	tidalNameDialog { |insert|
+		var win, field, note, rename;
+		win = Window("tidal name of %".format(insert.shortLabel),
+			Rect(window.bounds.left + 300, window.bounds.top + 300, 380, 96)).background_(colBg);
+		if(GUI.id == \qt) { win.view.palette = QPalette.dark };
+		field = TextField().font_(font).string_(insert.tidalName.asString);
+		note = StaticText().stringColor_(colDim).font_(smallFont)
+			.string_("its sound in Tidal: s \"%\" # ... - with a sound: # fx \"%\" (...)".format(insert.tidalName, insert.tidalName));
+		rename = {
+			var problem = sdg.setInsertTidalName(insert, field.string);
+			if(problem.isNil) { win.close; hints.note("% is % in Tidal now".format(insert.shortLabel, insert.tidalName)) } {
+				note.string = problem; note.stringColor = colWarn
+			}
+		};
+		field.action = { rename.value };
+		field.keyDownAction = { |view, char, mod, uni, keycode, key|
+			if(key == 16r1000000) { win.close; true } { nil }
+		};
+		win.layout = VLayout(
+			note,
+			HLayout(field,
+				Button().states_([["rename", colText, Color.grey(0.26)]]).action_({ rename.value }),
+				Button().states_([["cancel", colText, Color.grey(0.26)]]).action_({ win.close })
+			).spacing_(4)
+		).margins_(8).spacing_(6);
+		win.front;
+		field.focus(true);
+		^win
+	}
+
+	// A line of Tidal that drives an insert, its first few words at their values
+	// now, on the clipboard. Answers the line.
+	*tidalLineFor { |insert, count = 3|
+		var name = insert.tidalName;
+		var parts = insert.tidalKeys.keep(count).collect { |key|
+			var e = insert.unit.class.param(key), v = insert.unit.get(key);
+			v = switch(e[\kind],
+				\menu, { "\"%\"".format(if(v.asString.every { |c| c.isAlphaNum }) { v } { e[\items].indexOf(v) ? 0 }) },
+				\toggle, { v.binaryValue },
+				{ v.round(0.001) });
+			"# % %".format(key, v)
+		};
+		^"d9 $ s \"%\" ".format(name) ++ parts.join(" ")
+	}
+
+	copyTidalLine { |insert|
+		var line = this.class.tidalLineFor(insert);
+		this.class.prClipboardCommand(line) !? { |cmd| cmd.unixCmd(postOutput: false) };
+		hints.note((if(insert.listening) { "copied: %" } { "copied (switch on listen to tidal first): %" }).format(line));
+		^line
 	}
 
 	prOpenInsert { |insert|
@@ -1265,6 +1336,14 @@ SDGWindow {
 				})
 			})
 		] } { [] };
+		// an effect of the sc fx kit family can be played from Tidal (SDGFxControl)
+		var tidal = if(insert.canListen) { [
+			MenuAction("listen to tidal", { insert.listening = insert.listening.not })
+				.checkable_(true).checked_(insert.listening),
+			MenuAction("tidal name: %...".format(insert.tidalName), { this.tidalNameDialog(insert) }),
+			MenuAction("copy a tidal line", { this.copyTidalLine(insert) }),
+			MenuAction.separator
+		] } { [] };
 		menu !? (_.destroy);
 		menu = Menu(*([
 			MenuAction("% · %".format(insert.shortLabel, insert.label)).enabled_(false),
@@ -1275,7 +1354,8 @@ SDGWindow {
 				.enabled_(insert.canBypass),
 			MenuAction("move up", { sdg.moveInsert(insert, k - 1) }).enabled_(k > 0),
 			MenuAction("move down", { sdg.moveInsert(insert, k + 1) }).enabled_(k < (list.size - 1)),
-			MenuAction.separator,
+			MenuAction.separator
+		] ++ tidal ++ [
 			MenuAction("copy", { sdg.copyInserts([insert]); hints.note("% copied - paste it on any strip".format(insert.shortLabel)) }),
 			MenuAction("copy the whole chain (%)".format(list.size), {
 				sdg.copyInserts(list);
@@ -1777,7 +1857,8 @@ SDGWindow {
 			["on", Color.black, colOn]
 		]).value_(insert.enabled.binaryValue);
 		var nameBtn = Button().fixedHeight_(20).states_([
-			["% · %".format(insert.shortLabel, insert.label), colText, this.class.insertColour(insert.kind)]
+			["% · %%".format(insert.shortLabel, insert.label, if(insert.listening) { " · ~" ++ insert.tidalName } { "" }),
+				if(insert.listening) { Color.black } { colText }, this.class.insertSlotColour(insert)]
 		]);
 		var up = Button().fixedWidth_(22).fixedHeight_(20).states_([["▲", colDim, Color.grey(0.26)]]);
 		var down = Button().fixedWidth_(22).fixedHeight_(20).states_([["▼", colDim, Color.grey(0.26)]]);
@@ -2583,7 +2664,10 @@ SDGWindow {
 		var query = this.class.parseSearch(searchField !? (_.string) ? "");
 		var filtering = query[\include].notEmpty or: { query[\exclude].notEmpty } or: { query[\bpm].notNil } or: { query[\key].notNil };
 		var banks = lib.buffers.keys.asArray;
-		var synths = lib.synthEvents.keys.asArray.collect(_.asString).sort;
+		// sdgcontrol plays nothing: it is how a pattern drives the inserts (SDGFxControl)
+		// nor the names of inserts listening to Tidal (s "growl")
+		var fxSounds = [SDGFxControl.soundName] ++ (sdg.fxControl !? { |c| c.soundNames } ? []);
+		var synths = lib.synthEvents.keys.asArray.reject { |k| fxSounds.includes(k) }.collect(_.asString).sort;
 		var wasSelected = selected, pairs;
 		var nameHas = { |name| query[\words].every { |w| name.toLower.contains(w) } };
 		rebuilds = rebuilds + 1;

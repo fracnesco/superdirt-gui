@@ -55,6 +55,13 @@
 // Cloud, Stammer, Sympathy, Spiral), which need not be named at all: each is a
 // kind by being a subclass of it. Their synths stay awake while their output
 // sounds, so a delay's tail outlives DirtPause's grace.
+//
+// One of those can listen to Tidal (SDGFxControl): under its Tidal name, its
+// parameters are words a pattern sets event by event.
+//
+//   g = ~sdg.addInsert(0, \growl);
+//   g.listening = true;                 // d9 $ s "growl*8" # drive1 "0 24"
+//   ~sdg.setInsertTidalName(g, \dirt);  // s "dirt" # drive1 ..., or with a sound # fx "dirt" (drive1 12)
 // =====================================================================
 
 SDGInsert {
@@ -68,6 +75,7 @@ SDGInsert {
 	var <plugin, <synth, <controller, <stateData, bypassed = false, changes = 0;
 	var <track, <place;		// a track's insert: its SDGTrack, and \pre or \post its effect
 	var opening = false;	// a VST insert: from its synth starting until the plugin has its state
+	var tidalName, <listening = false;	// what Tidal calls it, and whether it hears Tidal (SDGFxControl)
 
 	*initClass {
 		kinds = IdentityDictionary[
@@ -219,6 +227,8 @@ SDGInsert {
 			unit = cls.new(SDGInsertTarget(this), spec[\controlName]);
 			unit.label = label;
 			unit.addDependant(this);
+			// its window shows a listen switch and the Tidal keys (sc fx kit from 2026-11-08)
+			if(this.canListen) { unit.tryPerform(\tidal_, this) };
 		};
 	}
 
@@ -337,6 +347,91 @@ SDGInsert {
 		});
 	}
 
+	// ----- from Tidal (SDGFxControl)
+
+	// whether it can listen: an effect built on FxParamUnit, whose parameters are a table
+	canListen { ^unit.notNil and: { \FxParamUnit.asClass !? { |c| unit.isKindOf(c) } ? false } }
+
+	// whether its graph has FxLfo's cycle clock
+	usesTidalClock { ^this.canListen and: { unit.class.tryPerform(\usesTidalClock) == true } }
+
+	// what Tidal calls it: given once, the kind's name or the next free one after it
+	tidalName {
+		if(this.canListen.not) { ^nil };
+		^tidalName ?? { tidalName = sdg.fxControl.freeName(kind, this) }
+	}
+
+	tidalNameOrNil { ^tidalName }
+
+	// SuperDirtGUI:setInsertTidalName checks the name first
+	prTidalName_ { |name|
+		tidalName = name !? (_.asSymbol);
+		unit !? { unit.changed(\tidal) };
+	}
+
+	listening_ { |bool|
+		listening = bool == true and: { this.canListen };
+		if(listening) { this.tidalName };
+		unit !? { unit.changed(\tidal) };
+		sdg.changed(\inserts, orbitIndex);
+	}
+
+	// the parameters a pattern may set: the effect's own list, or its knobs
+	tidalKeys {
+		var cls;
+		if(this.canListen.not) { ^[] };
+		cls = unit.class;
+		^(cls.tryPerform(\tidalParams) ?? {
+			cls.table.select { |e| e[\kind] == \knob and: { e[\key] != \output } }.collect { |e| e[\key] }
+		}).select { |key| cls.param(key).notNil }
+	}
+
+	// What an event said, as [key, value, ...], inside the event's bundle: into
+	// the object without a word to its window (SDGFxControl tells that later),
+	// then all of it to the synth in one message, and into the effect's state.
+	// \preset is an index into the presets, first, so the other keys win over it.
+	prSequence { |pairs|
+		var cls = unit.class, values = unit.values, preset;
+		pairs = pairs.clump(2);
+		preset = pairs.detect { |p| p[0] == \preset };
+		preset !? {
+			var names = cls.presetNames, settings;
+			if(preset[1].isNumber and: { names.notEmpty }) {
+				settings = cls.presetSettings(names.wrapAt(preset[1].asInteger));
+				settings !? {
+					settings.keysValuesDo { |key, v|
+						cls.param(key) !? { |e| cls.prConstrain(e, v) !? { |c| values[key] = c } }
+					}
+				}
+			}
+		};
+		pairs.do { |p|
+			if(p[0] != \preset) {
+				cls.param(p[0]) !? { |e| cls.prConstrain(e, this.class.menuValue(e, p[1])) !? { |c| values[e[\key]] = c } }
+			}
+		};
+		this.prSet([kinds[kind][\controlName], unit.controls]);
+	}
+
+	// A menu's value from Tidal: an item's name, or its index - also as a string
+	// ("3"), since Tidal's string patterns cannot say an item like 1/8d (its
+	// mininotation reads the slash as slow)
+	*menuValue { |e, v|
+		var str;
+		if(e[\kind] != \menu or: { v.isNumber }) { ^v };
+		str = v.asString;
+		if(e[\items].includes(str.asSymbol)) { ^str.asSymbol };
+		if(str.notEmpty and: { str.every(_.isDecDigit) }) { ^str.asInteger };
+		^v
+	}
+
+	// Tidal's tempo and where its cycle is, for FxLfo's sync. The cycle is sent
+	// modulo 4, the longest period, so a float32 on the server keeps its fraction
+	prClock { |cps, cycle|
+		fx.state[\fxCps] = cps;
+		fx.synth !? { |syn| syn.set(\fxCps, cps, \fxCycle, cycle % 4, \fxSync, 1) };
+	}
+
 	// ----- in a session (SDGSession)
 
 	// what an Insight shows and aims at, each with a setter of the same name
@@ -347,6 +442,7 @@ SDGInsert {
 	// which its settings leave out; a plugin's name, file and last state read back
 	sessionData {
 		var data = (kind: kind, enabled: this.enabled);
+		if(this.canListen) { data[\tidalName] = this.tidalName; data[\listening] = listening };
 		unit !? {
 			data[\settings] = unit.settings;
 			(unit.tryPerform(\sidechainName) ?? { unit.tryPerform(\sidechain) }) !? { |source| data[\sidechain] = source };
@@ -380,6 +476,13 @@ SDGInsert {
 			}
 		};
 		if(this.canBypass) { data[\enabled] !? { |on| this.enabled = on } };
+		// a name another insert has (a paste beside its original) gives way to a free one
+		if(this.canListen) {
+			data[\tidalName] !? { |name|
+				if(sdg.fxControl.nameProblem(name, this).isNil) { this.prTidalName = name }
+			};
+			data[\listening] !? { |on| this.listening = on };
+		};
 	}
 
 	// what the object pushes: into the effect's state, so a synth started

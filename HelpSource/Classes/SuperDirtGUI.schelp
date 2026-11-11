@@ -594,6 +594,21 @@ RETURNS:: this loader's link::Classes/SDGSession::.
 METHOD:: controlWindow
 RETURNS:: the link::Classes/SDGWindow:: while it is open, nil otherwise.
 
+METHOD:: allInserts
+Every insert: the orbits', their tracks', the returns' and the master's.
+RETURNS:: an Array of link::Classes/SDGInsert::.
+
+METHOD:: setInsertTidalName
+What Tidal calls an insert that listens (see link::Classes/SDGFxControl::): lower case letters and digits, a letter first, not starting with sdg, no other insert's.
+ARGUMENT:: insert
+an link::Classes/SDGInsert::.
+ARGUMENT:: name
+a String or Symbol.
+RETURNS:: nil when it was renamed, else a String saying what is wrong.
+
+METHOD:: fxControl
+The link::Classes/SDGFxControl:: that plays the inserts from Tidal and keeps their lfos on the cycle.
+
 METHOD:: insertsOf
 The inserts of an orbit, in the order the signal goes through them.
 ARGUMENT:: orbitIndex

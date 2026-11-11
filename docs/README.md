@@ -15,6 +15,7 @@ does it that way, and what SuperDirt does underneath.
 | [presets.md](presets.md) | every synth's presets: `n` picks one and `note` plays the pitch, finding a sound in the window's preview, copying it as Tidal, saving your own |
 | [drums.md](drums.md) | the drum machine: fifteen voices with presets, the parameter words they share, how loud each one is and how that was measured, writing a drum voice, the rendered banks, `sdglayer` |
 | [drum-fx.md](drum-fx.md) | eight effects for drums, one hit at a time: transients, a tuned sub, resonating bodies, latex, metal, rolls, gated reverb, tape stops; how each works and how loud it is |
+| [sequencing-inserts.md](sequencing-inserts.md) | the insert effects played from Tidal: listening, `s "growl" # drive1 12`, `fx "growl" (...)` on a sound, presets by `n`, timing, the window's cost, lfos on Tidal's cycle |
 | [writing-content.md](writing-content.md) | the four kinds of content file, the header the window reads, new... and reading a file again on save |
 | [sample-players.md](sample-players.md) | how an event gets to a player, what arguments it receives, and how to write one |
 | [sample-editor.md](sample-editor.md) | the editor window: trimming, the beat grid, the slicer, what the numbers mean, what a save writes |

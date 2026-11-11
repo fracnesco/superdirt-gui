@@ -1,0 +1,96 @@
+TITLE:: SDGFxControl
+summary:: insert effects played from Tidal, event by event, and their lfos on Tidal's cycle
+categories:: Libraries>SuperDirtGUI
+related:: Classes/SuperDirtGUI, Classes/SDGInsert, Classes/FxLfo
+
+DESCRIPTION::
+Made by link::Classes/SuperDirtGUI:: as code::~sdg.fxControl::, freed with it. An insert built on FxParamUnit that is link::Classes/SDGInsert#-listening:: has a Tidal name, which is a sound of the library while it listens. Its parameters are plain words, and code::n:: picks a preset:
+
+code::
+d9 $ s "growl*8" # drive1 (range 0 24 sine) # tone 2000 # n "<0 3>"
+d1 $ s "bd*4" # fx "growl" (mix 0.5 # tone 800)
+::
+
+The sound plays nothing and leaves the orbit's other global effects alone; only the words its event carries count, never the orbit's defaults, and never SuperDirt's own (link::#*reservedWords::). On a sound event, Tidal's code::fx name:: renames the words to code::growl_mix:: and a module (code::sdgfxctl::) reads those; code::s "sdgcontrol":: reads only those too. The values go to the insert's synth in the event's own bundle, into its object without a word to its window, and into the effect's state. The window is told at most link::#*redrawRate:: times a second. The last value stays.
+
+A name that is already a sample bank or a synth of the library is not taken over: a warning is posted, and code::fx:: still reaches the insert.
+
+An insert whose effect uses FxLfo's clock (Growl, Tunnel, Spiral) is told Tidal's cps and cycle from every event, listening or not, when the cps changes or half a cycle after it was last told. docs/sequencing-inserts.md has the whole story and how it was measured.
+
+CLASSMETHODS::
+
+METHOD:: soundName
+The sound that reads only prefixed words (code::growl_mix::), code::\sdgcontrol::.
+
+METHOD:: reservedWords
+SuperDirt's own event keys: never read as an effect's parameter from a sound's event.
+
+METHOD:: plainWordsOf
+An effect's plain words: each key and its lower case, but the reserved ones.
+ARGUMENT:: keys
+
+METHOD:: moduleName
+The module that reads the words on sound events, code::\sdgfxctl::.
+
+METHOD:: redrawRate
+How often a second, at most, a sequenced effect's window is told of new values. 10.
+
+METHOD:: wordsOf
+code::[word, key]:: pairs for a name and its keys: each as written, and lower case when that differs.
+ARGUMENT:: name
+ARGUMENT:: keys
+
+INSTANCEMETHODS::
+
+METHOD:: sdg
+Its link::Classes/SuperDirtGUI::.
+
+METHOD:: heardWords
+The prefixed words heard now (code::growl_mix::), sorted.
+
+METHOD:: soundNames
+The insert names that are sounds of the library now.
+
+METHOD:: isLibrarySound
+Whether the library has the name as a bank or a synth that is not one of these.
+ARGUMENT:: name
+
+METHOD:: dispatchSound
+What an event of an insert's sound says to it, and the clock. Called inside the event's bundle.
+ARGUMENT:: name
+ARGUMENT:: event
+
+METHOD:: library
+SuperDirt's sound library.
+
+METHOD:: dirt
+The SuperDirt.
+
+METHOD:: rebuild
+The words and the clocked inserts read again from the inserts. Happens on its own on every change of them.
+
+METHOD:: dispatch
+What an event's prefixed words say to the inserts, and the clock. Called inside the event's bundle.
+ARGUMENT:: event
+
+METHOD:: isWanted
+Whether anything listens or wants the clock: the module's test.
+
+METHOD:: freeName
+A name an insert of a kind can have: the kind, else kind2, kind3 ...
+ARGUMENT:: kind
+ARGUMENT:: except
+the insert asking, whose own name does not count.
+
+METHOD:: isTaken
+Whether another insert has the name.
+ARGUMENT:: name
+ARGUMENT:: except
+
+METHOD:: nameProblem
+What is wrong with a name for an insert, or nil.
+ARGUMENT:: name
+ARGUMENT:: insert
+
+METHOD:: free
+The sounds and the module out.

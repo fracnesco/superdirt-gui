@@ -325,6 +325,121 @@ let -- synths (s "sdgacid", s "sdgpad" ...)
     td = pS "td"
 :}
 
+-- the insert effects, played from Tidal: right click an insert of the mixer,
+-- "listen to tidal", and its tidal name is a sound that moves it
+--   d9 $ s "growl*8" # drive1 (range 0 24 sine) # tone 2000 # n "<0 3>"
+-- n picks a preset; a menu takes an item's name or its index ("3"). With a
+-- sound, fx sends the words to an insert by its name:
+--   d1 $ s "bd*4" # fx "growl" (mix "0 1" # tone 800)
+:{
+let fx :: String -> ControlPattern -> ControlPattern
+    fx name = fmap (GHC.Exts.fromList . map (\(k, v) -> (name ++ "_" ++ k, v)) . GHC.Exts.toList)
+:}
+-- BEGIN insert effect words
+-- (made by examples/tidal/make-fx-words.scd from the effects' tables: do not edit by hand)
+:{
+let backwards = pF "backwards"   -- Cloud, Stammer
+    bias1 = pF "bias1"   -- Growl
+    bias2 = pF "bias2"   -- Growl
+    bias3 = pF "bias3"   -- Growl
+    brick = pF "brick"   -- Smear
+    bright = pF "bright"   -- Sympathy
+    chance = pF "chance"   -- Stammer
+    chaos = pF "chaos"   -- Cloud
+    combRate = pF "combRate"   -- Smear
+    combWidth = pF "combWidth"   -- Smear
+    cross = pF "cross"   -- Tunnel
+    damp = pF "damp"   -- Cloud, Hall, Plate, Shimmer, Spiral
+    divL = pS "divL"   -- Tunnel
+    divR = pS "divR"   -- Tunnel
+    driftDepth = pF "driftDepth"   -- Spiral
+    driftRate = pF "driftRate"   -- Spiral
+    driftSync = pS "driftSync"   -- Spiral
+    drip = pF "drip"   -- Coil
+    drive = pF "drive"   -- Coil, Spiral
+    drive1 = pF "drive1"   -- Growl
+    drive2 = pF "drive2"   -- Growl
+    drive3 = pF "drive3"   -- Growl
+    early = pF "early"   -- Hall
+    fbTime = pF "fbTime"   -- Growl
+    fbTone = pF "fbTone"   -- Growl
+    feedback = pF "feedback"   -- Cloud, Growl, Shimmer, Spiral, Tunnel
+    filter1 = pS "filter1"   -- Growl
+    filter2 = pS "filter2"   -- Growl
+    filter3 = pS "filter3"   -- Growl
+    filterFreq = pF "filterFreq"   -- Stammer, Tunnel
+    filterOn = pF "filterOn"   -- Stammer
+    filterWidth = pF "filterWidth"   -- Stammer, Tunnel
+    freezeOn = pF "freezeOn"   -- Cloud, Smear
+    freq1 = pF "freq1"   -- Growl
+    freq2 = pF "freq2"   -- Growl
+    freq3 = pF "freq3"   -- Growl
+    grainSize = pF "grainSize"   -- Cloud
+    grains = pF "grains"   -- Cloud
+    grid = pS "grid"   -- Stammer
+    gridVary = pF "gridVary"   -- Stammer
+    haze = pF "haze"   -- Shimmer
+    hiCut = pF "hiCut"   -- Sympathy
+    holes = pF "holes"   -- Smear
+    inharm = pF "inharm"   -- Sympathy
+    input = pF "input"   -- Growl, Tunnel
+    interval = pF "interval"   -- Shimmer
+    jumble = pF "jumble"   -- Smear
+    level = pF "level"   -- Stammer
+    level1 = pF "level1"   -- Growl
+    level2 = pF "level2"   -- Growl
+    level3 = pF "level3"   -- Growl
+    lfo1Rate = pF "lfo1Rate"   -- Growl
+    lfo1Sync = pS "lfo1Sync"   -- Growl
+    lfo2Rate = pF "lfo2Rate"   -- Growl
+    lfo2Sync = pS "lfo2Sync"   -- Growl
+    lfoRate = pF "lfoRate"   -- Tunnel
+    lfoSync = pS "lfoSync"   -- Tunnel
+    loCut = pF "loCut"   -- Sympathy
+    lowCut = pF "lowCut"   -- Coil, Hall, Plate, Shimmer
+    mix = pF "mix"   -- Cloud, Coil, Growl, Hall, Plate, Shimmer, Smear, Spiral, Sympathy, Tunnel
+    modDepth = pF "modDepth"   -- Hall, Plate
+    modFilter = pF "modFilter"   -- Tunnel
+    modTime = pF "modTime"   -- Tunnel
+    noise = pF "noise"   -- Tunnel
+    note1 = pF "note1"   -- Sympathy
+    note2 = pF "note2"   -- Sympathy
+    note3 = pF "note3"   -- Sympathy
+    note4 = pF "note4"   -- Sympathy
+    note5 = pF "note5"   -- Sympathy
+    note6 = pF "note6"   -- Sympathy
+    pitch = pF "pitch"   -- Cloud
+    pitchFall = pF "pitchFall"   -- Stammer
+    pitchScatter = pF "pitchScatter"   -- Cloud
+    position = pF "position"   -- Cloud
+    preDelay = pF "preDelay"   -- Hall, Plate, Shimmer
+    res1 = pF "res1"   -- Growl
+    res2 = pF "res2"   -- Growl
+    res3 = pF "res3"   -- Growl
+    reverb = pF "reverb"   -- Tunnel
+    root = pF "root"   -- Sympathy
+    scatter = pF "scatter"   -- Cloud
+    scrambleRate = pF "scrambleRate"   -- Smear
+    shift = pF "shift"   -- Smear, Spiral
+    sides = pF "sides"   -- Spiral
+    sizeScatter = pF "sizeScatter"   -- Cloud
+    squash = pF "squash"   -- Growl
+    teeth = pF "teeth"   -- Smear
+    tension = pF "tension"   -- Coil
+    timeL = pF "timeL"   -- Tunnel
+    timeR = pF "timeR"   -- Tunnel
+    tone = pF "tone"   -- Coil, Growl
+    type1 = pS "type1"   -- Growl
+    type2 = pS "type2"   -- Growl
+    type3 = pS "type3"   -- Growl
+    vibrato = pF "vibrato"   -- Sympathy
+    vibratoRate = pF "vibratoRate"   -- Sympathy
+    warp = pF "warp"   -- Smear
+    width = pF "width"   -- Cloud, Coil, Hall, Plate, Shimmer, Smear, Spiral, Tunnel
+    wobble = pF "wobble"   -- Tunnel
+:}
+-- END insert effect words
+
 -- 4. the functions -------------------------------------------------------------
 
 -- One line per paragraph, here and below: with a space in this file's path

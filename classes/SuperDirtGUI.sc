@@ -150,6 +150,7 @@ SuperDirtGUI {
 	var tidalLog;			// the SDGTidalLog, made when first asked for
 	var midi;				// the SDGMidi, made when first asked for
 	var sleep;				// the SDGSleep: when orbits sleep, started once the orbits exist
+	var <fxControl;			// the SDGFxControl: inserts played from Tidal, and the lfos' clock
 	var pickers;			// DirtOrbit -> [our diversion, the one it replaced]
 	var warnedPicker = false;
 
@@ -179,6 +180,7 @@ SuperDirtGUI {
 		this.load;
 		this.prLoadOwnSamples;
 		pickers = IdentityDictionary.new;
+		fxControl = SDGFxControl(this);
 		CmdPeriod.add(this);
 		this.prWhenOrbitsExist { this.prInstallTagPicker; this.prWatchTree; this.sleep.start };
 	}
@@ -1176,6 +1178,25 @@ SuperDirtGUI {
 				this.orderInserts(orbit);
 			}
 		}
+	}
+
+	// every insert there is: the orbits', their tracks', the returns' and the master's
+	allInserts {
+		^(dirt.orbits ? []).collect { |orbit| this.prEveryInsertOf(orbit.orbitIndex) }.flatten(1)
+			++ this.busTracks.collect { |t| t.inserts }.flatten(1)
+	}
+
+	// What Tidal calls an insert (SDGFxControl): lower case letters and digits, a
+	// letter first, not sdg..., no other insert's. Answers the problem, or nil when
+	// it was renamed.
+	setInsertTidalName { |insert, name|
+		var problem;
+		if(insert.canListen.not) { ^"% cannot listen to Tidal".format(insert.shortLabel) };
+		problem = fxControl.nameProblem(name, insert);
+		if(problem.notNil) { ^problem };
+		insert.prTidalName = name.asSymbol;
+		this.changed(\inserts, insert.orbitIndex);
+		^nil
 	}
 
 	// every insert of an orbit out
@@ -2296,6 +2317,8 @@ SuperDirtGUI {
 		midi = nil;
 		sleep !? (_.free);
 		sleep = nil;
+		fxControl !? (_.free);
+		fxControl = nil;
 		dirtWarnedOutOfOrbit !? { |w| dirt.warnOutOfOrbit = w; dirtWarnedOutOfOrbit = nil };
 		silentBus !? { silentBus.free; silentBus = nil };
 		this.prFreeTapBusses;

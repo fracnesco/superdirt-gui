@@ -342,6 +342,12 @@ d3 $ s "~ ~ ~ cp" # pF "sdgroll" 6 # pF "sdgrollcurve" 0.8
 [docs/drum-fx.md](docs/drum-fx.md) says how each works and how loud it is;
 `examples/tidal/lessons/38-drum-fx.tidal` plays them all.
 
+The insert effects of the sc fx kit family can be played from Tidal too: right
+click one, **listen to tidal**, and its name becomes a sound that moves it,
+`d9 $ s "growl*8" # drive1 "0 24" # tone 2000`, or with a sound,
+`d1 $ s "bd*4" # fx "growl" (mix 0.5)`; their lfos can follow Tidal's cycle.
+[docs/sequencing-inserts.md](docs/sequencing-inserts.md), `lessons/39-insert-fx.tidal`.
+
 ## The window
 
 `~sdg.gui`, after `~dirt.start`.

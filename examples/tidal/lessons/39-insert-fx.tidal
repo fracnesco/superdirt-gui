@@ -1,0 +1,51 @@
+-- SuperDirtGUI from Tidal - 39: the insert effects, played from Tidal
+--
+-- An insert of the sc fx kit family (Growl, Tunnel, Smear, Cloud, Stammer,
+-- Sympathy, Spiral, the reverbs) can listen to Tidal: right click it in the
+-- mixer, "listen to tidal" (or the check at the top of its own window). Its
+-- slot turns green and shows its tidal name - growl, tunnel, growl2 ... -
+-- which is now a sound: s "growl" plays nothing, it moves the Growl, by the
+-- names its window shows in green. Or from SuperCollider, before this file:
+--
+--   g = ~sdg.addInsert(0, \growl); g.listening = true;
+--   t = ~sdg.addInsert(1, \tunnel); t.listening = true;
+--
+-- The words (drive1, tone, feedback ...) are in boot.hs. n picks a preset; a
+-- menu takes an item's name, or its index as a string ("3"). On a sound,
+-- fx "growl" (...) moves the Growl with that sound. docs/sequencing-inserts.md
+-- has the rest.
+
+setcps (124/60/4)
+
+-- a beat into orbit 0, where the Growl is
+d1 $ s "[bd*4, ~ sn, hh*8]" # orbit 0
+
+-- the drive in steps, on a pattern of its own
+d9 $ s "growl*8" # drive1 "0 6 12 24 0 36 12 6"
+
+-- or swept: a value every 16th
+d9 $ s "growl*16" # drive1 (range 0 30 sine) # freq1 (range 300 4000 $ slow 4 saw)
+
+-- the curve by name, a different one each bar
+d9 $ s "growl" # type1 "<soft fold sine tube>"
+
+-- a preset a bar: n wraps over the presets
+d9 $ s "growl" # n "<0 1 3 6>"
+
+-- with the sound itself: only the snare gets the wet growl
+d1 $ stack [
+    s "bd*4" # fx "growl" (mix 0),
+    s "~ sn" # fx "growl" (mix 1 # tone 3000)
+  ] # orbit 0
+
+-- the lfos on the cycle. The wasp preset (6) has lfo 1 moving stage 1's
+-- filter; its sync menu: free, four, two, one, half, quarter, eighth,
+-- sixteenth, third, sixth, twelfth (periods in cycles)
+d9 $ s "growl" # n 6 # lfo1Sync "<quarter eighth third half>"
+
+-- Tunnel on orbit 1: feedback building over four cycles, then let go
+d2 $ s "~ cp ~ ~" # orbit 1
+
+d8 $ s "tunnel*4" # feedback (slow 4 $ range 0.3 1.05 saw) # mix 0.6
+
+hush

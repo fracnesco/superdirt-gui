@@ -182,6 +182,24 @@ effect's own window.
 METHOD:: canBypass
 False for an insight, which only reads.
 
+METHOD:: canListen
+Whether it can be played from Tidal: an effect built on FxParamUnit (Growl, Tunnel, the reverbs ...). See link::Classes/SDGFxControl::.
+
+METHOD:: listening
+Whether a Tidal pattern sets its parameters, under its link::#-tidalName::. Kept in a session.
+code::
+g = ~sdg.addInsert(0, \growl); g.listening = true;   // d9 $ s "growl*8" # drive1 "0 24"
+::
+
+METHOD:: tidalName
+What Tidal calls it: the kind, or the next free name after it (growl2 ...), given the first time it is asked. Renamed by link::Classes/SuperDirtGUI#-setInsertTidalName::. nil for an insert that cannot listen.
+
+METHOD:: tidalKeys
+The parameters a pattern may set: its effect's code::tidalParams::.
+
+METHOD:: usesTidalClock
+Whether its graph has FxLfo's cycle clock, which SDGFxControl keeps on Tidal's cycle.
+
 METHOD:: isVST
 Whether it hosts a VST plugin.
 

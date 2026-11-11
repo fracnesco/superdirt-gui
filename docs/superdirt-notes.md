@@ -343,6 +343,14 @@ often the first thing loaded. A parameter of 0.63 came back across two sclangs w
 
 **`parameterAutomated` is not a full picture of a plugin's state:** a preset picked in its editor need not send it. *Found in use.*
 
+**Tidal 1.9.5's mininotation has no top-level comma.** `s "bd*4, ~ sn"` is a syntax error, raised in the scheduler
+thread when the pattern is first queried, so the line itself seems to run; `s "[bd*4, ~ sn]"` is the stack. *Measured
+2026-11-08 with `queryArc` in ghci.*
+
+**An event that skips SuperDirt's `playSynths` wakes no global effect.** `s "growl"` (an insert listening to Tidal, SDGFxControl) answers from the
+sound's own `play` function, so no `GlobalDirtEffect:set` runs: a sleeping insert keeps what it is sent and plays it when
+the next sound on its orbit wakes it. *Measured 2026-11-08: Growl's meter replies froze until the orbit was woken.*
+
 **A wake holds for 4 s and cannot be renewed inside them.** `dirt_resumed` feeds DirtPause's `Trig1` (4 s), which
 ignores a trigger while it is high; after it falls, `DetectSilence` needs 4 s of silence more. So a quiet orbit sleeps
 8.0 s after the last wake that landed, and the 4 s itself is a constant in every def: an orbit can be kept up longer
