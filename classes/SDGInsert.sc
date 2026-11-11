@@ -172,11 +172,12 @@ SDGInsert {
 			var dry = In.ar(dryBus, n), wet = In.ar(effectBus, n);
 			var sig = dry + wet;
 			var env = EnvGen.kr(Env.asr(0.02, 1, 0.02), gate, doneAction: 2);
-			var out = if(kind == \compressor) {
-				cls.ar(sig, spec[\controlName], InFeedback.ar(scBus, n))
-			} {
-				cls.ar(sig, spec[\controlName])
-			};
+			var out = case
+			{ kind == \compressor } { cls.ar(sig, spec[\controlName], InFeedback.ar(scBus, n)) }
+			// the eq tells its window its levels in and out while one is open
+			// (ParaEQ's meter: silent until asked, the sound untouched)
+			{ kind == \eq } { cls.ar(sig, spec[\controlName], meter: true) }
+			{ true } { cls.ar(sig, spec[\controlName]) };
 			DirtPause.ar(if(spec[\tail] == true) { out } { sig }, graceTime: 4);
 			ReplaceOut.ar(dryBus, (out * env) + (dry * (1 - env)));
 			ReplaceOut.ar(effectBus, wet * (1 - env));
