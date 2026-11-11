@@ -124,7 +124,8 @@ SuperDirtGUI {
 	var <globalEffectSpecs, <samplePlayers;
 	var <faderValues, <muteStates, <soloStates;
 	var <>verbose = true;
-	var controlWindow, appliedAmps, warnedInstruments;
+	var controlWindow, appliedAmps, warnedInstruments, dirtWarnedOutOfOrbit;
+	var editorHost;					// the sample editor's host, made once (editorHost)
 	var fileRecords;		// path -> (kind:, names:, hash:, failed:), one per file read
 	var loadingNames;		// while a file runs: the players and effects it registers
 	var filePresets;		// synth name -> the presets its file registered (SDGSynthPresets may replace them)
@@ -147,6 +148,7 @@ SuperDirtGUI {
 	var sync;				// the SDGSync, made when first asked for
 	var tidalLog;			// the SDGTidalLog, made when first asked for
 	var midi;				// the SDGMidi, made when first asked for
+	var sleep;				// the SDGSleep: when orbits sleep, started once the orbits exist
 	var pickers;			// DirtOrbit -> [our diversion, the one it replaced]
 	var warnedPicker = false;
 
@@ -170,12 +172,13 @@ SuperDirtGUI {
 		insertDefs = IdentitySet.new;
 		warnedInstruments = IdentitySet.new;
 		current = this;
+		this.prApplyOrbitWarning;
 		this.prCheckSuperDirtVersion;
 		this.load;
 		this.prLoadOwnSamples;
 		pickers = IdentityDictionary.new;
 		CmdPeriod.add(this);
-		this.prWhenOrbitsExist { this.prInstallTagPicker; this.prWatchTree };
+		this.prWhenOrbitsExist { this.prInstallTagPicker; this.prWatchTree; this.sleep.start };
 	}
 
 	// A cmd-period: CmdPeriod.run has just cleared both clocks and freed every
@@ -1154,7 +1157,11 @@ SuperDirtGUI {
 	// and the returns and master are made again. Then \tree is notified.
 	prWatchTree {
 		treeFunc ?? {
-			treeFunc = { this.prRestartVSTInserts; this.prRestartBusses; this.changed(\tree) };
+			treeFunc = {
+				this.prRestartVSTInserts; this.prRestartBusses;
+				sleep !? (_.prRestart);
+				this.changed(\tree)
+			};
 			ServerTree.add(treeFunc, dirt.server);
 		}
 	}
@@ -2055,6 +2062,65 @@ SuperDirtGUI {
 
 	midi { ^midi ?? { midi = SDGMidi(this) } }
 
+	// ----- settings (SDGSettings, kept between runs)
+
+	// when an orbit sleeps: SDGSleep (enabled, seconds)
+	sleep { ^sleep ?? { sleep = SDGSleep(this) } }
+
+	// the settings window, SDGSettingsWindow
+	settings { ^SDGSettingsWindow(this) }
+
+	// The longest file the sample editor opens, in minutes of stereo at
+	// 44.1 kHz (its SampleEdit.maxSamples, frames x channels: a mono file may
+	// be twice as long). Kept in SDGSettings, notifies \editorMaxMinutes.
+	// Opening reads the whole file in the language, about 10 s for 10 minutes,
+	// and SuperDirt plays nothing meanwhile; past 101 minutes sclang would
+	// crash, so the editor's own hardLimit holds there whatever this says.
+	*editorSamplesPerMinute { ^44100 * 2 * 60 }
+	*editorMaxMinutesRange { ^[1, 100] }
+	*defaultEditorMaxMinutes { ^4.5 }
+
+	editorMaxMinutes {
+		var range = this.class.editorMaxMinutesRange;
+		^(SDGSettings.at(\editorMaxMinutes) ? this.class.defaultEditorMaxMinutes).clip(range[0], range[1])
+	}
+
+	editorMaxMinutes_ { |minutes|
+		var range = this.class.editorMaxMinutesRange;
+		minutes = minutes.clip(range[0], range[1]).round(0.5);
+		SDGSettings.put(\editorMaxMinutes, minutes);
+		this.prApplyEditorMax;
+		this.changed(\editorMaxMinutes, minutes);
+	}
+
+	// Whether SuperDirt posts "event falls out of existing orbits" for every event
+	// sent to an orbit it does not have (# orbit 8 with eight orbits). That is
+	// SuperDirt's own warnOutOfOrbit; this keeps the choice on this computer and
+	// sets it when the loader starts. On by default, as in SuperDirt. free puts
+	// back what SuperDirt had. Notifies \warnOutOfOrbit.
+	warnOutOfOrbit { ^SDGSettings.at(\warnOutOfOrbit, true) }
+
+	warnOutOfOrbit_ { |bool|
+		bool = bool.asBoolean;
+		SDGSettings.put(\warnOutOfOrbit, bool);
+		this.prApplyOrbitWarning;
+		this.changed(\warnOutOfOrbit, bool);
+	}
+
+	prApplyOrbitWarning {
+		if(dirt.respondsTo(\warnOutOfOrbit_)) {
+			dirtWarnedOutOfOrbit = dirtWarnedOutOfOrbit ?? { dirt.warnOutOfOrbit };
+			dirt.warnOutOfOrbit = this.warnOutOfOrbit
+		}
+	}
+
+	prApplyEditorMax {
+		var cls = \SampleEdit.asClass;
+		if (cls.notNil and: { cls.respondsTo(\maxSamples_) }) {
+			cls.maxSamples = (this.editorMaxMinutes * this.class.editorSamplesPerMinute).asFloat
+		}
+	}
+
 	// "percussive.short" or [\percussive, \short] -> [\percussive, \short]: tidal's
 	// strings take letters, digits and . - _ : and a space would make two events
 	*splitTags { |value|
@@ -2171,6 +2237,9 @@ SuperDirtGUI {
 		tidalLog = nil;
 		midi !? (_.free);
 		midi = nil;
+		sleep !? (_.free);
+		sleep = nil;
+		dirtWarnedOutOfOrbit !? { |w| dirt.warnOutOfOrbit = w; dirtWarnedOutOfOrbit = nil };
 		silentBus !? { silentBus.free; silentBus = nil };
 		this.prFreeTapBusses;
 		(dirt.orbits ? []).do { |orbit|

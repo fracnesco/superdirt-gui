@@ -464,7 +464,7 @@ SDGWindow {
 		var info = StaticText().stringColor_(colDim).string_(
 			"% orbits · % channels · port %".format(
 				dirt.orbits.size, dirt.numChannels, dirt.port ? "-"));
-		var recBtn, saveBtn, tidalBtn;
+		var recBtn, saveBtn, tidalBtn, settingsBtn;
 		var busBtn = Button().fixedWidth_(110)
 			.states_([["bus manager", colText, colPanel]]);
 		busBtn.action = { busManager !? { busManager.gui } };
@@ -489,6 +489,9 @@ SDGWindow {
 		hints.attach(learnBtn, if(SDGMidi.isAvailable) {
 			"MIDI: find and connect a controller, midi learn, every mapping - lit while midi learn is on"
 		} { "MIDI: Tidal controls only - controllers need the Modality-toolkit quark" });
+		settingsBtn = Button().fixedWidth_(70).states_([["settings", colText, colPanel]]);
+		settingsBtn.action = { sdg.settings };
+		hints.attach(settingsBtn, "settings kept on this computer: whether silent orbits sleep, and after how long");
 		sessionMenu = PopUpMenu().fixedWidth_(150);
 		sessionLoadBtn = Button().fixedWidth_(86);
 		sessionLoadBtn.action = { this.loadSelectedSession };
@@ -498,7 +501,7 @@ SDGWindow {
 		hints.attach(sessionLoadBtn, "replace the mixer with the session in the menu: faders, tracks, parameters, inserts, VST states");
 		hints.attach(saveBtn, "keep the whole mixer under a name, every fader, parameter, insert and VST state");
 		this.prRefreshSessions;
-		^HLayout(title, info, nil, sessionMenu, sessionLoadBtn, saveBtn, learnBtn, tidalBtn, busBtn, recBtn)
+		^HLayout(title, info, nil, sessionMenu, sessionLoadBtn, saveBtn, learnBtn, tidalBtn, busBtn, recBtn, settingsBtn)
 	}
 
 	// ------------------------------------------------------------------ sessions

@@ -342,3 +342,13 @@ one comes back with a remembered parameter (0.37) through the `ServerTree` hook.
 often the first thing loaded. A parameter of 0.63 came back across two sclangs with the path kept beside the name. *Measured 2026-11-01.*
 
 **`parameterAutomated` is not a full picture of a plugin's state:** a preset picked in its editor need not send it. *Found in use.*
+
+**A wake holds for 4 s and cannot be renewed inside them.** `dirt_resumed` feeds DirtPause's `Trig1` (4 s), which
+ignores a trigger while it is high; after it falls, `DetectSilence` needs 4 s of silence more. So a quiet orbit sleeps
+8.0 s after the last wake that landed, and the 4 s itself is a constant in every def: an orbit can be kept up longer
+(SDGSleep plans its wakes back from the last one, 4.1 s apart), never put to sleep sooner. *Measured 2026-11-08: asked
+12, 15, 20 s, slept 11.8, 14.9, 19.9.*
+
+**Resume only the effects a pattern has used.** An effect no event has set runs on its SynthDef defaults, and
+`dirt_leslie`'s `leslie` is 0.5: resuming every effect of an orbit took a 0.2 peak out at 0.46. `GlobalDirtEffect:set`
+resumes one only when it `alwaysRun`s or the event holds one of its parameters. *Measured 2026-11-08.*

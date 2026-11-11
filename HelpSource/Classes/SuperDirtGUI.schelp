@@ -999,6 +999,28 @@ The link::Classes/SDGSampleTags:: of the library, made when first asked for.
 Its files are shared by every loader: they live in
 link::Classes/SDGSampleTags#*folder::.
 
+METHOD:: editorMaxMinutes
+The longest file the sample editor opens, in minutes of stereo at 44.1 kHz
+(the editor counts frames times channels, so a mono file may be twice as
+long): 4.5 by default, 1 to 100, in half minutes. Set in the settings window
+too, kept on this computer for the next run, put into
+code::SampleEdit.maxSamples:: whenever it changes and when the loader starts.
+Notifies code::\editorMaxMinutes::.
+
+Opening a file reads all of it in the language, about 1 s a minute of stereo,
+and sclang does nothing else meanwhile: SuperDirt plays nothing while a long
+file opens. Past about 101 minutes sclang crashes on the one Signal the file
+is read into, so the editor refuses those whatever this says
+(code::SampleEdit.hardLimit::).
+
+METHOD:: warnOutOfOrbit
+Whether SuperDirt posts code::event falls out of existing orbits:: for every
+event sent to an orbit it does not have (code::# orbit 8:: with eight orbits).
+This is SuperDirt's own code::warnOutOfOrbit::, true by default, as in
+SuperDirt, set in the settings window too (strong::post window::), kept on
+this computer and set when the loader starts. link::#-free:: puts back what
+SuperDirt had. Notifies code::\warnOutOfOrbit::.
+
 METHOD:: edit
 Open the sample editor on one sample of the library.
 ARGUMENT:: name
