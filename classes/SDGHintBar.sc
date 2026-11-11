@@ -29,7 +29,9 @@ SDGHintBar {
 	classvar <>defaultHeight = 22;
 
 	var <view, <text, <>defaultString;
-	var toggleBox, font;
+	var toggleBox, font, shown = true;
+	var attached;						// [[view, hint] ...], for the window to look the pointer up in
+	var lastLookup = 0;
 
 	*new { |defaultString, height| ^super.new.init(defaultString, height) }
 
@@ -43,14 +45,17 @@ SDGHintBar {
 	}
 
 	// A child's mouse-over only arrives if the window is willing to hear
-	// about it. Moving onto the window itself - the gaps between controls -
-	// puts the bar back to its default, so a stale hint does not sit there
-	// describing something the pointer left a while ago.
+	// about it. A move the window itself hears is looked up among the views
+	// with a hint: a button (QPushButton ignores a move with no button down,
+	// so Qt hands it on to the window) or a disabled control (which hears
+	// nothing) still gets its hint that way. Anywhere else - the gaps between
+	// controls - puts the bar back to its default, so a stale hint does not sit
+	// there describing something the pointer left a while ago.
 	watch { |window|
 		var v = window.tryPerform(\view) ? window;
 		v !? {
 			v.acceptsMouseOver = true;
-			v.mouseOverAction = { this.clear };
+			v.mouseOverAction = { |top, x, y| this.prHintAt(top, x, y); nil };
 		};
 		^this
 	}
@@ -60,10 +65,31 @@ SDGHintBar {
 		views.asArray.do { |v|
 			v !? {
 				v.acceptsMouseOver = true;
-				v.mouseOverAction = { this.string_(hint.value) };
+				v.mouseOverAction = { this.string_(hint.value); nil };
+				v.mouseEnterAction = { this.string_(hint.value); nil };
+				attached = attached.add([v, hint]);
 			};
 		};
 		^views
+	}
+
+	// the hint of the smallest view with one under a point of the window's
+	// top view, or the default
+	prHintAt { |top, x, y|
+		var p, best, bestArea, origin;
+		// a move fires many times a second; a look a frame is plenty
+		if ((Main.elapsedTime - lastLookup) < 0.03) { ^this };
+		lastLookup = Main.elapsedTime;
+		origin = try { top.absoluteBounds.origin } ? Point(0, 0);
+		p = Point(x, y) + origin;
+		attached = attached.reject { |pair| pair[0].isClosed };
+		attached.do { |pair|
+			var r = try { pair[0].absoluteBounds };
+			if (r.notNil and: { r.containsPoint(p) } and: { try { pair[0].visible } ? false }) {
+				if (bestArea.isNil or: { (r.width * r.height) < bestArea }) { best = pair; bestArea = r.width * r.height };
+			};
+		};
+		if (best.notNil) { this.string_(best[1].value) } { this.clear };
 	}
 
 	// what the bar falls back to when the pointer is over nothing: the last
@@ -79,9 +105,12 @@ SDGHintBar {
 
 	clear { this.string_(nil) }
 
-	visible { ^view.visible }
+	// kept here: a view in a window not yet shown answers false, and a
+	// checkbox made then would start unticked
+	visible { ^shown }
 
 	visible_ { |bool|
+		shown = bool;
 		view.visible = bool;
 		toggleBox !? { |b| b.value = bool };
 	}
@@ -90,8 +119,8 @@ SDGHintBar {
 	// one after that
 	toggle {
 		toggleBox ?? {
-			toggleBox = CheckBox().string_("hints").value_(view.visible)
-				.action_({ |v| view.visible = v.value });
+			toggleBox = CheckBox().string_("hints").value_(shown)
+				.action_({ |v| shown = v.value; view.visible = v.value });
 			this.attach(toggleBox, "this bar - untick to fold it away");
 		};
 		^toggleBox
